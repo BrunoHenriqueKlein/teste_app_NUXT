@@ -1,100 +1,173 @@
 <template>
-  <div class="login-container">
-    <div class="login-form">
-      <h1>Login</h1>
-      
-      <form @submit.prevent="handleLogin">
-        <div class="form-group">
-          <label for="email">E-mail:</label>
-          <input
-            id="email"
-            v-model="email"
-            type="email"
-            required
-            placeholder="seu@email.com"
-            class="input-field"
-          />
-        </div>
+  <v-app>
+    <v-main>
+      <v-container fluid class="fill-height pa-0">
+        <v-row no-gutters class="fill-height">
+          <!-- Lado Esquerdo - Formulário -->
+          <v-col cols="12" md="6" class="d-flex align-center justify-center">
+            <v-card variant="flat" class="pa-8" max-width="450">
+              <v-card-text class="text-center pa-0">
+                <v-icon 
+                  icon="mdi-factory" 
+                  size="64" 
+                  color="primary" 
+                  class="mb-4"
+                ></v-icon>
+                <h1 class="text-h4 font-weight-bold mb-2">Sistema de Produção</h1>
+                <p class="text-body-1 text-medium-emphasis mb-6">
+                  Faça login para acessar o sistema
+                </p>
+              </v-card-text>
 
-        <div class="form-group">
-          <label for="password">Senha:</label>
-          <input
-            id="password"
-            v-model="password"
-            type="password"
-            required
-            placeholder="Sua senha"
-            class="input-field"
-          />
-        </div>
+              <v-form @submit.prevent="handleLogin" class="mt-4">
+                <v-text-field
+                  v-model="email"
+                  label="E-mail"
+                  type="email"
+                  variant="outlined"
+                  prepend-inner-icon="mdi-email"
+                  required
+                  class="mb-4"
+                ></v-text-field>
 
-        <button type="submit" :disabled="loading" class="login-button">
-          {{ loading ? 'Entrando...' : 'Entrar' }}
-        </button>
-      </form>
+                <v-text-field
+                  v-model="password"
+                  label="Senha"
+                  type="password"
+                  variant="outlined"
+                  prepend-inner-icon="mdi-lock"
+                  required
+                  class="mb-2"
+                ></v-text-field>
 
-      <div v-if="error" class="error-message">
-        {{ error }}
-      </div>
+                <v-btn
+                  type="submit"
+                  color="primary"
+                  size="large"
+                  block
+                  :loading="loading"
+                  class="mt-2"
+                >
+                  <template v-slot:loader>
+                    <v-progress-circular
+                      indeterminate
+                      size="20"
+                      color="white"
+                    ></v-progress-circular>
+                  </template>
+                  Entrar
+                </v-btn>
+              </v-form>
 
-      <div class="register-link">
-        <p>Não tem conta? <a href="#" @click.prevent="showRegister = true">Cadastre-se</a></p>
-      </div>
+              <v-alert
+                v-if="error"
+                type="error"
+                variant="tonal"
+                class="mt-4"
+              >
+                {{ error }}
+              </v-alert>
 
-      <!-- Formulário de Registro -->
-      <div v-if="showRegister" class="register-form">
-        <h2>Cadastro</h2>
-        <form @submit.prevent="handleRegister">
-          <div class="form-group">
-            <label for="registerName">Nome:</label>
-            <input
-              id="registerName"
-              v-model="registerName"
-              type="text"
-              required
-              placeholder="Seu nome"
-              class="input-field"
-            />
-          </div>
+              <v-divider class="my-6"></v-divider>
 
-          <div class="form-group">
-            <label for="registerEmail">E-mail:</label>
-            <input
-              id="registerEmail"
-              v-model="registerEmail"
-              type="email"
-              required
-              placeholder="seu@email.com"
-              class="input-field"
-            />
-          </div>
+              <div class="text-center">
+                <v-btn
+                  variant="text"
+                  color="primary"
+                  @click="showRegister = true"
+                >
+                  Criar nova conta
+                </v-btn>
+              </div>
+            </v-card>
+          </v-col>
 
-          <div class="form-group">
-            <label for="registerPassword">Senha:</label>
-            <input
-              id="registerPassword"
-              v-model="registerPassword"
-              type="password"
-              required
-              placeholder="Mínimo 6 caracteres"
-              class="input-field"
-            />
-          </div>
+          <!-- Lado Direito - Banner -->
+          <v-col cols="12" md="6" class="d-none d-md-flex">
+            <div class="login-banner fill-height d-flex align-center justify-center">
+              <div class="text-center text-white pa-8">
+                <v-icon icon="mdi-cog" size="80" class="mb-4"></v-icon>
+                <h2 class="text-h3 font-weight-bold mb-4">Controle de Produção</h2>
+                <p class="text-h6 font-weight-regular">
+                  Gerencie suas ordens de produção de forma eficiente
+                </p>
+              </div>
+            </div>
+          </v-col>
+        </v-row>
+      </v-container>
 
-          <button type="submit" :disabled="loading" class="register-button">
-            {{ loading ? 'Cadastrando...' : 'Cadastrar' }}
-          </button>
-          
-          <button type="button" @click="showRegister = false" class="cancel-button">
-            Cancelar
-          </button>
-        </form>
-      </div>
-    </div>
-  </div>
+      <!-- Dialog de Registro -->
+      <v-dialog v-model="showRegister" max-width="500">
+        <v-card>
+          <v-card-title class="d-flex justify-space-between align-center">
+            <span class="text-h5">Criar Conta</span>
+            <v-btn icon @click="showRegister = false">
+              <v-icon>mdi-close</v-icon>
+            </v-btn>
+          </v-card-title>
+
+          <v-card-text>
+            <v-form @submit.prevent="handleRegister">
+              <v-text-field
+                v-model="registerName"
+                label="Nome completo"
+                variant="outlined"
+                prepend-inner-icon="mdi-account"
+                required
+                class="mb-4"
+              ></v-text-field>
+
+              <v-text-field
+                v-model="registerEmail"
+                label="E-mail"
+                type="email"
+                variant="outlined"
+                prepend-inner-icon="mdi-email"
+                required
+                class="mb-4"
+              ></v-text-field>
+
+              <v-text-field
+                v-model="registerPassword"
+                label="Senha"
+                type="password"
+                variant="outlined"
+                prepend-inner-icon="mdi-lock"
+                required
+                class="mb-4"
+              ></v-text-field>
+
+              <div class="d-flex gap-2">
+                <v-btn
+                  variant="outlined"
+                  block
+                  @click="showRegister = false"
+                >
+                  Cancelar
+                </v-btn>
+                <v-btn
+                  type="submit"
+                  color="primary"
+                  block
+                  :loading="loading"
+                >
+                  Cadastrar
+                </v-btn>
+              </div>
+            </v-form>
+          </v-card-text>
+        </v-card>
+      </v-dialog>
+    </v-main>
+  </v-app>
 </template>
 
 <script setup>
+definePageMeta({
+  layout: false
+})
+
 // Estado do login
 const email = ref('')
 const password = ref('')
@@ -122,12 +195,9 @@ const handleLogin = async () => {
     })
 
     if (response.success) {
-    // Salva o token
-    localStorage.setItem('authToken', response.token)
-    localStorage.setItem('user', JSON.stringify(response.user))
-    
-    // Forçar recarregamento para garantir que o middleware funcione
-    window.location.href = '/'
+      localStorage.setItem('authToken', response.token)
+      localStorage.setItem('user', JSON.stringify(response.user))
+      window.location.href = '/'
     }
   } catch (err) {
     error.value = err.data?.message || 'Erro ao fazer login'
@@ -152,7 +222,6 @@ const handleRegister = async () => {
     })
 
     if (response.success) {
-      // Limpa o formulário e mostra mensagem de sucesso
       showRegister.value = false
       registerName.value = ''
       registerEmail.value = ''
@@ -168,121 +237,15 @@ const handleRegister = async () => {
 </script>
 
 <style scoped>
-.login-container {
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background-color: #f5f5f5;
+.login-banner {
+  background: linear-gradient(135deg, var(--v-primary-base), var(--v-secondary-base));
 }
 
-.login-form {
-  background: white;
-  padding: 2rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  width: 100%;
-  max-width: 400px;
+.fill-height {
+  height: 100vh;
 }
 
-h1 {
-  text-align: center;
-  margin-bottom: 1.5rem;
-  color: #333;
-}
-
-.form-group {
-  margin-bottom: 1rem;
-}
-
-label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: bold;
-  color: #555;
-}
-
-.input-field {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 1rem;
-  box-sizing: border-box;
-}
-
-.input-field:focus {
-  outline: none;
-  border-color: #007bff;
-}
-
-.login-button, .register-button {
-  width: 100%;
-  padding: 0.75rem;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 1rem;
-  cursor: pointer;
-  margin-bottom: 1rem;
-}
-
-.login-button:disabled, .register-button:disabled {
-  background-color: #6c757d;
-  cursor: not-allowed;
-}
-
-.login-button:hover:not(:disabled), .register-button:hover:not(:disabled) {
-  background-color: #0056b3;
-}
-
-.cancel-button {
-  width: 100%;
-  padding: 0.75rem;
-  background-color: #6c757d;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 1rem;
-  cursor: pointer;
-}
-
-.cancel-button:hover {
-  background-color: #545b62;
-}
-
-.error-message {
-  background-color: #f8d7da;
-  color: #721c24;
-  padding: 0.75rem;
-  border-radius: 4px;
-  margin-bottom: 1rem;
-  text-align: center;
-}
-
-.register-link {
-  text-align: center;
-  margin-top: 1rem;
-}
-
-.register-link a {
-  color: #007bff;
-  text-decoration: none;
-}
-
-.register-link a:hover {
-  text-decoration: underline;
-}
-
-.register-form {
-  margin-top: 2rem;
-  padding-top: 2rem;
-  border-top: 1px solid #eee;
-}
-
-.register-form h2 {
-  margin-bottom: 1rem;
-  color: #333;
+.gap-2 {
+  gap: 8px;
 }
 </style>

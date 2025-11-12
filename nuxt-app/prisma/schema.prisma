@@ -7,16 +7,325 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Item {
-  id        Int      @id @default(autoincrement())
-  valor     String
-  createdAt DateTime @default(now())
-}
-
+// ==================== USUÁRIOS E ACESSOS ====================
 model User {
   id        Int      @id @default(autoincrement())
   email     String   @unique
   password  String
   name      String
+  role      UserRole @default(USER)
+  department UserDepartment
+  isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relações
+  createdOPs      OP[]           @relation("OP_CriadaPor")
+  responsibleOPs  OP[]           @relation("OP_Responsavel")
+  opProcessos     OPProcesso[]   @relation("Processo_Responsavel")
+  userModules     UserModule[]
+  movimentacoes   EstoqueMovimentacao[]
+  historico       OPHistorico[]
+  arquivos        Arquivo[]
+
+  @@map("users")
+}
+
+enum UserRole {
+  ADMIN
+  GERENTE
+  ENGENHEIRO
+  COMPRADOR
+  PCP
+  QUALIDADE
+  ESTOQUE
+  VENDAS
+  USER
+}
+
+enum UserDepartment {
+  ADMINISTRATIVO
+  VENDAS
+  ENGENHARIA
+  COMPRAS
+  PCP
+  QUALIDADE
+  ESTOQUE
+  MONTAGEM
+  EXPEDICAO
+}
+
+// ==================== ORDENS DE PRODUÇÃO ====================
+model OP {
+  id              Int       @id @default(autoincrement())
+  numeroOP        String    @unique
+  codigoMaquina   String
+  descricaoMaquina String
+  observacoes     String?
+  dataPedido      DateTime
+  dataEntrega     DateTime
+  dataCriacao     DateTime  @default(now())
+  dataInicio      DateTime?
+  dataFinalizacao DateTime?
+  status          OPStatus  @default(ABERTA)
+  progresso       Int       @default(0)
+  cliente         String
+  cnpjCliente     String?
+  enderecoCliente String?
+  criadoPorId     Int
+  responsavelId   Int?
+
+  // Relações
+  criadoPor       User      @relation("OP_CriadaPor", fields: [criadoPorId], references: [id])
+  responsavel     User?     @relation("OP_Responsavel", fields: [responsavelId], references: [id])
+  processos       OPProcesso[]
+  pecas           Peca[]
+  compras         Compra[]
+  historico       OPHistorico[]
+  movimentacoes   EstoqueMovimentacao[]
+  arquivos        Arquivo[]
+
+  @@map("ops")
+}
+
+enum OPStatus {
+  ABERTA
+  EM_PROJETO
+  AGUARDANDO_COMPRAS
+  EM_FABRICACAO
+  EM_MONTAGEM
+  EM_TESTES
+  AGUARDANDO_DOCUMENTACAO
+  PRONTA_EXPEDICAO
+  ENTREGUE
+  CANCELADA
+}
+
+// ==================== PROCESSOS DA OP ====================
+model OPProcesso {
+  id          Int       @id @default(autoincrement())
+  opId        Int
+  nome        String
+  descricao   String?
+  sequencia   Int
+  status      ProcessoStatus @default(NAO_INICIADO)
+  progresso   Int       @default(0)
+  prazoEstimado Int?
+  dataInicio   DateTime?
+  dataFim      DateTime?
+  responsavelId Int?
+
+  // Relações
+  op          OP        @relation(fields: [opId], references: [id])
+  responsavel User?     @relation("Processo_Responsavel", fields: [responsavelId], references: [id])
+
+  @@map("op_processos")
+}
+
+enum ProcessoStatus {
+  NAO_INICIADO
+  EM_ANDAMENTO
+  AGUARDANDO
+  CONCLUIDO
+  BLOQUEADO
+}
+
+// ==================== PEÇAS DO EQUIPAMENTO ====================
+model Peca {
+  id          Int       @id @default(autoincrement())
+  opId        Int
+  codigo      String
+  descricao   String
+  quantidade  Int       @default(1)
+  material    String?
+  desenhoUrl  String?
+  arquivoBOM  String?
+  status      PecaStatus @default(NAO_INICIADA)
+
+  // Relações
+  op          OP        @relation(fields: [opId], references: [id])
+  processos   ProcessoPeca[]
+  compras     CompraItem[]
+
+  @@unique([opId, codigo])
+  @@map("pecas")
+}
+
+enum PecaStatus {
+  NAO_INICIADA
+  EM_COTACAO
+  EM_FABRICACAO
+  AGUARDANDO_RECEBIMENTO
+  EM_ESTOQUE
+  EM_MONTAGEM
+  MONTADA
+}
+
+// ==================== PROCESSOS DAS PEÇAS ====================
+model ProcessoPeca {
+  id          Int       @id @default(autoincrement())
+  pecaId      Int
+  nome        String
+  sequencia   Int
+  status      ProcessoStatus @default(NAO_INICIADO)
+  fornecedor  String?
+  custo       Float?
+  tempoEstimado Int?
+
+  // Relações
+  peca        Peca      @relation(fields: [pecaId], references: [id])
+
+  @@map("processo_pecas")
+}
+
+// ==================== CONTROLE DE ESTOQUE ====================
+model Estoque {
+  id          Int       @id @default(autoincrement())
+  codigo      String    @unique
+  descricao   String
+  categoria   String
+  quantidade  Int       @default(0)
+  unidade     String    @default("UN")
+  minEstoque  Int       @default(0)
+  localizacao String?
+
+  // Relações
+  movimentacoes EstoqueMovimentacao[]
+
+  @@map("estoque")
+}
+
+model EstoqueMovimentacao {
+  id          Int       @id @default(autoincrement())
+  estoqueId   Int
+  tipo        MovimentacaoTipo
+  quantidade  Int
+  motivo      String
+  opId        Int?
+  usuarioId   Int
+
+  // Relações
+  estoque     Estoque   @relation(fields: [estoqueId], references: [id])
+  op          OP?       @relation(fields: [opId], references: [id])
+  usuario     User      @relation(fields: [usuarioId], references: [id])
+
+  createdAt   DateTime  @default(now())
+
+  @@map("estoque_movimentacoes")
+}
+
+enum MovimentacaoTipo {
+  ENTRADA
+  SAIDA
+  AJUSTE
+}
+
+// ==================== COMPRAS E ORÇAMENTOS ====================
+model Compra {
+  id          Int       @id @default(autoincrement())
+  opId        Int
+  numero      String    @unique
+  fornecedor  String
+  valorTotal  Float?
+  status      CompraStatus @default(SOLICITADA)
+  dataSolicitacao DateTime @default(now())
+  dataEntregaPrevista DateTime?
+
+  // Relações
+  op          OP        @relation(fields: [opId], references: [id])
+  itens       CompraItem[]
+
+  @@map("compras")
+}
+
+model CompraItem {
+  id          Int       @id @default(autoincrement())
+  compraId    Int
+  pecaId      Int?
+  descricao   String
+  quantidade  Int
+  valorUnitario Float
+
+  // Relações
+  compra      Compra    @relation(fields: [compraId], references: [id])
+  peca        Peca?     @relation(fields: [pecaId], references: [id])
+
+  @@map("compra_itens")
+}
+
+enum CompraStatus {
+  SOLICITADA
+  COTACAO
+  APROVADA
+  PEDIDO_EMITIDO
+  RECEBIDA_PARCIAL
+  RECEBIDA_TOTAL
+  CANCELADA
+}
+
+// ==================== MÓDULOS E PERMISSÕES ====================
+model Module {
+  id          Int       @id @default(autoincrement())
+  nome        String    @unique
+  descricao   String?
+  icon        String?
+  path        String
+  isActive    Boolean   @default(true)
+  order       Int
+
+  // Relações
+  userModules UserModule[]
+
+  @@map("modules")
+}
+
+model UserModule {
+  id         Int     @id @default(autoincrement())
+  userId     Int
+  moduleId   Int
+  canView    Boolean @default(false)
+  canEdit    Boolean @default(false)
+  canDelete  Boolean @default(false)
+
+  // Relações
+  user       User    @relation(fields: [userId], references: [id])
+  module     Module  @relation(fields: [moduleId], references: [id])
+
+  @@unique([userId, moduleId])
+  @@map("user_modules")
+}
+
+// ==================== HISTÓRICO DE ALTERAÇÕES ====================
+model OPHistorico {
+  id          Int       @id @default(autoincrement())
+  opId        Int
+  usuarioId   Int
+  acao        String
+  detalhes    String?
+  createdAt   DateTime  @default(now())
+
+  // Relações
+  op          OP        @relation(fields: [opId], references: [id])
+  usuario     User      @relation(fields: [usuarioId], references: [id])
+
+  @@map("op_historico")
+}
+
+// ==================== ARQUIVOS E DOCUMENTOS ====================
+model Arquivo {
+  id          Int       @id @default(autoincrement())
+  opId        Int?
+  nome        String
+  tipo        String
+  url         String
+  tamanho     Int
+  usuarioId   Int
+
+  // Relações
+  op          OP?       @relation(fields: [opId], references: [id])
+  usuario     User      @relation(fields: [usuarioId], references: [id])
+
+  createdAt   DateTime  @default(now())
+
+  @@map("arquivos")
 }

@@ -1868,16 +1868,28 @@ async function getIslandContext(event) {
 
 const _lazy_MyKlQu = () => Promise.resolve().then(function () { return login_post$1; });
 const _lazy_wD64rD = () => Promise.resolve().then(function () { return register_post$1; });
+const _lazy_LHV_bL = () => Promise.resolve().then(function () { return stats_get$1; });
 const _lazy_Ht9XLv = () => Promise.resolve().then(function () { return itens_get$1; });
+const _lazy_VPkvMQ = () => Promise.resolve().then(function () { return index_get$3; });
+const _lazy_zKWFxN = () => Promise.resolve().then(function () { return index_post$1; });
+const _lazy_qyGLAc = () => Promise.resolve().then(function () { return recent_get$1; });
 const _lazy_5EnahH = () => Promise.resolve().then(function () { return salvar_post$1; });
+const _lazy_1uUSXj = () => Promise.resolve().then(function () { return index_get$1; });
+const _lazy__qQdIa = () => Promise.resolve().then(function () { return modules_get$1; });
 const _lazy_0XwxzV = () => Promise.resolve().then(function () { return renderer$1; });
 
 const handlers = [
   { route: '', handler: _oStzCE, lazy: false, middleware: true, method: undefined },
   { route: '/api/auth/login', handler: _lazy_MyKlQu, lazy: true, middleware: false, method: "post" },
   { route: '/api/auth/register', handler: _lazy_wD64rD, lazy: true, middleware: false, method: "post" },
+  { route: '/api/dashboard/stats', handler: _lazy_LHV_bL, lazy: true, middleware: false, method: "get" },
   { route: '/api/itens', handler: _lazy_Ht9XLv, lazy: true, middleware: false, method: "get" },
+  { route: '/api/ops', handler: _lazy_VPkvMQ, lazy: true, middleware: false, method: "get" },
+  { route: '/api/ops', handler: _lazy_zKWFxN, lazy: true, middleware: false, method: "post" },
+  { route: '/api/ops/recent', handler: _lazy_qyGLAc, lazy: true, middleware: false, method: "get" },
   { route: '/api/salvar', handler: _lazy_5EnahH, lazy: true, middleware: false, method: "post" },
+  { route: '/api/user', handler: _lazy_1uUSXj, lazy: true, middleware: false, method: "get" },
+  { route: '/api/user/modules', handler: _lazy__qQdIa, lazy: true, middleware: false, method: "get" },
   { route: '/__nuxt_error', handler: _lazy_0XwxzV, lazy: true, middleware: false, method: undefined },
   { route: '/__nuxt_island/**', handler: _SxA8c9, lazy: false, middleware: false, method: undefined },
   { route: '/**', handler: _lazy_0XwxzV, lazy: true, middleware: false, method: undefined }
@@ -2218,11 +2230,11 @@ const styles$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
   default: styles
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$3 = new PrismaClient();
+const prisma$9 = new PrismaClient();
 const login_post = defineEventHandler(async (event) => {
   const body = await readBody(event);
   try {
-    const user = await prisma$3.user.findUnique({
+    const user = await prisma$9.user.findUnique({
       where: {
         email: body.email
       }
@@ -2262,11 +2274,11 @@ const login_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProper
   default: login_post
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$2 = new PrismaClient();
+const prisma$8 = new PrismaClient();
 const register_post = defineEventHandler(async (event) => {
   const body = await readBody(event);
   try {
-    const existingUser = await prisma$2.user.findUnique({
+    const existingUser = await prisma$8.user.findUnique({
       where: {
         email: body.email
       }
@@ -2277,7 +2289,7 @@ const register_post = defineEventHandler(async (event) => {
         statusMessage: "Usu\xE1rio j\xE1 existe"
       });
     }
-    const user = await prisma$2.user.create({
+    const user = await prisma$8.user.create({
       data: {
         name: body.name,
         email: body.email,
@@ -2306,10 +2318,54 @@ const register_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePro
   default: register_post
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$1 = new PrismaClient();
+const prisma$7 = new PrismaClient();
+const stats_get = defineEventHandler(async (event) => {
+  try {
+    const opsAbertas = await prisma$7.oP.count({
+      where: { status: "ABERTA" }
+    });
+    const opsProducao = await prisma$7.oP.count({
+      where: {
+        status: {
+          in: ["EM_PROJETO", "EM_FABRICACAO", "EM_MONTAGEM"]
+        }
+      }
+    });
+    const opsConcluidas = await prisma$7.oP.count({
+      where: { status: "ENTREGUE" }
+    });
+    const opsAtrasadas = await prisma$7.oP.count({
+      where: {
+        dataEntrega: { lt: /* @__PURE__ */ new Date() },
+        status: { not: "ENTREGUE" }
+      }
+    });
+    return {
+      opsAbertas,
+      opsProducao,
+      opsConcluidas,
+      opsAtrasadas
+    };
+  } catch (error) {
+    console.error("Erro ao carregar estat\xEDsticas:", error);
+    return {
+      opsAbertas: 0,
+      opsProducao: 0,
+      opsConcluidas: 0,
+      opsAtrasadas: 0
+    };
+  }
+});
+
+const stats_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: stats_get
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const prisma$6 = new PrismaClient();
 const itens_get = defineEventHandler(async (event) => {
   try {
-    const itens = await prisma$1.item.findMany({
+    const itens = await prisma$6.item.findMany({
       orderBy: {
         createdAt: "desc"
       }
@@ -2326,11 +2382,130 @@ const itens_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePropert
   default: itens_get
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma = new PrismaClient();
+const prisma$5 = new PrismaClient();
+const index_get$2 = defineEventHandler(async (event) => {
+  try {
+    const query = getQuery$1(event);
+    const where = {};
+    if (query.status) {
+      where.status = query.status;
+    }
+    if (query.search) {
+      where.OR = [
+        { numeroOP: { contains: query.search, mode: "insensitive" } },
+        { codigoMaquina: { contains: query.search, mode: "insensitive" } },
+        { descricaoMaquina: { contains: query.search, mode: "insensitive" } },
+        { cliente: { contains: query.search, mode: "insensitive" } }
+      ];
+    }
+    const ops = await prisma$5.oP.findMany({
+      where,
+      include: {
+        criadoPor: {
+          select: { name: true }
+        },
+        responsavel: {
+          select: { name: true }
+        }
+      },
+      orderBy: { dataCriacao: "desc" }
+    });
+    return ops;
+  } catch (error) {
+    console.error("Erro ao carregar OPs:", error);
+    throw createError({
+      statusCode: 500,
+      statusMessage: "Erro interno do servidor"
+    });
+  }
+});
+
+const index_get$3 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: index_get$2
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const prisma$4 = new PrismaClient();
+const index_post = defineEventHandler(async (event) => {
+  try {
+    const body = await readBody(event);
+    if (!body.numeroOP || !body.codigoMaquina || !body.descricaoMaquina || !body.dataPedido || !body.dataEntrega || !body.cliente) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: "Dados obrigat\xF3rios n\xE3o informados"
+      });
+    }
+    const existingOP = await prisma$4.oP.findUnique({
+      where: { numeroOP: body.numeroOP }
+    });
+    if (existingOP) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: "N\xFAmero de OP j\xE1 existe"
+      });
+    }
+    const op = await prisma$4.oP.create({
+      data: {
+        ...body,
+        criadoPorId: 1,
+        // Em produção, pegar do usuário logado
+        dataPedido: new Date(body.dataPedido),
+        dataEntrega: new Date(body.dataEntrega)
+      }
+    });
+    await prisma$4.oPHistorico.create({
+      data: {
+        opId: op.id,
+        usuarioId: 1,
+        // Em produção, pegar do usuário logado
+        acao: "OP criada",
+        detalhes: `Ordem de produ\xE7\xE3o ${body.numeroOP} criada`
+      }
+    });
+    return { success: true, op };
+  } catch (error) {
+    console.error("Erro ao criar OP:", error);
+    throw createError({
+      statusCode: 500,
+      statusMessage: "Erro ao criar ordem de produ\xE7\xE3o"
+    });
+  }
+});
+
+const index_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: index_post
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const prisma$3 = new PrismaClient();
+const recent_get = defineEventHandler(async (event) => {
+  try {
+    const ops = await prisma$3.oP.findMany({
+      take: 6,
+      orderBy: { dataCriacao: "desc" },
+      include: {
+        responsavel: {
+          select: { name: true }
+        }
+      }
+    });
+    return ops;
+  } catch (error) {
+    console.error("Erro ao carregar OPs recentes:", error);
+    return [];
+  }
+});
+
+const recent_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: recent_get
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const prisma$2 = new PrismaClient();
 const salvar_post = defineEventHandler(async (event) => {
   const body = await readBody(event);
   try {
-    const item = await prisma.item.create({
+    const item = await prisma$2.item.create({
       data: {
         valor: body.valor
       }
@@ -2347,6 +2522,62 @@ const salvar_post = defineEventHandler(async (event) => {
 const salvar_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
   __proto__: null,
   default: salvar_post
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const prisma$1 = new PrismaClient();
+const index_get = defineEventHandler(async (event) => {
+  try {
+    const users = await prisma$1.user.findMany({
+      where: { isActive: true },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        department: true
+      },
+      orderBy: { name: "asc" }
+    });
+    return users;
+  } catch (error) {
+    console.error("Erro ao carregar usu\xE1rios:", error);
+    throw createError({
+      statusCode: 500,
+      statusMessage: "Erro interno do servidor"
+    });
+  }
+});
+
+const index_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: index_get
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const prisma = new PrismaClient();
+const modules_get = defineEventHandler(async (event) => {
+  try {
+    const userData = await readBody(event).catch(() => null);
+    const modules = await prisma.module.findMany({
+      where: {
+        isActive: true
+      },
+      orderBy: {
+        order: "asc"
+      }
+    });
+    return modules;
+  } catch (error) {
+    console.error("Erro ao carregar m\xF3dulos:", error);
+    throw createError({
+      statusCode: 500,
+      statusMessage: "Erro interno do servidor"
+    });
+  }
+});
+
+const modules_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: modules_get
 }, Symbol.toStringTag, { value: 'Module' }));
 
 function renderPayloadResponse(ssrContext) {

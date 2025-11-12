@@ -1,0 +1,90 @@
+/* Variáveis CSS personalizadas */
+:root {
+  --border-radius: 12px;
+  --shadow-1: 0 2px 8px rgba(0,0,0,0.1);
+  --shadow-2: 0 4px 20px rgba(0,0,0,0.15);
+  --shadow-3: 0 8px 30px rgba(0,0,0,0.2);
+}
+
+/* Estilos globais */
+.v-application {
+  font-family: 'Roboto', sans-serif;
+}
+
+/* Cards personalizados */
+.custom-card {
+  border-radius: var(--border-radius) !important;
+  box-shadow: var(--shadow-1) !important;
+  transition: all 0.3s ease;
+}
+
+.custom-card:hover {
+  box-shadow: var(--shadow-2) !important;
+  transform: translateY(-2px);
+}
+
+/* Botões personalizados */
+.v-btn {
+  text-transform: none !important;
+  font-weight: 600;
+  border-radius: 8px !important;
+}
+
+/* Inputs personalizados */
+.v-field {
+  border-radius: 8px !important;
+}
+
+/* Tabelas personalizadas */
+.v-data-table {
+  border-radius: var(--border-radius) !important;
+}
+
+/* Badges personalizados */
+.v-badge__badge {
+  border: 2px solid white;
+}
+
+/* Animações */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* Scroll personalizado */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Utilitários */
+.glass-effect {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, var(--v-primary-base), var(--v-secondary-base));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}

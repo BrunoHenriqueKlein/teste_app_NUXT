@@ -1,238 +1,328 @@
 <template>
-  <div class="container">
-    <div class="header">
-      <h1>Minha Aplicação Nuxt + Prisma</h1>
-      <div class="user-info">
-        <span>Olá, {{ user?.name }}!</span>
-        <button @click="handleLogout" class="logout-button">Sair</button>
-      </div>
-    </div>
-    
-    <div class="form-container">
-      <input 
-        v-model="valorInput" 
-        type="text" 
-        placeholder="Digite um valor..."
-        class="input-field"
-        @keypress.enter="salvarValor"
-      />
-      <button 
-        @click="salvarValor" 
-        :disabled="!valorInput || carregando"
-        class="submit-button"
-      >
-        {{ carregando ? 'Salvando...' : 'Salvar no Banco' }}
-      </button>
-    </div>
+  <v-container fluid class="fill-height">
+    <!-- Header -->
+    <v-row class="mb-6">
+      <v-col cols="12">
+        <v-card class="pa-6" color="primary" variant="flat">
+          <v-card-text class="text-center text-white">
+            <h1 class="text-h3 font-weight-bold mb-2">Dashboard de Produção</h1>
+            <p class="text-h6 font-weight-regular">
+              Visão geral do andamento das ordens de produção
+            </p>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
 
-    <div v-if="mensagem" class="mensagem" :class="{ 'erro': isErro }">
-      {{ mensagem }}
-    </div>
+    <!-- Estatísticas -->
+    <v-row class="mb-6">
+      <v-col v-for="stat in stats" :key="stat.title" cols="12" sm="6" md="3">
+        <v-card 
+          class="stat-card pa-4" 
+          :color="stat.color" 
+          variant="flat"
+          @click="stat.action"
+        >
+          <v-card-text class="text-center text-white">
+            <v-icon size="48" class="mb-3">{{ stat.icon }}</v-icon>
+            <div class="text-h3 font-weight-bold">{{ stat.value }}</div>
+            <div class="text-body-1">{{ stat.title }}</div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
 
-    <!-- CORREÇÃO: Verificar se itens existe e tem length -->
-    <div class="itens-salvos" v-if="itens && itens.length > 0">
-      <h2>Itens Salvos:</h2>
-      <ul>
-        <li v-for="item in itens" :key="item.id" class="item">
-          {{ item.valor }} - {{ formatarData(item.createdAt) }}
-        </li>
-      </ul>
-    </div>
+    <!-- Conteúdo Principal -->
+    <v-row>
+      <!-- OPs Recentes -->
+      <v-col cols="12" lg="8">
+        <v-card class="h-100">
+          <v-card-title class="d-flex justify-space-between align-center">
+            <span class="text-h5">Ordens de Produção Recentes</span>
+            <v-btn 
+              color="primary" 
+              @click="navigateTo('/ops')" 
+              prepend-icon="mdi-plus"
+            >
+              Nova OP
+            </v-btn>
+          </v-card-title>
+          
+          <v-card-text>
+            <v-progress-linear 
+              v-if="loading" 
+              indeterminate 
+              color="primary"
+              class="mb-4"
+            ></v-progress-linear>
 
-    <!-- Mostrar mensagem quando não há itens -->
-    <div v-else-if="itens && itens.length === 0" class="no-items">
-      <p>Nenhum item salvo ainda.</p>
-    </div>
-  </div>
+            <v-alert 
+              v-else-if="recentOps.length === 0" 
+              type="info" 
+              variant="tonal"
+              class="my-4"
+            >
+              <template v-slot:prepend>
+                <v-icon color="info">mdi-information</v-icon>
+              </template>
+              Nenhuma ordem de produção encontrada.
+              <template v-slot:append>
+                <v-btn variant="text" color="info" @click="navigateTo('/ops')">
+                  Criar primeira OP
+                </v-btn>
+              </template>
+            </v-alert>
+
+            <v-row v-else>
+              <v-col 
+                v-for="op in recentOps" 
+                :key="op.id" 
+                cols="12" 
+                md="6"
+              >
+                <v-card variant="outlined" class="h-100">
+                  <v-card-item>
+                    <template v-slot:prepend>
+                      <v-avatar :color="getStatusColor(op?.status)" size="40">
+                        <v-icon icon="mdi-clipboard-list" color="white"></v-icon>
+                      </v-avatar>
+                    </template>
+                    
+                    <v-card-title class="text-h6">
+                      {{ op?.numeroOP || 'N/A' }}
+                    </v-card-title>
+                    
+                    <v-card-subtitle>
+                      {{ op?.descricaoMaquina || 'Descrição não informada' }}
+                    </v-card-subtitle>
+                  </v-card-item>
+
+                  <v-card-text>
+                    <div class="mb-2">
+                      <v-icon small class="mr-1">mdi-account</v-icon>
+                      <strong>Cliente:</strong> {{ op?.cliente || 'Não informado' }}
+                    </div>
+                    
+                    <div class="mb-2">
+                      <v-icon small class="mr-1">mdi-calendar</v-icon>
+                      <strong>Entrega:</strong> 
+                      {{ formatDate(op?.dataEntrega) || 'Não informada' }}
+                      <v-chip 
+                        v-if="op?.dataEntrega && isAtrasada(op.dataEntrega)" 
+                        size="small" 
+                        color="error" 
+                        class="ml-2"
+                      >
+                        Atrasada
+                      </v-chip>
+                    </div>
+
+                    <div class="mb-3">
+                      <div class="d-flex justify-space-between mb-1">
+                        <span>Progresso</span>
+                        <span class="font-weight-bold">{{ op?.progresso || 0 }}%</span>
+                      </div>
+                      <v-progress-linear 
+                        :model-value="op?.progresso || 0" 
+                        :color="getProgressColor(op?.progresso || 0)"
+                        height="8"
+                        rounded
+                      ></v-progress-linear>
+                    </div>
+
+                    <div class="d-flex justify-space-between align-center">
+                      <v-chip 
+                        :color="getStatusColor(op?.status)" 
+                        variant="flat" 
+                        size="small"
+                      >
+                        {{ op?.status || 'ABERTA' }}
+                      </v-chip>
+                      
+                      <v-btn 
+                        icon 
+                        variant="text" 
+                        size="small"
+                        @click="viewOP(op)"
+                      >
+                        <v-icon>mdi-chevron-right</v-icon>
+                      </v-btn>
+                    </div>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+            </v-row>
+          </v-card-text>
+        </v-card>
+      </v-col>
+
+      <!-- Ações Rápidas -->
+      <v-col cols="12" lg="4">
+        <v-card class="h-100">
+          <v-card-title class="text-h5">Ações Rápidas</v-card-title>
+          <v-card-text>
+            <v-list density="comfortable">
+              <v-list-item
+                v-for="action in quickActions"
+                :key="action.title"
+                :prepend-icon="action.icon"
+                :title="action.title"
+                @click="action.handler"
+                variant="tonal"
+                class="mb-2 rounded"
+              >
+              </v-list-item>
+            </v-list>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+  </v-container>
 </template>
 
 <script setup>
-// Verificar autenticação
-const user = ref(null)
-const itens = ref([]) // Inicializar como array vazio
+// Estado
+const stats = ref([
+  { 
+    title: 'OPs Abertas', 
+    value: 5, 
+    icon: 'mdi-clipboard-text-outline', 
+    color: 'blue',
+    action: () => navigateTo('/ops?status=ABERTA')
+  },
+  { 
+    title: 'Em Produção', 
+    value: 12, 
+    icon: 'mdi-cog', 
+    color: 'orange',
+    action: () => navigateTo('/ops?status=EM_FABRICACAO')
+  },
+  { 
+    title: 'Concluídas', 
+    value: 8, 
+    icon: 'mdi-check-circle', 
+    color: 'green',
+    action: () => navigateTo('/ops?status=ENTREGUE')
+  },
+  { 
+    title: 'Atrasadas', 
+    value: 2, 
+    icon: 'mdi-alert-circle', 
+    color: 'red',
+    action: () => navigateTo('/ops?status=ATRASADA')
+  }
+])
 
-onMounted(() => {
-  const userData = localStorage.getItem('user')
-  if (!userData) {
-    navigateTo('/login')
-    return
+const recentOps = ref([])
+const loading = ref(false)
+
+// Ações rápidas
+const quickActions = [
+  {
+    title: 'Nova Ordem de Produção',
+    icon: 'mdi-plus-circle',
+    handler: () => navigateTo('/ops?create=new')
+  },
+  {
+    title: 'Relatório de Produção',
+    icon: 'mdi-chart-bar',
+    handler: () => navigateTo('/relatorios')
+  },
+  {
+    title: 'Gerenciar Estoque',
+    icon: 'mdi-warehouse',
+    handler: () => navigateTo('/estoque')
+  },
+  {
+    title: 'Solicitar Compra',
+    icon: 'mdi-cart',
+    handler: () => navigateTo('/compras')
   }
-  
-  try {
-    user.value = JSON.parse(userData)
-    carregarItens()
-  } catch (error) {
-    console.error('Erro ao carregar usuário:', error)
-    navigateTo('/login')
-  }
+]
+
+// Carregar dados do dashboard
+onMounted(async () => {
+  await loadDashboardData()
 })
 
-// Função de logout
-const handleLogout = () => {
-  localStorage.removeItem('authToken')
-  localStorage.removeItem('user')
-  navigateTo('/login')
-}
-
-// Resto do código
-const valorInput = ref('')
-const carregando = ref(false)
-const mensagem = ref('')
-const isErro = ref(false)
-
-const salvarValor = async () => {
-  if (!valorInput.value.trim()) return
-
-  carregando.value = true
-  mensagem.value = ''
-  isErro.value = false
-
+const loadDashboardData = async () => {
+  loading.value = true
   try {
-    const response = await $fetch('/api/salvar', {
-      method: 'POST',
-      body: {
-        valor: valorInput.value
-      }
-    })
-
-    mensagem.value = 'Valor salvo com sucesso!'
-    valorInput.value = ''
+    // Carregar OPs recentes
+    const opsData = await $fetch('/api/ops/recent')
+    recentOps.value = Array.isArray(opsData) ? opsData : []
     
-    // Recarregar a lista
-    await carregarItens()
   } catch (error) {
-    console.error('Erro ao salvar:', error)
-    mensagem.value = 'Erro ao salvar o valor'
-    isErro.value = true
+    console.error('Erro ao carregar dados do dashboard:', error)
+    recentOps.value = []
   } finally {
-    carregando.value = false
+    loading.value = false
   }
 }
 
-// Função para carregar itens
-const carregarItens = async () => {
+// Utilitários
+const getStatusColor = (status) => {
+  const statusSafe = status || 'ABERTA'
+  const statusColors = {
+    'ABERTA': 'blue',
+    'EM_PROJETO': 'orange',
+    'EM_FABRICACAO': 'green',
+    'EM_MONTAGEM': 'purple',
+    'EM_TESTES': 'cyan',
+    'ENTREGUE': 'green',
+    'CANCELADA': 'red'
+  }
+  return statusColors[statusSafe] || 'grey'
+}
+
+const getProgressColor = (progresso) => {
+  const progressoSafe = progresso || 0
+  if (progressoSafe >= 80) return 'green'
+  if (progressoSafe >= 50) return 'orange'
+  return 'red'
+}
+
+const formatDate = (dateString) => {
+  if (!dateString) return 'Não informada'
   try {
-    const data = await $fetch('/api/itens')
-    itens.value = data || [] // Garantir que sempre seja um array
-  } catch (error) {
-    console.error('Erro ao carregar itens:', error)
-    itens.value = [] // Em caso de erro, definir como array vazio
+    return new Date(dateString).toLocaleDateString('pt-BR')
+  } catch {
+    return 'Data inválida'
   }
 }
 
-// Formatar data
-const formatarData = (dataString) => {
-  return new Date(dataString).toLocaleString('pt-BR')
+const isAtrasada = (dataEntrega) => {
+  if (!dataEntrega) return false
+  try {
+    return new Date(dataEntrega) < new Date()
+  } catch {
+    return false
+  }
+}
+
+const viewOP = (op) => {
+  if (op?.id) {
+    navigateTo(`/ops/${op.id}`)
+  }
 }
 </script>
 
 <style scoped>
-.container {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 20px;
-  font-family: Arial, sans-serif;
-}
-
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #eee;
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.logout-button {
-  padding: 0.5rem 1rem;
-  background-color: #dc3545;
-  color: white;
-  border: none;
-  border-radius: 4px;
+.stat-card {
+  transition: all 0.3s ease;
   cursor: pointer;
 }
 
-.logout-button:hover {
-  background-color: #c82333;
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
 }
 
-.form-container {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
+.h-100 {
+  height: 100%;
 }
 
-.input-field {
-  flex: 1;
-  min-width: 200px;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 16px;
-}
-
-.submit-button {
-  padding: 10px 20px;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 16px;
-}
-
-.submit-button:disabled {
-  background-color: #6c757d;
-  cursor: not-allowed;
-}
-
-.submit-button:hover:not(:disabled) {
-  background-color: #0056b3;
-}
-
-.mensagem {
-  padding: 10px;
-  margin-bottom: 20px;
-  border-radius: 4px;
-  background-color: #d4edda;
-  color: #155724;
-  border: 1px solid #c3e6cb;
-}
-
-.mensagem.erro {
-  background-color: #f8d7da;
-  color: #721c24;
-  border: 1px solid #f5c6cb;
-}
-
-.itens-salvos {
-  margin-top: 30px;
-}
-
-.itens-salvos h2 {
-  margin-bottom: 15px;
-}
-
-.item {
-  padding: 8px;
-  border-bottom: 1px solid #eee;
-}
-
-.item:last-child {
-  border-bottom: none;
-}
-
-.no-items {
-  margin-top: 30px;
-  text-align: center;
-  color: #6c757d;
-  font-style: italic;
+.fill-height {
+  min-height: calc(100vh - 200px);
 }
 </style>

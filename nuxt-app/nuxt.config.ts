@@ -1,4 +1,18 @@
 export default defineNuxtConfig({
   devtools: { enabled: true },
-  ssr: false
+  ssr: false,
+  
+  // CSS global - FORMA CORRETA para Vuetify 3
+  css: [
+    'vuetify/styles',
+    '@mdi/font/css/materialdesignicons.min.css'
+  ],
+  
+  // Build configuration
+  build: {
+    transpile: ['vuetify']
+  },
+  
+  // Configuração de compatibilidade
+  compatibilityDate: '2024-11-12'
 })

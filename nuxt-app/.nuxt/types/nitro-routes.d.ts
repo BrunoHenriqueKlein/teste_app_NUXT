@@ -9,11 +9,27 @@ declare module "nitropack/types" {
     '/api/auth/register': {
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/auth/register.post').default>>>>
     }
+    '/api/dashboard/stats': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/dashboard/stats.get').default>>>>
+    }
     '/api/itens': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/itens.get').default>>>>
     }
+    '/api/ops': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ops/index.get').default>>>>
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ops/index.post').default>>>>
+    }
+    '/api/ops/recent': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ops/recent.get').default>>>>
+    }
     '/api/salvar': {
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/salvar.post').default>>>>
+    }
+    '/api/user': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/user/index.get').default>>>>
+    }
+    '/api/user/modules': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/user/modules.get').default>>>>
     }
     '/__nuxt_error': {
       'default': Simplify<Serialize<Awaited<ReturnType<typeof import('../../node_modules/@nuxt/nitro-server/dist/runtime/handlers/renderer').default>>>>

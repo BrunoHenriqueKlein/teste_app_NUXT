@@ -2,21 +2,23 @@ FROM node:24-alpine
 
 WORKDIR /app
 
-# Instalar dependências do sistema se necessário
-RUN apk add --no-cache openssl
+# Instalar dependências do sistema
+RUN apk add --no-cache openssl python3 make g++ git
 
-# 1. Primeiro copiar APENAS os arquivos necessários para instalação
-COPY nuxt-app/package*.json ./
+# PRIMEIRO copiar os arquivos do Prisma
 COPY nuxt-app/prisma ./prisma/
 
-# 2. Instalar dependências
+# Copiar arquivos de dependências
+COPY nuxt-app/package*.json ./
+
+# Instalar dependências (agora o Prisma vai encontrar o schema)
 RUN npm install
 
-# 3. Copiar o restante da aplicação
+# FINALMENTE copiar o restante da aplicação
 COPY nuxt-app/ .
 
 # Expor a porta
 EXPOSE 3000
 
 # Comando para iniciar a aplicação
-CMD ["sh", "-c", "npx prisma db push && npm run dev"]
+CMD ["sh", "-c", "npx prisma db push --accept-data-loss && npx tsx prisma/seed.ts && npm run dev"]
