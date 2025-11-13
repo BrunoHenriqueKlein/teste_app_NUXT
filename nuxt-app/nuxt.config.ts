@@ -12,6 +12,11 @@ export default defineNuxtConfig({
   build: {
     transpile: ['vuetify']
   },
+
+  // Adicionar o plugin de máscara
+  plugins: [
+    '~/plugins/mask.ts'
+  ],
   
   // Configuração de compatibilidade
   compatibilityDate: '2024-11-12'

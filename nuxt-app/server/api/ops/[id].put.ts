@@ -5,30 +5,30 @@ const prisma = new PrismaClient()
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
+    const id = getRouterParam(event, 'id')
     
-    // Validar dados obrigatórios
-    if (!body.numeroOP || !body.codigoMaquina || !body.descricaoMaquina || 
-        !body.dataPedido || !body.dataEntrega || !body.cliente) {
+    if (!id) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Dados obrigatórios não informados'
+        statusMessage: 'ID da OP não informado'
       })
     }
     
-    // Verificar se número OP já existe
+    // Verificar se OP existe
     const existingOP = await prisma.oP.findUnique({
-      where: { numeroOP: body.numeroOP }
+      where: { id: parseInt(id) }
     })
     
-    if (existingOP) {
+    if (!existingOP) {
       throw createError({
-        statusCode: 400,
-        statusMessage: 'Número de OP já existe'
+        statusCode: 404,
+        statusMessage: 'OP não encontrada'
       })
     }
     
-    // Criar OP
-    const op = await prisma.oP.create({
+    // Atualizar OP
+    const op = await prisma.oP.update({
+      where: { id: parseInt(id) },
       data: {
         numeroOP: body.numeroOP,
         codigoMaquina: body.codigoMaquina,
@@ -39,9 +39,7 @@ export default defineEventHandler(async (event) => {
         cnpjCliente: body.cnpjCliente,
         enderecoCliente: body.enderecoCliente,
         observacoes: body.observacoes,
-        status: body.status || 'ABERTA',
-        progresso: 0,
-        criadoPorId: 1, // Em produção, pegar do usuário logado
+        status: body.status,
         responsavelId: body.responsavelId || null
       },
       include: {
@@ -56,17 +54,17 @@ export default defineEventHandler(async (event) => {
       data: {
         opId: op.id,
         usuarioId: 1, // Em produção, pegar do usuário logado
-        acao: 'OP criada',
-        detalhes: `Ordem de produção ${body.numeroOP} criada`
+        acao: 'OP atualizada',
+        detalhes: `Ordem de produção ${body.numeroOP} atualizada`
       }
     })
     
     return { success: true, op }
   } catch (error: any) {
-    console.error('Erro ao criar OP:', error)
+    console.error('Erro ao atualizar OP:', error)
     throw createError({
       statusCode: error.statusCode || 500,
-      statusMessage: error.message || 'Erro ao criar ordem de produção'
+      statusMessage: error.message || 'Erro ao atualizar ordem de produção'
     })
   }
 })

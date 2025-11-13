@@ -1870,6 +1870,8 @@ const _lazy_MyKlQu = () => Promise.resolve().then(function () { return login_pos
 const _lazy_wD64rD = () => Promise.resolve().then(function () { return register_post$1; });
 const _lazy_LHV_bL = () => Promise.resolve().then(function () { return stats_get$1; });
 const _lazy_Ht9XLv = () => Promise.resolve().then(function () { return itens_get$1; });
+const _lazy_5TbrLG = () => Promise.resolve().then(function () { return _id__delete$1; });
+const _lazy_CzQc1e = () => Promise.resolve().then(function () { return _id__put$1; });
 const _lazy_VPkvMQ = () => Promise.resolve().then(function () { return index_get$3; });
 const _lazy_zKWFxN = () => Promise.resolve().then(function () { return index_post$1; });
 const _lazy_qyGLAc = () => Promise.resolve().then(function () { return recent_get$1; });
@@ -1884,6 +1886,8 @@ const handlers = [
   { route: '/api/auth/register', handler: _lazy_wD64rD, lazy: true, middleware: false, method: "post" },
   { route: '/api/dashboard/stats', handler: _lazy_LHV_bL, lazy: true, middleware: false, method: "get" },
   { route: '/api/itens', handler: _lazy_Ht9XLv, lazy: true, middleware: false, method: "get" },
+  { route: '/api/ops/:id', handler: _lazy_5TbrLG, lazy: true, middleware: false, method: "delete" },
+  { route: '/api/ops/:id', handler: _lazy_CzQc1e, lazy: true, middleware: false, method: "put" },
   { route: '/api/ops', handler: _lazy_VPkvMQ, lazy: true, middleware: false, method: "get" },
   { route: '/api/ops', handler: _lazy_zKWFxN, lazy: true, middleware: false, method: "post" },
   { route: '/api/ops/recent', handler: _lazy_qyGLAc, lazy: true, middleware: false, method: "get" },
@@ -2230,11 +2234,11 @@ const styles$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
   default: styles
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$9 = new PrismaClient();
+const prisma$b = new PrismaClient();
 const login_post = defineEventHandler(async (event) => {
   const body = await readBody(event);
   try {
-    const user = await prisma$9.user.findUnique({
+    const user = await prisma$b.user.findUnique({
       where: {
         email: body.email
       }
@@ -2274,11 +2278,11 @@ const login_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProper
   default: login_post
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$8 = new PrismaClient();
+const prisma$a = new PrismaClient();
 const register_post = defineEventHandler(async (event) => {
   const body = await readBody(event);
   try {
-    const existingUser = await prisma$8.user.findUnique({
+    const existingUser = await prisma$a.user.findUnique({
       where: {
         email: body.email
       }
@@ -2289,7 +2293,7 @@ const register_post = defineEventHandler(async (event) => {
         statusMessage: "Usu\xE1rio j\xE1 existe"
       });
     }
-    const user = await prisma$8.user.create({
+    const user = await prisma$a.user.create({
       data: {
         name: body.name,
         email: body.email,
@@ -2318,23 +2322,23 @@ const register_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePro
   default: register_post
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$7 = new PrismaClient();
+const prisma$9 = new PrismaClient();
 const stats_get = defineEventHandler(async (event) => {
   try {
-    const opsAbertas = await prisma$7.oP.count({
+    const opsAbertas = await prisma$9.oP.count({
       where: { status: "ABERTA" }
     });
-    const opsProducao = await prisma$7.oP.count({
+    const opsProducao = await prisma$9.oP.count({
       where: {
         status: {
           in: ["EM_PROJETO", "EM_FABRICACAO", "EM_MONTAGEM"]
         }
       }
     });
-    const opsConcluidas = await prisma$7.oP.count({
+    const opsConcluidas = await prisma$9.oP.count({
       where: { status: "ENTREGUE" }
     });
-    const opsAtrasadas = await prisma$7.oP.count({
+    const opsAtrasadas = await prisma$9.oP.count({
       where: {
         dataEntrega: { lt: /* @__PURE__ */ new Date() },
         status: { not: "ENTREGUE" }
@@ -2362,10 +2366,10 @@ const stats_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePropert
   default: stats_get
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$6 = new PrismaClient();
+const prisma$8 = new PrismaClient();
 const itens_get = defineEventHandler(async (event) => {
   try {
-    const itens = await prisma$6.item.findMany({
+    const itens = await prisma$8.item.findMany({
       orderBy: {
         createdAt: "desc"
       }
@@ -2380,6 +2384,117 @@ const itens_get = defineEventHandler(async (event) => {
 const itens_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
   __proto__: null,
   default: itens_get
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const prisma$7 = new PrismaClient();
+const _id__delete = defineEventHandler(async (event) => {
+  try {
+    const id = getRouterParam(event, "id");
+    if (!id) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: "ID da OP n\xE3o informado"
+      });
+    }
+    const existingOP = await prisma$7.oP.findUnique({
+      where: { id: parseInt(id) }
+    });
+    if (!existingOP) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: "OP n\xE3o encontrada"
+      });
+    }
+    await prisma$7.oP.delete({
+      where: { id: parseInt(id) }
+    });
+    await prisma$7.oPHistorico.create({
+      data: {
+        opId: parseInt(id),
+        usuarioId: 1,
+        // Em produção, pegar do usuário logado
+        acao: "OP exclu\xEDda",
+        detalhes: `Ordem de produ\xE7\xE3o ${existingOP.numeroOP} exclu\xEDda`
+      }
+    });
+    return { success: true, message: "OP exclu\xEDda com sucesso" };
+  } catch (error) {
+    console.error("Erro ao excluir OP:", error);
+    throw createError({
+      statusCode: error.statusCode || 500,
+      statusMessage: error.message || "Erro ao excluir ordem de produ\xE7\xE3o"
+    });
+  }
+});
+
+const _id__delete$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: _id__delete
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const prisma$6 = new PrismaClient();
+const _id__put = defineEventHandler(async (event) => {
+  try {
+    const body = await readBody(event);
+    const id = getRouterParam(event, "id");
+    if (!id) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: "ID da OP n\xE3o informado"
+      });
+    }
+    const existingOP = await prisma$6.oP.findUnique({
+      where: { id: parseInt(id) }
+    });
+    if (!existingOP) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: "OP n\xE3o encontrada"
+      });
+    }
+    const op = await prisma$6.oP.update({
+      where: { id: parseInt(id) },
+      data: {
+        numeroOP: body.numeroOP,
+        codigoMaquina: body.codigoMaquina,
+        descricaoMaquina: body.descricaoMaquina,
+        dataPedido: new Date(body.dataPedido),
+        dataEntrega: new Date(body.dataEntrega),
+        cliente: body.cliente,
+        cnpjCliente: body.cnpjCliente,
+        enderecoCliente: body.enderecoCliente,
+        observacoes: body.observacoes,
+        status: body.status,
+        responsavelId: body.responsavelId || null
+      },
+      include: {
+        responsavel: {
+          select: { name: true }
+        }
+      }
+    });
+    await prisma$6.oPHistorico.create({
+      data: {
+        opId: op.id,
+        usuarioId: 1,
+        // Em produção, pegar do usuário logado
+        acao: "OP atualizada",
+        detalhes: `Ordem de produ\xE7\xE3o ${body.numeroOP} atualizada`
+      }
+    });
+    return { success: true, op };
+  } catch (error) {
+    console.error("Erro ao atualizar OP:", error);
+    throw createError({
+      statusCode: error.statusCode || 500,
+      statusMessage: error.message || "Erro ao atualizar ordem de produ\xE7\xE3o"
+    });
+  }
+});
+
+const _id__put$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: _id__put
 }, Symbol.toStringTag, { value: 'Module' }));
 
 const prisma$5 = new PrismaClient();
@@ -2446,11 +2561,25 @@ const index_post = defineEventHandler(async (event) => {
     }
     const op = await prisma$4.oP.create({
       data: {
-        ...body,
+        numeroOP: body.numeroOP,
+        codigoMaquina: body.codigoMaquina,
+        descricaoMaquina: body.descricaoMaquina,
+        dataPedido: new Date(body.dataPedido),
+        dataEntrega: new Date(body.dataEntrega),
+        cliente: body.cliente,
+        cnpjCliente: body.cnpjCliente,
+        enderecoCliente: body.enderecoCliente,
+        observacoes: body.observacoes,
+        status: body.status || "ABERTA",
+        progresso: 0,
         criadoPorId: 1,
         // Em produção, pegar do usuário logado
-        dataPedido: new Date(body.dataPedido),
-        dataEntrega: new Date(body.dataEntrega)
+        responsavelId: body.responsavelId || null
+      },
+      include: {
+        responsavel: {
+          select: { name: true }
+        }
       }
     });
     await prisma$4.oPHistorico.create({
@@ -2466,8 +2595,8 @@ const index_post = defineEventHandler(async (event) => {
   } catch (error) {
     console.error("Erro ao criar OP:", error);
     throw createError({
-      statusCode: 500,
-      statusMessage: "Erro ao criar ordem de produ\xE7\xE3o"
+      statusCode: error.statusCode || 500,
+      statusMessage: error.message || "Erro ao criar ordem de produ\xE7\xE3o"
     });
   }
 });
