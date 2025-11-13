@@ -105,14 +105,19 @@ enum OPStatus {
 model OPProcesso {
   id          Int       @id @default(autoincrement())
   opId        Int
-  nome        String
+  nome        String    // Nome do processo
   descricao   String?
-  sequencia   Int
+  sequencia   Int       // Ordem de execução
   status      ProcessoStatus @default(NAO_INICIADO)
-  progresso   Int       @default(0)
-  prazoEstimado Int?
+  progresso   Int       @default(0) // 0-100%
+  
+  // Datas e prazos
+  prazoEstimado Int?    // Dias para conclusão
   dataInicio   DateTime?
   dataFim      DateTime?
+  dataPrevista DateTime? // Data prevista para conclusão
+  
+  // Responsável
   responsavelId Int?
 
   // Relações
