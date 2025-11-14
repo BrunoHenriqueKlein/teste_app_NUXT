@@ -19,14 +19,15 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relações
-  createdOPs      OP[]           @relation("OP_CriadaPor")
-  responsibleOPs  OP[]           @relation("OP_Responsavel")
-  opProcessos     OPProcesso[]   @relation("Processo_Responsavel")
-  userModules     UserModule[]
-  movimentacoes   EstoqueMovimentacao[]
-  historico       OPHistorico[]
-  arquivos        Arquivo[]
+  // Relações COMPLETAS
+  createdOPs          OP[]                   @relation("OP_CriadaPor")
+  responsibleOPs      OP[]                   @relation("OP_Responsavel")
+  opProcessos         OPProcesso[]           @relation("Processo_Responsavel")
+  userModules         UserModule[]
+  processoHistorico   ProcessoHistorico[]    @relation("ProcessoHistorico_Usuario")
+  estoqueMovimentacoes EstoqueMovimentacao[] @relation("EstoqueMovimentacao_Usuario")
+  opHistorico         OPHistorico[]          @relation("OPHistorico_Usuario")
+  arquivos            Arquivo[]              @relation("Arquivo_Usuario")
 
   @@map("users")
 }
@@ -105,24 +106,21 @@ enum OPStatus {
 model OPProcesso {
   id          Int       @id @default(autoincrement())
   opId        Int
-  nome        String    // Nome do processo
+  nome        String
   descricao   String?
-  sequencia   Int       // Ordem de execução
+  sequencia   Int
   status      ProcessoStatus @default(NAO_INICIADO)
-  progresso   Int       @default(0) // 0-100%
-  
-  // Datas e prazos
-  prazoEstimado Int?    // Dias para conclusão
+  progresso   Int       @default(0)
+  prazoEstimado Int?
   dataInicio   DateTime?
   dataFim      DateTime?
-  dataPrevista DateTime? // Data prevista para conclusão
-  
-  // Responsável
+  dataPrevista DateTime?
   responsavelId Int?
 
   // Relações
   op          OP        @relation(fields: [opId], references: [id])
   responsavel User?     @relation("Processo_Responsavel", fields: [responsavelId], references: [id])
+  historico   ProcessoHistorico[]
 
   @@map("op_processos")
 }
@@ -133,6 +131,23 @@ enum ProcessoStatus {
   AGUARDANDO
   CONCLUIDO
   BLOQUEADO
+  CANCELADO
+}
+
+// ==================== HISTÓRICO DE PROCESSOS ====================
+model ProcessoHistorico {
+  id          Int       @id @default(autoincrement())
+  processoId  Int
+  usuarioId   Int
+  acao        String
+  detalhes    String?
+  createdAt   DateTime  @default(now())
+
+  // Relações
+  processo    OPProcesso @relation(fields: [processoId], references: [id])
+  usuario     User      @relation("ProcessoHistorico_Usuario", fields: [usuarioId], references: [id])
+
+  @@map("processo_historico")
 }
 
 // ==================== PEÇAS DO EQUIPAMENTO ====================
@@ -212,7 +227,7 @@ model EstoqueMovimentacao {
   // Relações
   estoque     Estoque   @relation(fields: [estoqueId], references: [id])
   op          OP?       @relation(fields: [opId], references: [id])
-  usuario     User      @relation(fields: [usuarioId], references: [id])
+  usuario     User      @relation("EstoqueMovimentacao_Usuario", fields: [usuarioId], references: [id])
 
   createdAt   DateTime  @default(now())
 
@@ -311,7 +326,7 @@ model OPHistorico {
 
   // Relações
   op          OP        @relation(fields: [opId], references: [id])
-  usuario     User      @relation(fields: [usuarioId], references: [id])
+  usuario     User      @relation("OPHistorico_Usuario", fields: [usuarioId], references: [id])
 
   @@map("op_historico")
 }
@@ -328,7 +343,7 @@ model Arquivo {
 
   // Relações
   op          OP?       @relation(fields: [opId], references: [id])
-  usuario     User      @relation(fields: [usuarioId], references: [id])
+  usuario     User      @relation("Arquivo_Usuario", fields: [usuarioId], references: [id])
 
   createdAt   DateTime  @default(now())
 
