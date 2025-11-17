@@ -16,6 +16,16 @@
                 >
                   <v-icon>mdi-arrow-left</v-icon>
                 </v-btn>
+                <v-btn 
+                  icon 
+                  variant="text" 
+                  color="white" 
+                  class="mr-2"
+                  @click="$router.push(`/ops/${route.params.id}`)"
+                  title="Ver Dashboard"
+                >
+                  <v-icon>mdi-chart-timeline</v-icon>
+                </v-btn>
                 <h1 class="text-h4 font-weight-bold">Processos da OP</h1>
               </div>
               <p class="text-body-1">

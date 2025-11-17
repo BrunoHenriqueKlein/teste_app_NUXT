@@ -621,12 +621,12 @@ const editOP = (op) => {
 
 const viewOP = (op) => {
   // Navegação forçada
-  window.location.href = `/ops/${op.id}`
+  navigateTo(`/ops/${op.id}`)
 }
 
 const viewProcessos = (op) => {
   // Navegação forçada
-  window.location.href = `/ops/${op.id}/processos`
+  navigateTo(`/ops/${op.id}/processos`)
 }
 
 const deleteOP = (op) => {
