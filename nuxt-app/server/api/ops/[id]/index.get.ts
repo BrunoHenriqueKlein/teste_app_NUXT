@@ -4,7 +4,19 @@ const prisma = new PrismaClient()
 
 export default defineEventHandler(async (event) => {
   try {
-    const ops = await prisma.oP.findMany({
+    const opId = getRouterParam(event, 'id')
+    
+    if (!opId) {
+      throw createError({
+        statusCode: 400,
+        message: 'ID da OP não informado'
+      })
+    }
+
+    const op = await prisma.oP.findUnique({
+      where: {
+        id: parseInt(opId)
+      },
       include: {
         criadoPor: {
           select: {
@@ -20,15 +32,19 @@ export default defineEventHandler(async (event) => {
             email: true
           }
         }
-      },
-      orderBy: {
-        dataCriacao: 'desc'
       }
     })
 
-    return ops
+    if (!op) {
+      throw createError({
+        statusCode: 404,
+        message: 'OP não encontrada'
+      })
+    }
+
+    return op
   } catch (error) {
-    console.error('Erro ao carregar OPs:', error)
+    console.error('Erro ao carregar OP:', error)
     throw createError({
       statusCode: 500,
       message: 'Erro interno do servidor'

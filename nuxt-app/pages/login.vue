@@ -1,19 +1,19 @@
 <template>
   <v-app>
     <v-main>
-      <v-container fluid class="fill-height pa-0">
+      <v-container fluid class="fill-height pa-0 d-flex align-center justify-center login-container">
         <v-row no-gutters class="fill-height">
-          <!-- Lado Esquerdo - Formulário -->
-          <v-col cols="12" md="6" class="d-flex align-center justify-center">
-            <v-card variant="flat" class="pa-8" max-width="450">
+          <v-col cols="12" class="d-flex align-center justify-center">
+            <v-card variant="flat" class="pa-8 mx-auto custom-card glass-effect" max-width="450" width="100%">
               <v-card-text class="text-center pa-0">
-                <v-icon 
-                  icon="mdi-factory" 
-                  size="64" 
-                  color="primary" 
-                  class="mb-4"
-                ></v-icon>
-                <h1 class="text-h4 font-weight-bold mb-2">Sistema de Produção</h1>
+                <v-img
+                  :src="logo"
+                  alt="Logo SOMEH"
+                  :width="250"
+                  :height="120"
+                  class="mx-auto mb-4"
+                  contain
+                />
                 <p class="text-body-1 text-medium-emphasis mb-6">
                   Faça login para acessar o sistema
                 </p>
@@ -63,7 +63,7 @@
                 v-if="error"
                 type="error"
                 variant="tonal"
-                class="mt-4"
+                class="mt-4 custom-card"
               >
                 {{ error }}
               </v-alert>
@@ -81,28 +81,15 @@
               </div>
             </v-card>
           </v-col>
-
-          <!-- Lado Direito - Banner -->
-          <v-col cols="12" md="6" class="d-none d-md-flex">
-            <div class="login-banner fill-height d-flex align-center justify-center">
-              <div class="text-center text-white pa-8">
-                <v-icon icon="mdi-cog" size="80" class="mb-4"></v-icon>
-                <h2 class="text-h3 font-weight-bold mb-4">Controle de Produção</h2>
-                <p class="text-h6 font-weight-regular">
-                  Gerencie suas ordens de produção de forma eficiente
-                </p>
-              </div>
-            </div>
-          </v-col>
         </v-row>
       </v-container>
 
       <!-- Dialog de Registro -->
       <v-dialog v-model="showRegister" max-width="500">
-        <v-card>
+        <v-card class="custom-card">
           <v-card-title class="d-flex justify-space-between align-center">
             <span class="text-h5">Criar Conta</span>
-            <v-btn icon @click="showRegister = false">
+            <v-btn icon @click="showRegister = false" class="custom-card">
               <v-icon>mdi-close</v-icon>
             </v-btn>
           </v-card-title>
@@ -143,6 +130,7 @@
                   variant="outlined"
                   block
                   @click="showRegister = false"
+                  class="custom-card"
                 >
                   Cancelar
                 </v-btn>
@@ -151,6 +139,7 @@
                   color="primary"
                   block
                   :loading="loading"
+                  class="custom-card"
                 >
                   Cadastrar
                 </v-btn>
@@ -167,6 +156,9 @@
 definePageMeta({
   layout: false
 })
+
+// Importar a logo
+import logo from '@/assets/imagens/logo-someh-fundo-claro.png'
 
 // Estado do login
 const email = ref('')
@@ -237,8 +229,8 @@ const handleRegister = async () => {
 </script>
 
 <style scoped>
-.login-banner {
-  background: linear-gradient(135deg, var(--v-primary-base), var(--v-secondary-base));
+.login-container {
+  background: linear-gradient(135deg, #1867C0, #5CBBF6) !important;
 }
 
 .fill-height {
@@ -247,5 +239,12 @@ const handleRegister = async () => {
 
 .gap-2 {
   gap: 8px;
+}
+
+/* Melhorando o efeito glass */
+.glass-effect {
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
 }
 </style>

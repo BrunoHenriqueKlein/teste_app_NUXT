@@ -9,6 +9,9 @@ declare module "nitropack/types" {
     '/api/auth/register': {
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/auth/register.post').default>>>>
     }
+    '/api/clean/processos': {
+      'delete': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/clean/processos.delete').default>>>>
+    }
     '/api/dashboard/stats': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/dashboard/stats.get').default>>>>
     }
@@ -18,6 +21,7 @@ declare module "nitropack/types" {
     '/api/ops/:id': {
       'delete': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ops/[id].delete').default>>>>
       'put': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ops/[id].put').default>>>>
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ops/[id]/index.get').default>>>>
     }
     '/api/ops/:id/:processoId': {
       'delete': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ops/[id]/[processoId].delete').default>>>>
@@ -25,6 +29,14 @@ declare module "nitropack/types" {
     }
     '/api/ops/:id/actions': {
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ops/[id]/actions.post').default>>>>
+    }
+    '/api/ops/:id/processos/:processoId': {
+      'delete': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ops/[id]/processos/[processoId]/index.delete').default>>>>
+      'put': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ops/[id]/processos/[processoId]/index.put').default>>>>
+    }
+    '/api/ops/:id/processos': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ops/[id]/processos/index.get').default>>>>
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ops/[id]/processos/index.post').default>>>>
     }
     '/api/ops': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ops/index.get').default>>>>

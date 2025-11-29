@@ -118,64 +118,12 @@ async function main() {
 
     console.log('✅ OPs de exemplo criadas')
 
-    // 5. Criar processos padrão para as OPs
-    const ops = await prisma.oP.findMany()
-
-    for (const op of ops) {
-      const processosPadrao = [
-        {
-          nome: 'Lançamento da OP no Sistema',
-          descricao: 'Registrar a OP no sistema de produção',
-          sequencia: 1,
-          status: 'CONCLUIDO' as const,
-          progresso: 100,
-          dataInicio: new Date('2024-01-15T08:00:00'),
-          dataFim: new Date('2024-01-15T08:30:00'),
-          responsavelId: adminUser.id
-        },
-        {
-          nome: 'Criação da Pasta do Projeto',
-          descricao: 'Criar estrutura de pastas para documentação',
-          sequencia: 2,
-          status: 'CONCLUIDO' as const,
-          progresso: 100,
-          dataInicio: new Date('2024-01-15T09:00:00'),
-          dataFim: new Date('2024-01-15T10:00:00'),
-          responsavelId: gerente.id
-        },
-        {
-          nome: 'Projeto Mecânico 3D',
-          descricao: 'Desenvolver projeto 3D da máquina',
-          sequencia: 3,
-          status: 'EM_ANDAMENTO' as const,
-          progresso: 65,
-          dataInicio: new Date('2024-01-16T08:00:00'),
-          dataPrevista: new Date('2024-02-15'),
-          prazoEstimado: 30,
-          responsavelId: engenheiro.id
-        },
-        {
-          nome: 'Detalhamento de Peças',
-          descricao: 'Criar desenhos de fabricação',
-          sequencia: 4,
-          status: 'NAO_INICIADO' as const,
-          progresso: 0,
-          dataPrevista: new Date('2024-02-20'),
-          prazoEstimado: 15
-        }
-      ]
-
-      for (const processoData of processosPadrao) {
-        await prisma.oPProcesso.create({
-          data: {
-            opId: op.id,
-            ...processoData
-          }
-        })
-      }
-    }
-
-    console.log(`✅ Processos padrão criados para ${ops.length} OPs`)
+    // 5. ✅ SEÇÃO COMENTADA - Não criar processos automáticos
+    /*
+    // Esta seção foi comentada para evitar criação automática de processos
+    // Os processos agora serão criados manualmente pelo usuário
+    console.log('ℹ️  Processos não criados automaticamente - crie manualmente')
+    */
 
     // 6. Dar acesso total a todos módulos para o admin
     const allModules = await prisma.module.findMany()
@@ -206,7 +154,7 @@ async function main() {
     console.log(`👤 Usuário gerente: gerente@empresa.com / gerente123`)
     console.log(`👤 Usuário engenheiro: engenheiro@empresa.com / engenheiro123`)
     console.log(`📋 ${opsExemplo.length} OPs de exemplo criadas`)
-    console.log(`⚙️ Processos padrão criados para cada OP`)
+    console.log(`⚙️ Processos: Crie manualmente conforme necessidade`)
 
   } catch (error) {
     console.error('❌ Erro durante o seed:', error)

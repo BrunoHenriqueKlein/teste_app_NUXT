@@ -4,54 +4,60 @@ const prisma = new PrismaClient()
 
 export default defineEventHandler(async (event) => {
   try {
-    const opId = getRouterParam(event, 'id')
     const body = await readBody(event)
     
-    if (!opId) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'ID da OP não informado'
-      })
-    }
-
     // Validar dados obrigatórios
-    if (!body.nome || !body.sequencia) {
+    if (!body.numeroOP || !body.descricaoMaquina || !body.cliente) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Nome e sequência são obrigatórios'
+        message: 'Número da OP, descrição e cliente são obrigatórios'
       })
     }
 
-    // Verificar se a sequência já existe
-    const existingProcesso = await prisma.oPProcesso.findFirst({
+    // Verificar se número da OP já existe
+    const existingOP = await prisma.oP.findFirst({
       where: {
-        opId: parseInt(opId),
-        sequencia: body.sequencia
+        numeroOP: body.numeroOP
       }
     })
 
-    if (existingProcesso) {
+    if (existingOP) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Já existe um processo com esta sequência'
+        message: 'Já existe uma OP com este número'
       })
     }
 
-    // Criar processo
-    const processo = await prisma.oPProcesso.create({
+    // 🔥 SOLUÇÃO TEMPORÁRIA - Pegar o primeiro usuário do banco
+    const primeiroUsuario = await prisma.user.findFirst({
+      select: { id: true }
+    })
+
+    if (!primeiroUsuario) {
+      throw createError({
+        statusCode: 400,
+        message: 'Nenhum usuário encontrado no sistema'
+      })
+    }
+
+    // Criar OP com usuário válido
+    const op = await prisma.oP.create({
       data: {
-        opId: parseInt(opId),
-        nome: body.nome,
-        descricao: body.descricao,
-        sequencia: body.sequencia,
-        status: body.status || 'NAO_INICIADO',
+        numeroOP: body.numeroOP,
+        codigoMaquina: body.codigoMaquina,
+        descricaoMaquina: body.descricaoMaquina,
+        dataPedido: body.dataPedido ? new Date(body.dataPedido) : null,
+        dataEntrega: body.dataEntrega ? new Date(body.dataEntrega) : null,
+        cliente: body.cliente,
+        cnpjCliente: body.cnpjCliente,
+        enderecoCliente: body.enderecoCliente,
+        observacoes: body.observacoes,
+        status: body.status || 'ABERTA',
         progresso: body.progresso || 0,
-        prazoEstimado: body.prazoEstimado,
-        dataPrevista: body.dataPrevista ? new Date(body.dataPrevista) : null,
-        responsavelId: body.responsavelId
+        criadoPorId: primeiroUsuario.id // ✅ Usar usuário válido
       },
       include: {
-        responsavel: {
+        criadoPor: {
           select: {
             id: true,
             name: true,
@@ -62,21 +68,21 @@ export default defineEventHandler(async (event) => {
     })
 
     // Criar histórico
-    await prisma.processoHistorico.create({
+    await prisma.oPHistorico.create({
       data: {
-        processoId: processo.id,
-        usuarioId: 1, // Em produção, pegar do usuário logado
-        acao: 'Processo criado',
-        detalhes: `Processo "${body.nome}" criado na OP ${opId}`
+        opId: op.id,
+        usuarioId: primeiroUsuario.id,
+        acao: 'OP criada',
+        detalhes: `OP ${body.numeroOP} criada no sistema`
       }
     })
 
-    return { success: true, processo }
+    return { success: true, op }
   } catch (error: any) {
-    console.error('Erro ao criar processo:', error)
+    console.error('Erro ao criar OP:', error)
     throw createError({
       statusCode: error.statusCode || 500,
-      statusMessage: error.message || 'Erro ao criar processo'
+      message: error.message || 'Erro ao criar OP'
     })
   }
 })

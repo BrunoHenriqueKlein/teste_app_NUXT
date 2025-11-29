@@ -496,54 +496,23 @@ watch(() => route.query, (newQuery) => {
   loadOPs()
 })
 
-// Carregar OPs
+// ✅ CORREÇÃO - Carregar OPs da API real
 const loadOPs = async () => {
   loading.value = true
   error.value = ''
   
   try {
-    console.log('📡 Carregando OPs...')
+    console.log('📡 Carregando OPs da API...')
     
-    // Dados mock para demonstração
-    ops.value = [
-      {
-        id: 1,
-        numeroOP: 'OP-2024-001',
-        codigoMaquina: 'MEC-001',
-        descricaoMaquina: 'Máquina de Corte CNC 3000',
-        status: route.query.status || 'EM_PROJETO',
-        progresso: 25,
-        cliente: 'Indústria Metalúrgica ABC',
-        dataEntrega: '2024-06-30',
-        responsavel: { name: 'João Silva' }
-      },
-      {
-        id: 2,
-        numeroOP: 'OP-2024-002',
-        codigoMaquina: 'MEC-002', 
-        descricaoMaquina: 'Prensa Hidráulica 50T',
-        status: 'EM_FABRICACAO',
-        progresso: 60,
-        cliente: 'Fábrica de Componentes XYZ',
-        dataEntrega: '2024-05-15',
-        responsavel: { name: 'Maria Santos' }
-      },
-      {
-        id: 3,
-        numeroOP: 'OP-2024-003',
-        codigoMaquina: 'MEC-003',
-        descricaoMaquina: 'Esteira Transportadora Industrial',
-        status: 'ABERTA',
-        progresso: 10,
-        cliente: 'Logística Rápida Ltda',
-        dataEntrega: '2024-08-20'
-      }
-    ]
+    // Buscar da API real
+    const data = await $fetch('/api/ops')
+    ops.value = Array.isArray(data) ? data : []
     
     console.log('✅ OPs carregadas:', ops.value.length)
   } catch (err) {
     console.error('❌ Erro ao carregar OPs:', err)
-    error.value = err.message || 'Erro ao carregar OPs'
+    error.value = err.data?.message || err.message || 'Erro ao carregar OPs'
+    ops.value = []
   } finally {
     loading.value = false
   }
@@ -592,7 +561,7 @@ const isAtrasada = (dataEntrega) => {
   return new Date(dataEntrega) < new Date()
 }
 
-// Ações
+// Ações - VERSÃO CORRIGIDA
 const openCreateDialog = () => {
   editingOP.value = null
   formOP.value = {
@@ -619,37 +588,18 @@ const editOP = (op) => {
   showOPDialog.value = true
 }
 
+// ✅ CORREÇÃO - Estas funções devem existir
 const viewOP = (op) => {
-  // Navegação forçada
-  navigateTo(`/ops/${op.id}`)
+  navigateTo(`/ops/${op.id}`)  // → Dashboard Gantt
 }
 
 const viewProcessos = (op) => {
-  // Navegação forçada
-  navigateTo(`/ops/${op.id}/processos`)
+  navigateTo(`/ops/${op.id}/processos`)  // → Gestão de processos
 }
 
 const deleteOP = (op) => {
   opToDelete.value = op
   showDeleteDialog.value = true
-}
-
-const confirmDelete = async () => {
-  if (!opToDelete.value) return
-  
-  deleting.value = true
-  try {
-    // Simular exclusão
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    ops.value = ops.value.filter(op => op.id !== opToDelete.value.id)
-    showDeleteDialog.value = false
-    opToDelete.value = null
-  } catch (err) {
-    console.error('Erro ao excluir OP:', err)
-    alert('Erro ao excluir OP')
-  } finally {
-    deleting.value = false
-  }
 }
 
 const closeDialog = () => {
@@ -674,31 +624,73 @@ const saveOP = async () => {
 
   saving.value = true
   try {
-    // Simular salvamento
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
     if (editingOP.value) {
-      // Atualizar OP existente
+      // ✅ ATUALIZAR OP existente - ENVIAR ID
+      const data = await $fetch(`/api/ops/${editingOP.value.id}`, {
+        method: 'PUT',
+        body: {
+          ...formOP.value,
+          id: editingOP.value.id // Garantir que o ID está sendo enviado
+        }
+      })
+      
       const index = ops.value.findIndex(op => op.id === editingOP.value.id)
       if (index !== -1) {
-        ops.value[index] = { ...editingOP.value, ...formOP.value }
+        ops.value[index] = data
       }
     } else {
-      // Criar nova OP
-      const newOP = {
-        id: Date.now(),
-        ...formOP.value,
-        responsavel: { name: 'Usuário Atual' }
-      }
-      ops.value.unshift(newOP)
+      // ✅ CRIAR nova OP - NÃO ENVIAR ID (deve ser gerado pelo servidor)
+      const data = await $fetch('/api/ops', {
+        method: 'POST',
+        body: {
+          // ❌ NÃO enviar id para criação
+          numeroOP: formOP.value.numeroOP,
+          codigoMaquina: formOP.value.codigoMaquina,
+          descricaoMaquina: formOP.value.descricaoMaquina,
+          dataPedido: formOP.value.dataPedido,
+          dataEntrega: formOP.value.dataEntrega,
+          cliente: formOP.value.cliente,
+          cnpjCliente: formOP.value.cnpjCliente,
+          enderecoCliente: formOP.value.enderecoCliente,
+          observacoes: formOP.value.observacoes,
+          status: formOP.value.status,
+          progresso: formOP.value.progresso
+          // id: formOP.value.id // ⚠️ REMOVER esta linha se existir
+        }
+      })
+      
+      ops.value.unshift(data)
     }
     
     closeDialog()
   } catch (err) {
     console.error('Erro ao salvar OP:', err)
-    alert('Erro ao salvar OP: ' + err.message)
+    alert('Erro ao salvar OP: ' + err.data?.message || err.message)
   } finally {
     saving.value = false
+  }
+}
+
+const confirmDelete = async () => {
+  if (!opToDelete.value) return
+  
+  deleting.value = true
+  try {
+    // ✅ EXCLUIR OP da API
+    await $fetch(`/api/ops/${opToDelete.value.id}`, {
+      method: 'DELETE'
+    })
+    
+    // Remover da lista local
+    ops.value = ops.value.filter(op => op.id !== opToDelete.value.id)
+    showDeleteDialog.value = false
+    opToDelete.value = null
+    
+  } catch (err) {
+    console.error('Erro ao excluir OP:', err)
+    alert('Erro ao excluir OP: ' + err.data?.message || err.message)
+  } finally {
+    deleting.value = false
   }
 }
 </script>

@@ -301,9 +301,7 @@ const isAtrasada = (dataEntrega) => {
 }
 
 const viewOP = (op) => {
-  if (op?.id) {
-    navigateTo(`/ops/${op.id}`)
-  }
+  navigateTo(`/ops/${op.id}`)  // → Dashboard Gantt
 }
 </script>
 
