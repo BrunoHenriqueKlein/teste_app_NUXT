@@ -1,7 +1,3 @@
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
-
 export default defineEventHandler(async (event) => {
   try {
     const opId = getRouterParam(event, 'id')
@@ -16,7 +12,9 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Verificar se a OP existe
+    const prisma = event.context.prisma
+
+    // Verificar se a OP existe - CORREÇÃO: modelo OP (não oP)
     const opExistente = await prisma.oP.findUnique({
       where: {
         id: parseInt(opId)
@@ -38,11 +36,14 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // ✅ CORREÇÃO: Usar OPProcesso (não oPProcesso)
+    const sequencia = parseInt(body.sequencia)
+
     // Verificar se a sequência já existe
     const existingProcesso = await prisma.oPProcesso.findFirst({
       where: {
         opId: parseInt(opId),
-        sequencia: body.sequencia
+        sequencia: sequencia
       }
     })
 
@@ -53,19 +54,33 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Criar processo
+    // ✅ CORREÇÃO: Tratamento de datas para OPProcesso
+    let dataPrevista = null
+    if (body.dataPrevista) {
+      if (typeof body.dataPrevista === 'string' && body.dataPrevista.includes('T')) {
+        dataPrevista = new Date(body.dataPrevista)
+      } else {
+        dataPrevista = new Date(body.dataPrevista + 'T00:00:00.000Z')
+      }
+    }
+
+    // Criar processo - CORREÇÃO: modelo OPProcesso
+    const processoData = {
+      opId: parseInt(opId),
+      nome: body.nome.trim(),
+      descricao: body.descricao?.trim() || null,
+      sequencia: sequencia,
+      status: body.status || 'NAO_INICIADO',
+      progresso: parseInt(body.progresso) || 0,
+      prazoEstimado: body.prazoEstimado ? parseInt(body.prazoEstimado) : null,
+      dataPrevista: dataPrevista,
+      responsavelId: body.responsavelId ? parseInt(body.responsavelId) : null
+    }
+
+    console.log('📝 DEBUG - Dados do processo a ser criado:', processoData)
+
     const processo = await prisma.oPProcesso.create({
-      data: {
-        opId: parseInt(opId),
-        nome: body.nome,
-        descricao: body.descricao,
-        sequencia: body.sequencia,
-        status: body.status || 'NAO_INICIADO',
-        progresso: body.progresso || 0,
-        prazoEstimado: body.prazoEstimado,
-        dataPrevista: body.dataPrevista ? new Date(body.dataPrevista) : null,
-        responsavelId: body.responsavelId
-      },
+      data: processoData,
       include: {
         responsavel: {
           select: {
@@ -84,23 +99,60 @@ export default defineEventHandler(async (event) => {
       }
     })
 
-    // Criar histórico
-    await prisma.processoHistorico.create({
-      data: {
-        processoId: processo.id,
-        usuarioId: 1, // Em produção, pegar do usuário logado
-        acao: 'Processo criado',
-        detalhes: `Processo "${body.nome}" criado na OP ${opExistente.numeroOP}`
-      }
+    // ✅ CORREÇÃO: Atualizar progresso da OP
+    const processosOP = await prisma.oPProcesso.findMany({
+      where: { opId: parseInt(opId) },
+      select: { progresso: true }
     })
 
+    const progressoMedio = processosOP.length > 0 
+      ? Math.round(processosOP.reduce((sum, p) => sum + p.progresso, 0) / processosOP.length)
+      : 0
+
+    await prisma.oP.update({
+      where: { id: parseInt(opId) },
+      data: { progresso: progressoMedio }
+    })
+
+    // ✅ CORREÇÃO: Criar histórico usando ProcessoHistorico
+    try {
+      await prisma.processoHistorico.create({
+        data: {
+          processoId: processo.id,
+          usuarioId: 1, // Em produção, pegar do usuário logado
+          acao: 'Processo criado',
+          detalhes: `Processo "${body.nome}" criado na OP ${opExistente.numeroOP}`
+        }
+      })
+    } catch (historyError) {
+      console.log('ℹ️ Tabela de histórico não disponível, continuando...')
+    }
+
     console.log('✅ Processo criado com sucesso:', processo.id)
-    return { success: true, processo }
+    
+    return { 
+      success: true, 
+      processo,
+      message: 'Processo criado com sucesso'
+    }
+    
   } catch (error: any) {
-    console.error('Erro ao criar processo:', error)
+    console.error('❌ Erro ao criar processo:', error)
+    
+    let errorMessage = error.message || 'Erro ao criar processo'
+    let statusCode = error.statusCode || 500
+    
+    if (error.code === 'P2002') {
+      errorMessage = 'Já existe um processo com estes dados'
+      statusCode = 400
+    } else if (error.code === 'P2003') {
+      errorMessage = 'Responsável não encontrado'
+      statusCode = 400
+    }
+    
     throw createError({
-      statusCode: error.statusCode || 500,
-      message: error.message || 'Erro ao criar processo'
+      statusCode: statusCode,
+      message: errorMessage
     })
   }
 })

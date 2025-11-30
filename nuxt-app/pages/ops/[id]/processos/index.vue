@@ -44,14 +44,24 @@
                 Cliente: {{ op?.cliente || 'Carregando...' }} | Entrega: {{ formatDate(op?.dataEntrega) }}
               </p>
             </div>
-            <v-btn 
-              color="white" 
-              variant="outlined" 
-              prepend-icon="mdi-plus"
-              @click="openCreateProcessoDialog"
-            >
-              Novo Processo
-            </v-btn>
+            <div class="d-flex gap-2">
+              <v-btn 
+                color="white" 
+                variant="outlined" 
+                prepend-icon="mdi-plus"
+                @click="openCreateProcessoDialog"
+              >
+                Novo Processo
+              </v-btn>
+              <v-btn 
+                color="white" 
+                variant="outlined" 
+                prepend-icon="mdi-playlist-plus"
+                @click="showTemplateDialog = true"
+              >
+                Usar Template
+              </v-btn>
+            </div>
           </v-card-text>
         </v-card>
       </v-col>
@@ -232,7 +242,7 @@
                       </v-row>
 
                       <!-- Ações -->
-                      <div class="d-flex gap-2 mt-4">
+                      <div class="d-flex gap-2 mt-4 flex-wrap">
                         <v-btn 
                           size="small" 
                           variant="outlined" 
@@ -248,7 +258,7 @@
                           variant="outlined" 
                           color="green"
                           @click="iniciarProcesso(processo)"
-                          v-if="processo.status === 'NAO_INICIADO'"
+                          v-if="processo.status === 'NAO_INICIADO' || processo.status === 'AGUARDANDO'"
                           prepend-icon="mdi-play"
                         >
                           Iniciar
@@ -301,10 +311,16 @@
       <v-icon size="96" color="grey-lighten-1" class="mb-4">mdi-cog-off</v-icon>
       <div class="text-h4 text-grey">Nenhum processo cadastrado</div>
       <div class="text-body-1 text-grey mt-2">Esta OP ainda não possui processos</div>
-      <v-btn color="primary" class="mt-6" size="large" @click="openCreateProcessoDialog">
-        <v-icon start>mdi-plus</v-icon>
-        Adicionar Primeiro Processo
-      </v-btn>
+      <div class="d-flex justify-center gap-4 mt-6">
+        <v-btn color="primary" size="large" @click="openCreateProcessoDialog">
+          <v-icon start>mdi-plus</v-icon>
+          Adicionar Primeiro Processo
+        </v-btn>
+        <v-btn color="secondary" size="large" @click="showTemplateDialog = true">
+          <v-icon start>mdi-playlist-plus</v-icon>
+          Usar Template
+        </v-btn>
+      </div>
     </div>
 
     <!-- Dialog Criar/Editar Processo -->
@@ -341,7 +357,7 @@
               
               <v-col cols="12" sm="6">
                 <v-text-field
-                  v-model="formProcesso.sequencia"
+                  v-model.number="formProcesso.sequencia"
                   label="Sequência *"
                   type="number"
                   variant="outlined"
@@ -352,27 +368,25 @@
               
               <v-col cols="12" sm="6">
                 <v-text-field
-                  v-model="formProcesso.prazoEstimado"
+                  v-model.number="formProcesso.prazoEstimado"
                   label="Prazo Estimado (dias)"
                   type="number"
                   variant="outlined"
                 />
               </v-col>
               
+              <!-- ✅ DATE PICKER CORRIGIDO -->
               <v-col cols="12" sm="6">
-                <v-menu>
-                  <template v-slot:activator="{ props }">
-                    <v-text-field
-                      v-bind="props"
-                      v-model="formProcesso.dataPrevista"
-                      label="Data Prevista"
-                      variant="outlined"
-                      readonly
-                      prepend-inner-icon="mdi-calendar"
-                    />
-                  </template>
-                  <v-date-picker v-model="formProcesso.dataPrevista" />
-                </v-menu>
+                <v-text-field
+                  v-model="formProcesso.dataPrevista"
+                  label="Data Prevista *"
+                  variant="outlined"
+                  type="date"
+                  prepend-inner-icon="mdi-calendar"
+                  :min="minDate"
+                  :max="maxDate"
+                  :rules="[v => !!v || 'Data prevista é obrigatória para o Gantt']"
+                />
               </v-col>
               
               <v-col cols="12" sm="6">
@@ -398,7 +412,7 @@
               
               <v-col cols="12" sm="6">
                 <v-text-field
-                  v-model="formProcesso.progresso"
+                  v-model.number="formProcesso.progresso"
                   label="Progresso (%)"
                   type="number"
                   variant="outlined"
@@ -424,19 +438,114 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- Dialog de Template -->
+    <v-dialog v-model="showTemplateDialog" max-width="500">
+      <v-card>
+        <v-card-title class="text-h5">
+          Usar Template de Processos
+        </v-card-title>
+        
+        <v-card-text>
+          <v-select
+            v-model="selectedTemplate"
+            label="Selecione um template"
+            :items="templateOptions"
+            variant="outlined"
+            class="mb-4"
+          />
+          
+          <v-alert v-if="selectedTemplate" type="info" variant="tonal">
+            Serão criados {{ getTemplateProcesses(selectedTemplate).length }} processos automaticamente
+          </v-alert>
+        </v-card-text>
+
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="outlined" @click="showTemplateDialog = false">
+            Cancelar
+          </v-btn>
+          <v-btn 
+            color="primary" 
+            @click="aplicarTemplate" 
+            :loading="aplicandoTemplate"
+            :disabled="!selectedTemplate"
+          >
+            Aplicar Template
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
 <script setup>
+// Composables
+const useProcessosTemplates = () => {
+  const templates = {
+    PADRAO_MAQUINA: [
+      { nome: 'Lançamento da OP no Sistema', descricao: 'Registro inicial da Ordem de Produção no sistema', sequencia: 1, prazoEstimado: 1, status: 'NAO_INICIADO', progresso: 0 },
+      { nome: 'Criação da Pasta do Projeto', descricao: 'Criação da estrutura de pastas para documentação do projeto', sequencia: 2, prazoEstimado: 1, status: 'NAO_INICIADO', progresso: 0 },
+      { nome: 'Início do Projeto Mecânico', descricao: 'Início do desenvolvimento do projeto 3D no SolidWorks', sequencia: 3, prazoEstimado: 15, status: 'NAO_INICIADO', progresso: 0 },
+      { nome: 'Detalhamento das Peças', descricao: 'Criação dos desenhos técnicos e detalhamento de todas as peças', sequencia: 4, prazoEstimado: 10, status: 'NAO_INICIADO', progresso: 0 },
+      { nome: 'Geração da Lista de Peças (BOM)', descricao: 'Exportação da planilha BOM do SolidWorks', sequencia: 5, prazoEstimado: 2, status: 'NAO_INICIADO', progresso: 0 },
+      { nome: 'Importação da Lista de Peças', descricao: 'Upload e importação da planilha BOM no sistema', sequencia: 6, prazoEstimado: 1, status: 'NAO_INICIADO', progresso: 0 },
+      { nome: 'Criação de Roteiros de Fabricação', descricao: 'Criação dos roteiros de pintura, zincagem e calibração', sequencia: 7, prazoEstimado: 3, status: 'NAO_INICIADO', progresso: 0 },
+      { nome: 'Solicitação de Orçamentos', descricao: 'Envio de e-mails para cotação de peças e serviços', sequencia: 8, prazoEstimado: 5, status: 'NAO_INICIADO', progresso: 0 },
+      { nome: 'Solicitação de Compras', descricao: 'Emissão de ordens de compra baseadas nos orçamentos aprovados', sequencia: 9, prazoEstimado: 2, status: 'NAO_INICIADO', progresso: 0 },
+      { nome: 'Recebimento de Materiais', descricao: 'Controle de recebimento e inspeção de materiais comprados', sequencia: 10, prazoEstimado: 10, status: 'NAO_INICIADO', progresso: 0 },
+      { nome: 'Montagem do Equipamento', descricao: 'Montagem mecânica completa do equipamento', sequencia: 11, prazoEstimado: 15, status: 'NAO_INICIADO', progresso: 0 },
+      { nome: 'Projeto Elétrico e CLP', descricao: 'Desenvolvimento da parte elétrica e programação do CLP/IHM', sequencia: 12, prazoEstimado: 10, status: 'NAO_INICIADO', progresso: 0 },
+      { nome: 'Testes do Equipamento', descricao: 'Testes funcionais e de qualidade do equipamento montado', sequencia: 13, prazoEstimado: 5, status: 'NAO_INICIADO', progresso: 0 },
+      { nome: 'Documentação Técnica', descricao: 'Elaboração de manual técnico, fotos e vídeos', sequencia: 14, prazoEstimado: 5, status: 'NAO_INICIADO', progresso: 0 },
+      { nome: 'Embalagem e Expedição', descricao: 'Preparação para envio e expedição ao cliente', sequencia: 15, prazoEstimado: 2, status: 'NAO_INICIADO', progresso: 0 }
+    ],
+    SIMPLES: [
+      { nome: 'Lançamento da OP', descricao: 'Registro inicial da OP', sequencia: 1, prazoEstimado: 1, status: 'NAO_INICIADO', progresso: 0 },
+      { nome: 'Projeto Mecânico', descricao: 'Desenvolvimento do projeto 3D', sequencia: 2, prazoEstimado: 10, status: 'NAO_INICIADO', progresso: 0 },
+      { nome: 'Lista de Peças', descricao: 'Geração e importação do BOM', sequencia: 3, prazoEstimado: 2, status: 'NAO_INICIADO', progresso: 0 },
+      { nome: 'Compras', descricao: 'Solicitação e acompanhamento de compras', sequencia: 4, prazoEstimado: 7, status: 'NAO_INICIADO', progresso: 0 },
+      { nome: 'Montagem', descricao: 'Montagem do equipamento', sequencia: 5, prazoEstimado: 10, status: 'NAO_INICIADO', progresso: 0 },
+      { nome: 'Testes e Entrega', descricao: 'Testes finais e expedição', sequencia: 6, prazoEstimado: 3, status: 'NAO_INICIADO', progresso: 0 }
+    ]
+  }
+
+  const getTemplate = (templateName) => {
+    return templates[templateName] || templates.PADRAO_MAQUINA
+  }
+
+  const getTemplateNames = () => {
+    return [
+      { value: 'PADRAO_MAQUINA', title: 'Padrão Máquina Completa' },
+      { value: 'SIMPLES', title: 'Processos Simplificados' }
+    ]
+  }
+
+  return {
+    templates,
+    getTemplate,
+    getTemplateNames
+  }
+}
+
+const { getTemplate, getTemplateNames } = useProcessosTemplates()
+
 // Estado
 const route = useRoute()
 const op = ref(null)
 const processos = ref([])
-const loading = ref(true) // Inicia como true
+const loading = ref(true)
 const salvando = ref(false)
 const showProcessoDialog = ref(false)
+const showTemplateDialog = ref(false)
+const aplicandoTemplate = ref(false)
 const editingProcesso = ref(null)
 const usuarios = ref([])
+const selectedTemplate = ref('PADRAO_MAQUINA')
+
+// ✅ VARIÁVEIS DO DATE PICKER CORRIGIDAS
+const minDate = ref(new Date().toISOString().split('T')[0])
+const maxDate = ref(new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0])
 
 // Formulário
 const formProcesso = ref({
@@ -460,7 +569,12 @@ const statusOptions = [
   { title: 'Cancelado', value: 'CANCELADO' }
 ]
 
-// Computed - SEGURO
+// ✅ CORREÇÃO: Template options como computed
+const templateOptions = computed(() => {
+  return getTemplateNames()
+})
+
+// Computed
 const processosOrdenados = computed(() => {
   if (!Array.isArray(processos.value)) return []
   return [...processos.value].sort((a, b) => (a.sequencia || 0) - (b.sequencia || 0))
@@ -550,6 +664,36 @@ const loadUsuarios = async () => {
   }
 }
 
+// Template functions
+const getTemplateProcesses = (templateName) => {
+  return getTemplate(templateName)
+}
+
+// ✅ CORREÇÃO: Método aplicarTemplate usando a API correta
+const aplicarTemplate = async () => {
+  aplicandoTemplate.value = true
+  try {
+    // Usar a API de template específica
+    const result = await $fetch(`/api/ops/${route.params.id}/processos/template`, {
+      method: 'POST',
+      body: {
+        templateName: selectedTemplate.value
+      }
+    })
+    
+    await loadProcessos()
+    showTemplateDialog.value = false
+    selectedTemplate.value = 'PADRAO_MAQUINA'
+    
+    alert(`✅ ${result.message}`)
+  } catch (error) {
+    console.error('❌ Erro ao aplicar template:', error)
+    alert('Erro ao aplicar template: ' + (error.data?.message || error.message))
+  } finally {
+    aplicandoTemplate.value = false
+  }
+}
+
 // Utilitários
 const getStatusColor = (status) => {
   const colors = {
@@ -621,8 +765,16 @@ const openCreateProcessoDialog = () => {
 
 const editarProcesso = (processo) => {
   editingProcesso.value = processo
-  formProcesso.value = { ...processo }
-  formProcesso.value.dataPrevista = processo.dataPrevista ? processo.dataPrevista.split('T')[0] : null
+  formProcesso.value = { 
+    ...processo,
+    responsavelId: processo.responsavel?.id || processo.responsavelId
+  }
+  
+  // ✅ CORREÇÃO: Formatar data para o input type="date"
+  if (processo.dataPrevista) {
+    formProcesso.value.dataPrevista = new Date(processo.dataPrevista).toISOString().split('T')[0]
+  }
+  
   showProcessoDialog.value = true
 }
 
@@ -634,10 +786,22 @@ const closeProcessoDialog = () => {
 const salvarProcesso = async () => {
   salvando.value = true
   try {
+    // Preparar dados para envio
+    const dadosEnvio = {
+      ...formProcesso.value,
+      // Garantir que números sejam números
+      sequencia: parseInt(formProcesso.value.sequencia),
+      progresso: parseInt(formProcesso.value.progresso),
+      prazoEstimado: formProcesso.value.prazoEstimado ? parseInt(formProcesso.value.prazoEstimado) : null,
+      // ✅ CORREÇÃO: Data já está no formato correto para input type="date"
+      dataPrevista: formProcesso.value.dataPrevista ? 
+        new Date(formProcesso.value.dataPrevista + 'T00:00:00').toISOString() : null
+    }
+
     if (editingProcesso.value) {
       const data = await $fetch(`/api/ops/${route.params.id}/processos/${editingProcesso.value.id}`, {
         method: 'PUT',
-        body: formProcesso.value
+        body: dadosEnvio
       })
       
       const index = processos.value.findIndex(p => p.id === editingProcesso.value.id)
@@ -647,7 +811,7 @@ const salvarProcesso = async () => {
     } else {
       const data = await $fetch(`/api/ops/${route.params.id}/processos`, {
         method: 'POST',
-        body: formProcesso.value
+        body: dadosEnvio
       })
       
       processos.value.push(data.processo)
@@ -655,8 +819,8 @@ const salvarProcesso = async () => {
     
     closeProcessoDialog()
   } catch (error) {
-    console.error('Erro ao salvar processo:', error)
-    alert('Erro ao salvar processo: ' + error.data?.message || error.message)
+    console.error('❌ Erro ao salvar processo:', error)
+    alert('Erro ao salvar processo: ' + (error.data?.message || error.message))
   } finally {
     salvando.value = false
   }
@@ -670,10 +834,10 @@ const iniciarProcesso = async (processo) => {
     
     processo.status = 'EM_ANDAMENTO'
     processo.dataInicio = new Date().toISOString()
-    processo.progresso = 10
+    processo.progresso = processo.progresso > 0 ? processo.progresso : 10
   } catch (error) {
     console.error('Erro ao iniciar processo:', error)
-    alert('Erro ao iniciar processo')
+    alert('Erro ao iniciar processo: ' + (error.data?.message || error.message))
   }
 }
 
@@ -686,7 +850,7 @@ const pausarProcesso = async (processo) => {
     processo.status = 'AGUARDANDO'
   } catch (error) {
     console.error('Erro ao pausar processo:', error)
-    alert('Erro ao pausar processo')
+    alert('Erro ao pausar processo: ' + (error.data?.message || error.message))
   }
 }
 
@@ -701,12 +865,12 @@ const concluirProcesso = async (processo) => {
     processo.dataFim = new Date().toISOString()
   } catch (error) {
     console.error('Erro ao concluir processo:', error)
-    alert('Erro ao concluir processo')
+    alert('Erro ao concluir processo: ' + (error.data?.message || error.message))
   }
 }
 
 const excluirProcesso = async (processo) => {
-  if (confirm(`Excluir processo "${processo.nome}"?`)) {
+  if (confirm(`Tem certeza que deseja excluir o processo "${processo.nome}"?`)) {
     try {
       await $fetch(`/api/ops/${route.params.id}/processos/${processo.id}`, {
         method: 'DELETE'
@@ -715,7 +879,7 @@ const excluirProcesso = async (processo) => {
       processos.value = processos.value.filter(p => p.id !== processo.id)
     } catch (error) {
       console.error('Erro ao excluir processo:', error)
-      alert('Erro ao excluir processo')
+      alert('Erro ao excluir processo: ' + (error.data?.message || error.message))
     }
   }
 }

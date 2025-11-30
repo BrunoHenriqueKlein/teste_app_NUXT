@@ -2,12 +2,11 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   ssr: false,
   
-  // CSS global - FORMA CORRETA
+  // CSS global
   css: [
     'vuetify/styles',
     '@mdi/font/css/materialdesignicons.min.css',
-    '@/assets/css/global.css' // APENAS o CSS global
-    // REMOVIDA a importação do SCSS aqui
+    '@/assets/css/global.css'
   ],
   
   // Build configuration
@@ -15,7 +14,12 @@ export default defineNuxtConfig({
     transpile: ['vuetify']
   },
 
-  // Configuração do Vite para SCSS (CORRIGIDA)
+  // ✅ ADICIONE: Configuração do Nitro para o Prisma
+  nitro: {
+    plugins: ['~/server/plugins/prisma.ts']
+  },
+
+  // Configuração do Vite para SCSS
   vite: {
     css: {
       preprocessorOptions: {
@@ -28,27 +32,25 @@ export default defineNuxtConfig({
     }
   },
 
-  // Configuração do Vuetify com SUAS cores
+  // Configuração do Vuetify
   vuetify: {
     theme: {
       defaultTheme: 'light',
       themes: {
         light: {
           colors: {
-            primary: '#1867C0', // SUA COR PRIMARY
-            secondary: '#5CBBF6', // SUA COR SECONDARY
-            accent: '#005CAF', // SUA COR ACCENT
+            primary: '#1867C0',
+            secondary: '#5CBBF6',
+            accent: '#005CAF',
           }
         }
       }
     }
   },
 
-  // Adicionar o plugin de máscara
   plugins: [
     '~/plugins/mask.ts'
   ],
   
-  // Configuração de compatibilidade
   compatibilityDate: '2024-11-12'
 })

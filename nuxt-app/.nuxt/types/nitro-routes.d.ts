@@ -31,12 +31,15 @@ declare module "nitropack/types" {
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ops/[id]/actions.post').default>>>>
     }
     '/api/ops/:id/processos/:processoId': {
+      'put': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ops/[id]/processos/[processoId].put').default>>>>
       'delete': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ops/[id]/processos/[processoId]/index.delete').default>>>>
-      'put': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ops/[id]/processos/[processoId]/index.put').default>>>>
     }
     '/api/ops/:id/processos': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ops/[id]/processos/index.get').default>>>>
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ops/[id]/processos/index.post').default>>>>
+    }
+    '/api/ops/:id/processos/template': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ops/[id]/processos/template.post').default>>>>
     }
     '/api/ops': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ops/index.get').default>>>>

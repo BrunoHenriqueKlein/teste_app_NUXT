@@ -115,6 +115,7 @@ declare global {
   const useNuxtData: typeof import('../../node_modules/nuxt/dist/app/composables/asyncData').useNuxtData
   const useNuxtDevTools: typeof import('../../node_modules/@nuxt/devtools/dist/runtime/use-nuxt-devtools').useNuxtDevTools
   const usePreviewMode: typeof import('../../node_modules/nuxt/dist/app/composables/preview').usePreviewMode
+  const useProcessosTemplates: typeof import('../../composables/useProcessosTemplates').useProcessosTemplates
   const useRequestEvent: typeof import('../../node_modules/nuxt/dist/app/composables/ssr').useRequestEvent
   const useRequestFetch: typeof import('../../node_modules/nuxt/dist/app/composables/ssr').useRequestFetch
   const useRequestHeader: typeof import('../../node_modules/nuxt/dist/app/composables/ssr').useRequestHeader
@@ -300,6 +301,7 @@ declare module 'vue' {
     readonly useNuxtData: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/asyncData')['useNuxtData']>
     readonly useNuxtDevTools: UnwrapRef<typeof import('../../node_modules/@nuxt/devtools/dist/runtime/use-nuxt-devtools')['useNuxtDevTools']>
     readonly usePreviewMode: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/preview')['usePreviewMode']>
+    readonly useProcessosTemplates: UnwrapRef<typeof import('../../composables/useProcessosTemplates')['useProcessosTemplates']>
     readonly useRequestEvent: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/ssr')['useRequestEvent']>
     readonly useRequestFetch: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/ssr')['useRequestFetch']>
     readonly useRequestHeader: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/ssr')['useRequestHeader']>
