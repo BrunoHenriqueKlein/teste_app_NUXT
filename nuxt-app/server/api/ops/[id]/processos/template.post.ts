@@ -2,7 +2,7 @@ export default defineEventHandler(async (event) => {
   try {
     const opId = getRouterParam(event, 'id')
     const body = await readBody(event)
-    
+
     console.log('🎯 Aplicando template - OP ID:', opId)
     console.log('🎯 Template selecionado:', body.templateName)
 
@@ -97,11 +97,24 @@ export default defineEventHandler(async (event) => {
 
     console.log(`📊 Processos existentes: ${processosExistentes.length}, Maior sequência: ${maiorSequencia}`)
 
+    // Pegar data de início (Prioridade: dataInicio -> dataPedido -> hoje)
+    let dataInicioAtual = new Date(opExistente.dataInicio || opExistente.dataPedido || new Date())
+    dataInicioAtual.setHours(0, 0, 0, 0)
+
     // Criar processos do template
     const processosCriados = []
-    
+
     for (const [index, processo] of templateProcesses.entries()) {
       try {
+        // Calcular datas para este processo
+        const dataInicioPrevista = new Date(dataInicioAtual)
+
+        const dataTerminoPrevista = new Date(dataInicioPrevista)
+        if (processo.prazoEstimado && processo.prazoEstimado > 0) {
+          dataTerminoPrevista.setDate(dataTerminoPrevista.getDate() + processo.prazoEstimado - 1)
+        }
+        dataTerminoPrevista.setHours(0, 0, 0, 0)
+
         const novoProcesso = await prisma.oPProcesso.create({
           data: {
             opId: parseInt(opId),
@@ -111,15 +124,21 @@ export default defineEventHandler(async (event) => {
             status: processo.status,
             progresso: processo.progresso,
             prazoEstimado: processo.prazoEstimado,
+            dataInicioPrevista: dataInicioPrevista,
+            dataTerminoPrevista: dataTerminoPrevista,
             dataPrevista: null
           }
         })
         processosCriados.push(novoProcesso)
-        
-        console.log(`✅ Processo criado: ${processo.nome} (ID: ${novoProcesso.id})`)
+
+        // Atualizar dataInicioAtual para o próximo processo (dia seguinte ao término deste)
+        dataInicioAtual = new Date(dataTerminoPrevista)
+        dataInicioAtual.setDate(dataInicioAtual.getDate() + 1)
+        dataInicioAtual.setHours(0, 0, 0, 0)
+
+        console.log(`✅ Processo criado: ${processo.nome} (ID: ${novoProcesso.id}) - Datas: ${dataInicioPrevista.toISOString().split('T')[0]} a ${dataTerminoPrevista.toISOString().split('T')[0]}`)
       } catch (processError) {
         console.error(`❌ Erro ao criar processo ${processo.nome}:`, processError)
-        // Continuar com os próximos processos
       }
     }
 
@@ -129,7 +148,7 @@ export default defineEventHandler(async (event) => {
       select: { progresso: true }
     })
 
-    const progressoMedio = todosProcessos.length > 0 
+    const progressoMedio = todosProcessos.length > 0
       ? Math.round(todosProcessos.reduce((sum, p) => sum + p.progresso, 0) / todosProcessos.length)
       : 0
 
@@ -140,16 +159,16 @@ export default defineEventHandler(async (event) => {
 
     console.log(`🎉 Template aplicado: ${processosCriados.length} processos criados`)
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       processos: processosCriados,
       totalCriados: processosCriados.length,
       message: `Template aplicado com sucesso! ${processosCriados.length} processos criados.`
     }
-    
+
   } catch (error: any) {
     console.error('❌ Erro ao aplicar template:', error)
-    
+
     throw createError({
       statusCode: error.statusCode || 500,
       message: error.message || 'Erro ao aplicar template'

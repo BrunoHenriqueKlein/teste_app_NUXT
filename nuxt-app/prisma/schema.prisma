@@ -4,34 +4,10 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url = env("DATABASE_URL")
 }
 
-// ==================== USUÁRIOS E ACESSOS ====================
-model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  password  String
-  name      String
-  role      UserRole @default(USER)
-  department UserDepartment
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relações COMPLETAS
-  createdOPs          OP[]                   @relation("OP_CriadaPor")
-  responsibleOPs      OP[]                   @relation("OP_Responsavel")
-  opProcessos         OPProcesso[]           @relation("Processo_Responsavel")
-  userModules         UserModule[]
-  processoHistorico   ProcessoHistorico[]    @relation("ProcessoHistorico_Usuario")
-  estoqueMovimentacoes EstoqueMovimentacao[] @relation("EstoqueMovimentacao_Usuario")
-  opHistorico         OPHistorico[]          @relation("OPHistorico_Usuario")
-  arquivos            Arquivo[]              @relation("Arquivo_Usuario")
-
-  @@map("users")
-}
-
+// --- ENUMS --- (APENAS UMA VEZ CADA)
 enum UserRole {
   ADMIN
   GERENTE
@@ -56,39 +32,6 @@ enum UserDepartment {
   EXPEDICAO
 }
 
-// ==================== ORDENS DE PRODUÇÃO ====================
-model OP {
-  id              Int       @id @default(autoincrement())
-  numeroOP        String    @unique
-  codigoMaquina   String
-  descricaoMaquina String
-  observacoes     String?
-  dataPedido      DateTime
-  dataEntrega     DateTime
-  dataCriacao     DateTime  @default(now())
-  dataInicio      DateTime?
-  dataFinalizacao DateTime?
-  status          OPStatus  @default(ABERTA)
-  progresso       Int       @default(0)
-  cliente         String
-  cnpjCliente     String?
-  enderecoCliente String?
-  criadoPorId     Int
-  responsavelId   Int?
-
-  // Relações
-  criadoPor       User      @relation("OP_CriadaPor", fields: [criadoPorId], references: [id])
-  responsavel     User?     @relation("OP_Responsavel", fields: [responsavelId], references: [id])
-  processos       OPProcesso[]
-  pecas           Peca[]
-  compras         Compra[]
-  historico       OPHistorico[]
-  movimentacoes   EstoqueMovimentacao[]
-  arquivos        Arquivo[]
-
-  @@map("ops")
-}
-
 enum OPStatus {
   ABERTA
   EM_PROJETO
@@ -102,29 +45,6 @@ enum OPStatus {
   CANCELADA
 }
 
-// ==================== PROCESSOS DA OP ====================
-model OPProcesso {
-  id          Int       @id @default(autoincrement())
-  opId        Int
-  nome        String
-  descricao   String?
-  sequencia   Int
-  status      ProcessoStatus @default(NAO_INICIADO)
-  progresso   Int       @default(0)
-  prazoEstimado Int?
-  dataInicio   DateTime?
-  dataFim      DateTime?
-  dataPrevista DateTime?
-  responsavelId Int?
-
-  // Relações
-  op          OP        @relation(fields: [opId], references: [id])
-  responsavel User?     @relation("Processo_Responsavel", fields: [responsavelId], references: [id])
-  historico   ProcessoHistorico[]
-
-  @@map("op_processos")
-}
-
 enum ProcessoStatus {
   NAO_INICIADO
   EM_ANDAMENTO
@@ -132,43 +52,6 @@ enum ProcessoStatus {
   CONCLUIDO
   BLOQUEADO
   CANCELADO
-}
-
-// ==================== HISTÓRICO DE PROCESSOS ====================
-model ProcessoHistorico {
-  id          Int       @id @default(autoincrement())
-  processoId  Int
-  usuarioId   Int
-  acao        String
-  detalhes    String?
-  createdAt   DateTime  @default(now())
-
-  // Relações
-  processo    OPProcesso @relation(fields: [processoId], references: [id])
-  usuario     User      @relation("ProcessoHistorico_Usuario", fields: [usuarioId], references: [id])
-
-  @@map("processo_historico")
-}
-
-// ==================== PEÇAS DO EQUIPAMENTO ====================
-model Peca {
-  id          Int       @id @default(autoincrement())
-  opId        Int
-  codigo      String
-  descricao   String
-  quantidade  Int       @default(1)
-  material    String?
-  desenhoUrl  String?
-  arquivoBOM  String?
-  status      PecaStatus @default(NAO_INICIADA)
-
-  // Relações
-  op          OP        @relation(fields: [opId], references: [id])
-  processos   ProcessoPeca[]
-  compras     CompraItem[]
-
-  @@unique([opId, codigo])
-  @@map("pecas")
 }
 
 enum PecaStatus {
@@ -181,96 +64,10 @@ enum PecaStatus {
   MONTADA
 }
 
-// ==================== PROCESSOS DAS PEÇAS ====================
-model ProcessoPeca {
-  id          Int       @id @default(autoincrement())
-  pecaId      Int
-  nome        String
-  sequencia   Int
-  status      ProcessoStatus @default(NAO_INICIADO)
-  fornecedor  String?
-  custo       Float?
-  tempoEstimado Int?
-
-  // Relações
-  peca        Peca      @relation(fields: [pecaId], references: [id])
-
-  @@map("processo_pecas")
-}
-
-// ==================== CONTROLE DE ESTOQUE ====================
-model Estoque {
-  id          Int       @id @default(autoincrement())
-  codigo      String    @unique
-  descricao   String
-  categoria   String
-  quantidade  Int       @default(0)
-  unidade     String    @default("UN")
-  minEstoque  Int       @default(0)
-  localizacao String?
-
-  // Relações
-  movimentacoes EstoqueMovimentacao[]
-
-  @@map("estoque")
-}
-
-model EstoqueMovimentacao {
-  id          Int       @id @default(autoincrement())
-  estoqueId   Int
-  tipo        MovimentacaoTipo
-  quantidade  Int
-  motivo      String
-  opId        Int?
-  usuarioId   Int
-
-  // Relações
-  estoque     Estoque   @relation(fields: [estoqueId], references: [id])
-  op          OP?       @relation(fields: [opId], references: [id])
-  usuario     User      @relation("EstoqueMovimentacao_Usuario", fields: [usuarioId], references: [id])
-
-  createdAt   DateTime  @default(now())
-
-  @@map("estoque_movimentacoes")
-}
-
 enum MovimentacaoTipo {
   ENTRADA
   SAIDA
   AJUSTE
-}
-
-// ==================== COMPRAS E ORÇAMENTOS ====================
-model Compra {
-  id          Int       @id @default(autoincrement())
-  opId        Int
-  numero      String    @unique
-  fornecedor  String
-  valorTotal  Float?
-  status      CompraStatus @default(SOLICITADA)
-  dataSolicitacao DateTime @default(now())
-  dataEntregaPrevista DateTime?
-
-  // Relações
-  op          OP        @relation(fields: [opId], references: [id])
-  itens       CompraItem[]
-
-  @@map("compras")
-}
-
-model CompraItem {
-  id          Int       @id @default(autoincrement())
-  compraId    Int
-  pecaId      Int?
-  descricao   String
-  quantidade  Int
-  valorUnitario Float
-
-  // Relações
-  compra      Compra    @relation(fields: [compraId], references: [id])
-  peca        Peca?     @relation(fields: [pecaId], references: [id])
-
-  @@map("compra_itens")
 }
 
 enum CompraStatus {
@@ -283,69 +80,237 @@ enum CompraStatus {
   CANCELADA
 }
 
-// ==================== MÓDULOS E PERMISSÕES ====================
-model Module {
-  id          Int       @id @default(autoincrement())
-  nome        String    @unique
-  descricao   String?
-  icon        String?
-  path        String
-  isActive    Boolean   @default(true)
-  order       Int
+// --- MODELS ---
+model User {
+  id                   Int                   @id @default(autoincrement())
+  email                String                @unique
+  password             String
+  name                 String
+  role                 UserRole              @default(USER)
+  department           UserDepartment
+  isActive             Boolean               @default(true)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  arquivos             Arquivo[]             @relation("Arquivo_Usuario")
+  estoqueMovimentacoes EstoqueMovimentacao[] @relation("EstoqueMovimentacao_Usuario")
+  opHistorico          OPHistorico[]         @relation("OPHistorico_Usuario")
+  opProcessos          OPProcesso[]          @relation("Processo_Responsavel")
+  createdOPs           OP[]                  @relation("OP_CriadaPor")
+  responsibleOPs       OP[]                  @relation("OP_Responsavel")
+  processoHistorico    ProcessoHistorico[]   @relation("ProcessoHistorico_Usuario")
+  userModules          UserModule[]
+  resetToken        String?   @map("reset_token")
+  resetTokenExpiry  DateTime? @map("reset_token_expiry")
 
-  // Relações
-  userModules UserModule[]
-
-  @@map("modules")
+  @@map("users")
 }
 
 model UserModule {
-  id         Int     @id @default(autoincrement())
-  userId     Int
-  moduleId   Int
-  canView    Boolean @default(false)
-  canEdit    Boolean @default(false)
-  canDelete  Boolean @default(false)
-
-  // Relações
-  user       User    @relation(fields: [userId], references: [id])
-  module     Module  @relation(fields: [moduleId], references: [id])
+  id        Int     @id @default(autoincrement())
+  userId    Int
+  moduleId  Int
+  canView   Boolean @default(true)    // Alterado de false para true
+  canEdit   Boolean @default(false)
+  canDelete Boolean @default(false)
+  module    Module  @relation(fields: [moduleId], references: [id])
+  user      User    @relation(fields: [userId], references: [id])
 
   @@unique([userId, moduleId])
   @@map("user_modules")
 }
 
-// ==================== HISTÓRICO DE ALTERAÇÕES ====================
-model OPHistorico {
-  id          Int       @id @default(autoincrement())
-  opId        Int
-  usuarioId   Int
-  acao        String
-  detalhes    String?
-  createdAt   DateTime  @default(now())
+model Module {
+  id          Int          @id @default(autoincrement())
+  nome        String       @unique
+  descricao   String?
+  icon        String?
+  path        String
+  isActive    Boolean      @default(true)
+  order       Int
+  userModules UserModule[]
 
-  // Relações
-  op          OP        @relation(fields: [opId], references: [id])
-  usuario     User      @relation("OPHistorico_Usuario", fields: [usuarioId], references: [id])
+  @@map("modules")
+}
+
+model OP {
+  id               Int                   @id @default(autoincrement())
+  numeroOP         String                @unique
+  codigoMaquina    String
+  descricaoMaquina String
+  observacoes      String?
+  dataPedido       DateTime
+  dataEntrega      DateTime
+  dataCriacao      DateTime              @default(now())
+  dataInicio       DateTime?
+  dataFinalizacao  DateTime?
+  status           OPStatus              @default(ABERTA)
+  progresso        Int                   @default(0)
+  cliente          String
+  cnpjCliente      String?
+  enderecoCliente  String?
+  criadoPorId      Int
+  responsavelId    Int?
+  arquivos         Arquivo[]
+  compras          Compra[]
+  movimentacoes    EstoqueMovimentacao[]
+  historico        OPHistorico[]
+  processos        OPProcesso[]
+  criadoPor        User                  @relation("OP_CriadaPor", fields: [criadoPorId], references: [id])
+  responsavel      User?                 @relation("OP_Responsavel", fields: [responsavelId], references: [id])
+  pecas            Peca[]
+
+  @@map("ops")
+}
+
+model OPProcesso {
+  id                  Int                 @id @default(autoincrement())
+  opId                Int
+  nome                String
+  descricao           String?
+  sequencia           Int
+  status              ProcessoStatus      @default(NAO_INICIADO)
+  progresso           Int                 @default(0)
+  prazoEstimado       Int?                @map("prazo_estimado")
+  dataPrevista        DateTime?           @map("data_prevista")
+  dataInicioPrevista  DateTime?           @map("data_inicio_prevista")
+  dataTerminoPrevista DateTime?           @map("data_termino_prevista")
+  dataInicio          DateTime?           @map("data_inicio")
+  dataFim             DateTime?           @map("data_fim")
+  responsavelId       Int?                @map("responsavel_id")
+  op                  OP                  @relation(fields: [opId], references: [id])
+  responsavel         User?               @relation("Processo_Responsavel", fields: [responsavelId], references: [id])
+  historico           ProcessoHistorico[]
+
+  @@map("op_processos")
+}
+
+model ProcessoHistorico {
+  id         Int        @id @default(autoincrement())
+  processoId Int
+  usuarioId  Int
+  acao       String
+  detalhes   String?
+  createdAt  DateTime   @default(now())
+  processo   OPProcesso @relation(fields: [processoId], references: [id])
+  usuario    User       @relation("ProcessoHistorico_Usuario", fields: [usuarioId], references: [id])
+
+  @@map("processo_historico")
+}
+
+model Peca {
+  id         Int            @id @default(autoincrement())
+  opId       Int
+  codigo     String
+  descricao  String
+  quantidade Int            @default(1)
+  material   String?
+  desenhoUrl String?
+  arquivoBOM String?
+  status     PecaStatus     @default(NAO_INICIADA)
+  compras    CompraItem[]
+  op         OP             @relation(fields: [opId], references: [id])
+  processos  ProcessoPeca[]
+
+  @@unique([opId, codigo])
+  @@map("pecas")
+}
+
+model ProcessoPeca {
+  id            Int            @id @default(autoincrement())
+  pecaId        Int
+  nome          String
+  sequencia     Int
+  status        ProcessoStatus @default(NAO_INICIADO)
+  fornecedor    String?
+  custo         Float?
+  tempoEstimado Int?
+  peca          Peca           @relation(fields: [pecaId], references: [id])
+
+  @@map("processo_pecas")
+}
+
+model Estoque {
+  id            Int                   @id @default(autoincrement())
+  codigo        String                @unique
+  descricao     String
+  categoria     String
+  quantidade    Int                   @default(0)
+  unidade       String                @default("UN")
+  minEstoque    Int                   @default(0)
+  localizacao   String?
+  movimentacoes EstoqueMovimentacao[]
+
+  @@map("estoque")
+}
+
+model EstoqueMovimentacao {
+  id         Int              @id @default(autoincrement())
+  estoqueId  Int
+  tipo       MovimentacaoTipo
+  quantidade Int
+  motivo     String
+  opId       Int?
+  usuarioId  Int
+  createdAt  DateTime         @default(now())
+  estoque    Estoque          @relation(fields: [estoqueId], references: [id])
+  op         OP?              @relation(fields: [opId], references: [id])
+  usuario    User             @relation("EstoqueMovimentacao_Usuario", fields: [usuarioId], references: [id])
+
+  @@map("estoque_movimentacoes")
+}
+
+model Compra {
+  id                  Int          @id @default(autoincrement())
+  opId                Int
+  numero              String       @unique
+  fornecedor          String
+  valorTotal          Float?
+  status              CompraStatus @default(SOLICITADA)
+  dataSolicitacao     DateTime     @default(now())
+  dataEntregaPrevista DateTime?
+  itens               CompraItem[]
+  op                  OP           @relation(fields: [opId], references: [id])
+
+  @@map("compras")
+}
+
+model CompraItem {
+  id            Int    @id @default(autoincrement())
+  compraId      Int
+  pecaId        Int?
+  descricao     String
+  quantidade    Int
+  valorUnitario Float
+  compra        Compra @relation(fields: [compraId], references: [id])
+  peca          Peca?  @relation(fields: [pecaId], references: [id])
+
+  @@map("compra_itens")
+}
+
+model OPHistorico {
+  id        Int      @id @default(autoincrement())
+  opId      Int
+  usuarioId Int
+  acao      String
+  detalhes  String?
+  createdAt DateTime @default(now())
+  op        OP       @relation(fields: [opId], references: [id])
+  usuario   User     @relation("OPHistorico_Usuario", fields: [usuarioId], references: [id])
 
   @@map("op_historico")
 }
 
-// ==================== ARQUIVOS E DOCUMENTOS ====================
 model Arquivo {
-  id          Int       @id @default(autoincrement())
-  opId        Int?
-  nome        String
-  tipo        String
-  url         String
-  tamanho     Int
-  usuarioId   Int
-
-  // Relações
-  op          OP?       @relation(fields: [opId], references: [id])
-  usuario     User      @relation("Arquivo_Usuario", fields: [usuarioId], references: [id])
-
-  createdAt   DateTime  @default(now())
+  id        Int      @id @default(autoincrement())
+  opId      Int?
+  nome      String
+  tipo      String
+  url       String
+  tamanho   Int
+  usuarioId Int
+  createdAt DateTime @default(now())
+  op        OP?      @relation(fields: [opId], references: [id])
+  usuario   User     @relation("Arquivo_Usuario", fields: [usuarioId], references: [id])
 
   @@map("arquivos")
 }

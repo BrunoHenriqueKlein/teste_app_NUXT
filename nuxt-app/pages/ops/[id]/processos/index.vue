@@ -1,3 +1,5 @@
+meu processos:
+
 <template>
   <div v-if="loading">
     <v-container fluid>
@@ -41,7 +43,9 @@
                 {{ op?.numeroOP || 'Carregando...' }} - {{ op?.descricaoMaquina || 'Carregando...' }}
               </p>
               <p class="text-caption">
-                Cliente: {{ op?.cliente || 'Carregando...' }} | Entrega: {{ formatDate(op?.dataEntrega) }}
+                Cliente: {{ op?.cliente || 'Carregando...' }} | 
+                Entrega: {{ formatDate(op?.dataEntrega) }} | 
+                Início OP: <strong>{{ formatDate(dataInicioOP) }}</strong>
               </p>
             </div>
             <div class="d-flex gap-2">
@@ -107,38 +111,48 @@
         <v-col cols="12" md="4">
           <v-card>
             <v-card-title class="text-h6">
-              Estatísticas
+              Cronograma
             </v-card-title>
             <v-card-text>
               <v-list density="compact">
                 <v-list-item>
                   <template v-slot:prepend>
                     <v-avatar color="blue" size="32">
-                      <v-icon color="white">mdi-play</v-icon>
+                      <v-icon color="white">mdi-calendar-start</v-icon>
                     </v-avatar>
                   </template>
-                  <v-list-item-title>Em Andamento</v-list-item-title>
-                  <v-list-item-subtitle>{{ estatisticas.emAndamento }} processos</v-list-item-subtitle>
+                  <v-list-item-title>Início OP</v-list-item-title>
+                  <v-list-item-subtitle>{{ formatDate(dataInicioOP) }}</v-list-item-subtitle>
                 </v-list-item>
                 
                 <v-list-item>
                   <template v-slot:prepend>
                     <v-avatar color="green" size="32">
-                      <v-icon color="white">mdi-check</v-icon>
+                      <v-icon color="white">mdi-calendar-end</v-icon>
                     </v-avatar>
                   </template>
-                  <v-list-item-title>Concluídos</v-list-item-title>
-                  <v-list-item-subtitle>{{ estatisticas.concluidos }} processos</v-list-item-subtitle>
+                  <v-list-item-title>Previsão Término</v-list-item-title>
+                  <v-list-item-subtitle>{{ formatDate(dataTerminoPrevista) }}</v-list-item-subtitle>
                 </v-list-item>
                 
                 <v-list-item>
                   <template v-slot:prepend>
                     <v-avatar color="orange" size="32">
-                      <v-icon color="white">mdi-clock</v-icon>
+                      <v-icon color="white">mdi-clock-outline</v-icon>
                     </v-avatar>
                   </template>
-                  <v-list-item-title>Não Iniciados</v-list-item-title>
-                  <v-list-item-subtitle>{{ estatisticas.naoIniciados }} processos</v-list-item-subtitle>
+                  <v-list-item-title>Duração Total</v-list-item-title>
+                  <v-list-item-subtitle>{{ duracaoTotal }} dias</v-list-item-subtitle>
+                </v-list-item>
+
+                <v-list-item>
+                  <template v-slot:prepend>
+                    <v-avatar color="purple" size="32">
+                      <v-icon color="white">mdi-progress-check</v-icon>
+                    </v-avatar>
+                  </template>
+                  <v-list-item-title>Progresso</v-list-item-title>
+                  <v-list-item-subtitle>{{ progressoGeral }}%</v-list-item-subtitle>
                 </v-list-item>
               </v-list>
             </v-card-text>
@@ -151,7 +165,7 @@
         <v-col cols="12">
           <v-card>
             <v-card-title class="d-flex justify-space-between align-center">
-              <span class="text-h6">Fluxo de Processos</span>
+              <span class="text-h6">Fluxo de Processos (Datas Calculadas Automaticamente)</span>
               <v-btn 
                 variant="outlined" 
                 color="primary" 
@@ -166,7 +180,7 @@
             <v-card-text>
               <v-timeline align="start" side="end" class="px-4">
                 <v-timeline-item
-                  v-for="processo in processosOrdenados"
+                  v-for="processo in processosComDatasCalculadas"
                   :key="processo.id"
                   :dot-color="getStatusColor(processo.status)"
                   size="small"
@@ -197,21 +211,55 @@
 
                       <!-- Informações do Processo -->
                       <v-row dense class="mt-2">
-                        <v-col cols="12" sm="6">
+                        <v-col cols="12" sm="4">
                           <div class="text-caption text-grey">Sequência</div>
                           <div class="font-weight-medium">#{{ processo.sequencia }}</div>
                         </v-col>
-                        <v-col cols="12" sm="6" v-if="processo.responsavel">
+                        <v-col cols="12" sm="4">
+                          <div class="text-caption text-grey">Prazo</div>
+                          <div class="font-weight-medium">{{ processo.prazoEstimado || 0 }} dia(s)</div>
+                        </v-col>
+                        <v-col cols="12" sm="4" v-if="processo.responsavel">
                           <div class="text-caption text-grey">Responsável</div>
                           <div class="font-weight-medium">{{ processo.responsavel.name }}</div>
                         </v-col>
-                        <v-col cols="12" sm="6" v-if="processo.dataPrevista">
-                          <div class="text-caption text-grey">Previsão</div>
-                          <div class="font-weight-medium">{{ formatDate(processo.dataPrevista) }}</div>
+                      </v-row>
+
+                      <!-- Datas Calculadas -->
+                      <v-row dense class="mt-3">
+                        <v-col cols="12" sm="6">
+                          <div class="text-caption text-grey">Início Previsto</div>
+                          <div class="font-weight-medium text-blue">
+                            {{ formatDate(processo.dataInicioPrevista) }}
+                          </div>
                         </v-col>
-                        <v-col cols="12" sm="6" v-if="processo.prazoEstimado">
-                          <div class="text-caption text-grey">Prazo Estimado</div>
-                          <div class="font-weight-medium">{{ processo.prazoEstimado }} dias</div>
+                        <v-col cols="12" sm="6">
+                          <div class="text-caption text-grey">Término Previsto</div>
+                          <div class="font-weight-medium text-green">
+                            {{ formatDate(processo.dataTerminoPrevista) }}
+                          </div>
+                        </v-col>
+                      </v-row>
+
+                      <!-- Datas Reais (se existirem) -->
+                      <v-row dense class="mt-2" v-if="processo.dataInicio || processo.dataFim">
+                        <v-col cols="12" sm="6" v-if="processo.dataInicio">
+                          <div class="text-caption text-grey">Início Real</div>
+                          <div class="font-weight-medium text-orange">
+                            {{ formatDate(processo.dataInicio) }}
+                            <v-icon v-if="processo.dataInicio !== processo.dataInicioPrevista" color="warning" small class="ml-1">
+                              mdi-alert
+                            </v-icon>
+                          </div>
+                        </v-col>
+                        <v-col cols="12" sm="6" v-if="processo.dataFim">
+                          <div class="text-caption text-grey">Término Real</div>
+                          <div class="font-weight-medium text-orange">
+                            {{ formatDate(processo.dataFim) }}
+                            <v-icon v-if="processo.dataFim !== processo.dataTerminoPrevista" color="warning" small class="ml-1">
+                              mdi-alert
+                            </v-icon>
+                          </div>
                         </v-col>
                       </v-row>
 
@@ -228,18 +276,6 @@
                           rounded
                         />
                       </div>
-
-                      <!-- Datas -->
-                      <v-row dense class="mt-3">
-                        <v-col cols="12" sm="6" v-if="processo.dataInicio">
-                          <div class="text-caption text-grey">Iniciado em</div>
-                          <div class="font-weight-medium">{{ formatDateTime(processo.dataInicio) }}</div>
-                        </v-col>
-                        <v-col cols="12" sm="6" v-if="processo.dataFim">
-                          <div class="text-caption text-grey">Concluído em</div>
-                          <div class="font-weight-medium">{{ formatDateTime(processo.dataFim) }}</div>
-                        </v-col>
-                      </v-row>
 
                       <!-- Ações -->
                       <div class="d-flex gap-2 mt-4 flex-wrap">
@@ -335,6 +371,26 @@
 
         <v-card-text>
           <v-form @submit.prevent="salvarProcesso" ref="processoForm">
+            
+            <!-- Data de Início da OP (apenas no primeiro processo) -->
+            <v-card variant="outlined" color="primary" class="mb-4" v-if="!editingProcesso && processos.length === 0">
+              <v-card-text class="pb-3">
+                <div class="text-caption font-weight-bold mb-2">🎯 CONFIGURAÇÃO DA OP</div>
+                <v-text-field
+                  v-model="dataInicioOP"
+                  label="Data de Início da OP *"
+                  type="date"
+                  variant="outlined"
+                  :min="minDate"
+                  :max="maxDate"
+                  :rules="[v => !!v || 'Data de início da OP é obrigatória']"
+                />
+                <div class="text-caption text-grey">
+                  Esta data será usada para calcular automaticamente todas as datas dos processos em cascata
+                </div>
+              </v-card-text>
+            </v-card>
+
             <v-row>
               <v-col cols="12">
                 <v-text-field
@@ -369,26 +425,32 @@
               <v-col cols="12" sm="6">
                 <v-text-field
                   v-model.number="formProcesso.prazoEstimado"
-                  label="Prazo Estimado (dias)"
+                  label="Prazo Estimado (dias) *"
                   type="number"
                   variant="outlined"
+                  required
+                  :rules="[v => !!v || 'Prazo estimado é obrigatório']"
+                  :min="1"
+                  :max="365"
                 />
               </v-col>
-              
-              <!-- ✅ DATE PICKER CORRIGIDO -->
-              <v-col cols="12" sm="6">
-                <v-text-field
-                  v-model="formProcesso.dataPrevista"
-                  label="Data Prevista *"
-                  variant="outlined"
-                  type="date"
-                  prepend-inner-icon="mdi-calendar"
-                  :min="minDate"
-                  :max="maxDate"
-                  :rules="[v => !!v || 'Data prevista é obrigatória para o Gantt']"
-                />
+
+              <!-- Datas Calculadas (apenas exibição) -->
+              <v-col cols="12" v-if="formProcesso.prazoEstimado && !editingProcesso">
+                <v-card variant="outlined" color="info">
+                  <v-card-text class="py-3">
+                    <div class="text-caption font-weight-bold">📅 DATAS CALCULADAS AUTOMATICAMENTE</div>
+                    <div class="text-body-2">
+                      <div>Início Previsto: <strong>{{ calcularDataInicioDisplay() }}</strong></div>
+                      <div>Término Previsto: <strong>{{ calcularDataTerminoDisplay() }}</strong></div>
+                    </div>
+                    <div class="text-caption text-grey mt-1">
+                      * As datas são calculadas automaticamente em cascata
+                    </div>
+                  </v-card-text>
+                </v-card>
               </v-col>
-              
+
               <v-col cols="12" sm="6">
                 <v-select
                   v-model="formProcesso.responsavelId"
@@ -456,7 +518,7 @@
           />
           
           <v-alert v-if="selectedTemplate" type="info" variant="tonal">
-            Serão criados {{ getTemplateProcesses(selectedTemplate).length }} processos automaticamente
+            Serão criados {{ getTemplateProcesses(selectedTemplate).length }} processos com datas calculadas automaticamente
           </v-alert>
         </v-card-text>
 
@@ -528,6 +590,7 @@ const useProcessosTemplates = () => {
   }
 }
 
+// Composables
 const { getTemplate, getTemplateNames } = useProcessosTemplates()
 
 // Estado
@@ -543,7 +606,8 @@ const editingProcesso = ref(null)
 const usuarios = ref([])
 const selectedTemplate = ref('PADRAO_MAQUINA')
 
-// ✅ VARIÁVEIS DO DATE PICKER CORRIGIDAS
+// ✅ VARIÁVEIS PARA CÁLCULO AUTOMÁTICO
+const dataInicioOP = ref('')
 const minDate = ref(new Date().toISOString().split('T')[0])
 const maxDate = ref(new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0])
 
@@ -555,7 +619,6 @@ const formProcesso = ref({
   status: 'NAO_INICIADO',
   progresso: 0,
   prazoEstimado: null,
-  dataPrevista: null,
   responsavelId: null
 })
 
@@ -569,38 +632,89 @@ const statusOptions = [
   { title: 'Cancelado', value: 'CANCELADO' }
 ]
 
-// ✅ CORREÇÃO: Template options como computed
+// Computed
 const templateOptions = computed(() => {
   return getTemplateNames()
 })
 
-// Computed
+// ✅ PROCESSOS COM DATAS CALCULADAS EM CASCATA
+const processosComDatasCalculadas = computed(() => {
+  if (!processos.value.length || !dataInicioOP.value) return processos.value
+
+  console.log('🔄 Calculando datas em cascata...')
+  const processosCalculados = JSON.parse(JSON.stringify(processos.value))
+  
+  let dataInicioAtual = new Date(dataInicioOP.value)
+  
+  for (let i = 0; i < processosCalculados.length; i++) {
+    const processo = processosCalculados[i]
+    
+    if (i === 0) {
+      // Primeiro processo: inicia na data da OP
+      processo.dataInicioPrevista = dataInicioOP.value
+    } else {
+      // Processos subsequentes: iniciam no dia seguinte ao término do anterior
+      const processoAnterior = processosCalculados[i - 1]
+      const dataTerminoAnterior = new Date(processoAnterior.dataTerminoPrevista)
+      dataTerminoAnterior.setDate(dataTerminoAnterior.getDate() + 1)
+      processo.dataInicioPrevista = dataTerminoAnterior.toISOString().split('T')[0]
+      dataInicioAtual = new Date(processo.dataInicioPrevista)
+    }
+    
+    // Calcular data de término baseada no prazo
+    if (processo.prazoEstimado && processo.prazoEstimado > 0) {
+      const dataTermino = new Date(dataInicioAtual)
+      dataTermino.setDate(dataTermino.getDate() + processo.prazoEstimado - 1)
+      processo.dataTerminoPrevista = dataTermino.toISOString().split('T')[0]
+    }
+  }
+  
+  return processosCalculados
+})
+
 const processosOrdenados = computed(() => {
-  if (!Array.isArray(processos.value)) return []
-  return [...processos.value].sort((a, b) => (a.sequencia || 0) - (b.sequencia || 0))
+  if (!Array.isArray(processosComDatasCalculadas.value)) return []
+  return [...processosComDatasCalculadas.value].sort((a, b) => (a.sequencia || 0) - (b.sequencia || 0))
 })
 
 const processosConcluidos = computed(() => {
-  if (!Array.isArray(processos.value)) return 0
-  return processos.value.filter(p => p.status === 'CONCLUIDO').length
+  if (!Array.isArray(processosComDatasCalculadas.value)) return 0
+  return processosComDatasCalculadas.value.filter(p => p.status === 'CONCLUIDO').length
 })
 
 const progressoGeral = computed(() => {
-  if (!Array.isArray(processos.value) || processos.value.length === 0) return 0
-  const totalProgresso = processos.value.reduce((sum, processo) => sum + (processo.progresso || 0), 0)
-  return Math.round(totalProgresso / processos.value.length)
+  if (!Array.isArray(processosComDatasCalculadas.value) || processosComDatasCalculadas.value.length === 0) return 0
+  const totalProgresso = processosComDatasCalculadas.value.reduce((sum, processo) => sum + (processo.progresso || 0), 0)
+  return Math.round(totalProgresso / processosComDatasCalculadas.value.length)
+})
+
+// ✅ DATA DE TÉRMINO PREVISTA DA OP (último processo)
+const dataTerminoPrevista = computed(() => {
+  if (!processosComDatasCalculadas.value.length) return null
+  const ultimoProcesso = processosComDatasCalculadas.value[processosComDatasCalculadas.value.length - 1]
+  return ultimoProcesso.dataTerminoPrevista
+})
+
+// ✅ DURAÇÃO TOTAL EM DIAS
+const duracaoTotal = computed(() => {
+  if (!dataInicioOP.value || !dataTerminoPrevista.value) return 0
+  const inicio = new Date(dataInicioOP.value)
+  const termino = new Date(dataTerminoPrevista.value)
+  const diffTime = Math.abs(termino - inicio)
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1
+  return diffDays
 })
 
 const estatisticas = computed(() => {
-  if (!Array.isArray(processos.value)) {
+  if (!Array.isArray(processosComDatasCalculadas.value)) {
     return { emAndamento: 0, concluidos: 0, naoIniciados: 0, aguardando: 0 }
   }
   
   return {
-    emAndamento: processos.value.filter(p => p.status === 'EM_ANDAMENTO').length,
+    emAndamento: processosComDatasCalculadas.value.filter(p => p.status === 'EM_ANDAMENTO').length,
     concluidos: processosConcluidos.value,
-    naoIniciados: processos.value.filter(p => p.status === 'NAO_INICIADO').length,
-    aguardando: processos.value.filter(p => p.status === 'AGUARDANDO').length
+    naoIniciados: processosComDatasCalculadas.value.filter(p => p.status === 'NAO_INICIADO').length,
+    aguardando: processosComDatasCalculadas.value.filter(p => p.status === 'AGUARDANDO').length
   }
 })
 
@@ -627,7 +741,17 @@ const loadOP = async () => {
   try {
     const data = await $fetch(`/api/ops/${route.params.id}`)
     op.value = data
-    console.log('✅ OP carregada:', op.value?.numeroOP)
+    
+    // ✅ DEFINIR DATA DE INÍCIO DA OP
+    dataInicioOP.value = op.value.dataInicio || 
+                        op.value.dataPedido || 
+                        new Date().toISOString().split('T')[0]
+    
+    console.log('✅ OP carregada:', {
+      numeroOP: op.value?.numeroOP,
+      dataInicio: dataInicioOP.value
+    })
+    
   } catch (error) {
     console.error('❌ Erro ao carregar OP:', error)
     op.value = {
@@ -637,6 +761,7 @@ const loadOP = async () => {
       cliente: 'Cliente não identificado',
       dataEntrega: null
     }
+    dataInicioOP.value = new Date().toISOString().split('T')[0]
   }
 }
 
@@ -664,16 +789,50 @@ const loadUsuarios = async () => {
   }
 }
 
+// ✅ MÉTODOS PARA CÁLCULO DE DATAS NO DIALOG
+const calcularDataInicioDisplay = () => {
+  if (!formProcesso.value.prazoEstimado) return '—'
+  
+  if (processos.value.length === 0) {
+    return dataInicioOP.value ? formatDate(dataInicioOP.value) : '—'
+  }
+  
+  // Para novos processos, calcular baseado no último processo
+  const ultimoProcesso = processosComDatasCalculadas.value[processosComDatasCalculadas.value.length - 1]
+  if (ultimoProcesso && ultimoProcesso.dataTerminoPrevista) {
+    const dataInicio = new Date(ultimoProcesso.dataTerminoPrevista)
+    dataInicio.setDate(dataInicio.getDate() + 1)
+    return formatDate(dataInicio.toISOString().split('T')[0])
+  }
+  
+  return 'A calcular...'
+}
+
+const calcularDataTerminoDisplay = () => {
+  const dataInicio = calcularDataInicioDisplay()
+  if (dataInicio === '—' || dataInicio === 'A calcular...' || !formProcesso.value.prazoEstimado) {
+    return '—'
+  }
+  
+  // Converter data de início para Date
+  const [dia, mes, ano] = dataInicio.split('/')
+  const dataInicioDate = new Date(`${ano}-${mes}-${dia}`)
+  
+  // Calcular data de término
+  const dataTermino = new Date(dataInicioDate)
+  dataTermino.setDate(dataTermino.getDate() + formProcesso.value.prazoEstimado - 1)
+  
+  return formatDate(dataTermino.toISOString().split('T')[0])
+}
+
 // Template functions
 const getTemplateProcesses = (templateName) => {
   return getTemplate(templateName)
 }
 
-// ✅ CORREÇÃO: Método aplicarTemplate usando a API correta
 const aplicarTemplate = async () => {
   aplicandoTemplate.value = true
   try {
-    // Usar a API de template específica
     const result = await $fetch(`/api/ops/${route.params.id}/processos/template`, {
       method: 'POST',
       body: {
@@ -742,11 +901,6 @@ const formatDate = (dateString) => {
   return new Date(dateString).toLocaleDateString('pt-BR')
 }
 
-const formatDateTime = (dateString) => {
-  if (!dateString) return '—'
-  return new Date(dateString).toLocaleString('pt-BR')
-}
-
 // Ações
 const openCreateProcessoDialog = () => {
   editingProcesso.value = null
@@ -757,7 +911,6 @@ const openCreateProcessoDialog = () => {
     status: 'NAO_INICIADO',
     progresso: 0,
     prazoEstimado: null,
-    dataPrevista: null,
     responsavelId: null
   }
   showProcessoDialog.value = true
@@ -770,11 +923,6 @@ const editarProcesso = (processo) => {
     responsavelId: processo.responsavel?.id || processo.responsavelId
   }
   
-  // ✅ CORREÇÃO: Formatar data para o input type="date"
-  if (processo.dataPrevista) {
-    formProcesso.value.dataPrevista = new Date(processo.dataPrevista).toISOString().split('T')[0]
-  }
-  
   showProcessoDialog.value = true
 }
 
@@ -784,20 +932,77 @@ const closeProcessoDialog = () => {
 }
 
 const salvarProcesso = async () => {
+  // Validação
+  if (!formProcesso.value.prazoEstimado) {
+    alert('❌ Prazo estimado é obrigatório')
+    return
+  }
+
+  if (processos.value.length === 0 && !dataInicioOP.value) {
+    alert('❌ Data de início da OP é obrigatória para o primeiro processo')
+    return
+  }
+
   salvando.value = true
   try {
-    // Preparar dados para envio
-    const dadosEnvio = {
-      ...formProcesso.value,
-      // Garantir que números sejam números
-      sequencia: parseInt(formProcesso.value.sequencia),
-      progresso: parseInt(formProcesso.value.progresso),
-      prazoEstimado: formProcesso.value.prazoEstimado ? parseInt(formProcesso.value.prazoEstimado) : null,
-      // ✅ CORREÇÃO: Data já está no formato correto para input type="date"
-      dataPrevista: formProcesso.value.dataPrevista ? 
-        new Date(formProcesso.value.dataPrevista + 'T00:00:00').toISOString() : null
+    // ✅ CALCULAR DATAS PARA O PROCESSO ATUAL
+    let dataInicioCalculada = ''
+    let dataTerminoCalculada = ''
+    
+    if (editingProcesso.value) {
+      // Para edição, manter as datas existentes
+      dataInicioCalculada = formProcesso.value.dataInicioPrevista
+      dataTerminoCalculada = formProcesso.value.dataTerminoPrevista
+    } else {
+      // ✅ CALCULAR NOVAS DATAS EM CASCATA
+      const novaSequencia = parseInt(formProcesso.value.sequencia)
+      
+      if (processos.value.length === 0) {
+        // Primeiro processo: inicia na data da OP
+        dataInicioCalculada = dataInicioOP.value
+      } else {
+        // Encontrar o processo anterior na sequência
+        const processosOrdenados = [...processos.value].sort((a, b) => a.sequencia - b.sequencia)
+        
+        // Se a sequência for maior que todos, pega o último processo
+        if (novaSequencia > processosOrdenados[processosOrdenados.length - 1].sequencia) {
+          const ultimoProcesso = processosOrdenados[processosOrdenados.length - 1]
+          const dataInicioDate = new Date(ultimoProcesso.dataTerminoPrevista || dataInicioOP.value)
+          dataInicioDate.setDate(dataInicioDate.getDate() + 1)
+          dataInicioCalculada = dataInicioDate.toISOString().split('T')[0]
+        } else {
+          // Encontrar onde inserir e recalcular todos
+          dataInicioCalculada = dataInicioOP.value
+        }
+      }
+      
+      // Calcular data de término baseada no prazo
+      if (formProcesso.value.prazoEstimado && formProcesso.value.prazoEstimado > 0) {
+        const dataTerminoDate = new Date(dataInicioCalculada)
+        dataTerminoDate.setDate(dataTerminoDate.getDate() + parseInt(formProcesso.value.prazoEstimado) - 1)
+        dataTerminoCalculada = dataTerminoDate.toISOString().split('T')[0]
+      }
     }
 
+    console.log('📅 Datas calculadas:', {
+      inicio: dataInicioCalculada,
+      termino: dataTerminoCalculada
+    })
+
+    // Preparar dados para envio (INCLUINDO AS DATAS CALCULADAS)
+    const dadosEnvio = {
+      ...formProcesso.value,
+      sequencia: parseInt(formProcesso.value.sequencia),
+      progresso: parseInt(formProcesso.value.progresso || 0),
+      prazoEstimado: parseInt(formProcesso.value.prazoEstimado),
+      // ✅ ENVIAR DATAS CALCULADAS PARA A API
+      dataInicioPrevista: dataInicioCalculada,
+      dataTerminoPrevista: dataTerminoCalculada
+    }
+
+    console.log('💾 Salvando processo com datas:', dadosEnvio)
+
+    // Chamada API
     if (editingProcesso.value) {
       const data = await $fetch(`/api/ops/${route.params.id}/processos/${editingProcesso.value.id}`, {
         method: 'PUT',
@@ -817,7 +1022,13 @@ const salvarProcesso = async () => {
       processos.value.push(data.processo)
     }
     
+    // ✅ RECALCULAR TODOS OS PROCESSOS SE FOR NOVO OU SEQUÊNCIA ALTERADA
+    if (!editingProcesso.value || formProcesso.value.sequencia !== editingProcesso.value.sequencia) {
+      await recalcularDatasCascata()
+    }
+    
     closeProcessoDialog()
+    
   } catch (error) {
     console.error('❌ Erro ao salvar processo:', error)
     alert('Erro ao salvar processo: ' + (error.data?.message || error.message))
@@ -826,15 +1037,74 @@ const salvarProcesso = async () => {
   }
 }
 
+const recalcularDatasCascata = async () => {
+  try {
+    console.log('🔄 Recalculando datas em cascata para todos os processos...')
+    
+    // Carregar processos ordenados
+    await loadProcessos()
+    const processosAtualizados = [...processos.value].sort((a, b) => a.sequencia - b.sequencia)
+    
+    // Recalcular datas para todos os processos
+    let dataInicioAtual = new Date(dataInicioOP.value)
+    
+    for (let i = 0; i < processosAtualizados.length; i++) {
+      const processo = processosAtualizados[i]
+      
+      if (i === 0) {
+        // Primeiro processo: inicia na data da OP
+        processo.dataInicioPrevista = dataInicioOP.value
+      } else {
+        // Processos subsequentes: iniciam no dia seguinte ao término do anterior
+        const processoAnterior = processosAtualizados[i - 1]
+        const dataTerminoAnterior = new Date(processoAnterior.dataTerminoPrevista || dataInicioOP.value)
+        dataTerminoAnterior.setDate(dataTerminoAnterior.getDate() + 1)
+        processo.dataInicioPrevista = dataTerminoAnterior.toISOString().split('T')[0]
+        dataInicioAtual = new Date(processo.dataInicioPrevista)
+      }
+      
+      // Calcular data de término baseada no prazo
+      if (processo.prazoEstimado && processo.prazoEstimado > 0) {
+        const dataTermino = new Date(dataInicioAtual)
+        dataTermino.setDate(dataTermino.getDate() + processo.prazoEstimado - 1)
+        processo.dataTerminoPrevista = dataTermino.toISOString().split('T')[0]
+        
+        // ✅ ATUALIZAR NO BANCO DE DADOS
+        if (processo.id) {
+          await $fetch(`/api/ops/${route.params.id}/processos/${processo.id}`, {
+            method: 'PUT',
+            body: {
+              dataInicioPrevista: processo.dataInicioPrevista,
+              dataTerminoPrevista: processo.dataTerminoPrevista
+            }
+          })
+        }
+      }
+    }
+    
+    // Recarregar processos após atualização
+    await loadProcessos()
+    
+    console.log('✅ Datas recalculadas e salvas no banco')
+  } catch (error) {
+    console.error('❌ Erro ao recalcular datas:', error)
+  }
+}
+
 const iniciarProcesso = async (processo) => {
   try {
-    await $fetch(`/api/ops/${route.params.id}/processos/${processo.id}/iniciar`, {
+    const response = await $fetch(`/api/ops/${route.params.id}/processos/${processo.id}/iniciar`, {
       method: 'POST'
     })
     
-    processo.status = 'EM_ANDAMENTO'
-    processo.dataInicio = new Date().toISOString()
-    processo.progresso = processo.progresso > 0 ? processo.progresso : 10
+    // Atualizar objeto local com resposta da API
+    if (response && response.processo) {
+      Object.assign(processo, response.processo)
+    }
+    
+    // Recarregar tudo para atualizar progresso geral
+    await loadProcessos()
+    await loadOP()
   } catch (error) {
     console.error('Erro ao iniciar processo:', error)
     alert('Erro ao iniciar processo: ' + (error.data?.message || error.message))
@@ -843,11 +1113,15 @@ const iniciarProcesso = async (processo) => {
 
 const pausarProcesso = async (processo) => {
   try {
-    await $fetch(`/api/ops/${route.params.id}/processos/${processo.id}/pausar`, {
+    const response = await $fetch(`/api/ops/${route.params.id}/processos/${processo.id}/pausar`, {
       method: 'POST'
     })
     
-    processo.status = 'AGUARDANDO'
+    if (response && response.processo) {
+      Object.assign(processo, response.processo)
+    }
+    
+    await loadProcessos()
   } catch (error) {
     console.error('Erro ao pausar processo:', error)
     alert('Erro ao pausar processo: ' + (error.data?.message || error.message))
@@ -856,13 +1130,17 @@ const pausarProcesso = async (processo) => {
 
 const concluirProcesso = async (processo) => {
   try {
-    await $fetch(`/api/ops/${route.params.id}/processos/${processo.id}/concluir`, {
+    const response = await $fetch(`/api/ops/${route.params.id}/processos/${processo.id}/concluir`, {
       method: 'POST'
     })
     
-    processo.status = 'CONCLUIDO'
-    processo.progresso = 100
-    processo.dataFim = new Date().toISOString()
+    if (response && response.processo) {
+      Object.assign(processo, response.processo)
+    }
+    
+    // Concluir afeta muito o progresso geral, importante recarregar
+    await loadProcessos()
+    await loadOP()
   } catch (error) {
     console.error('Erro ao concluir processo:', error)
     alert('Erro ao concluir processo: ' + (error.data?.message || error.message))

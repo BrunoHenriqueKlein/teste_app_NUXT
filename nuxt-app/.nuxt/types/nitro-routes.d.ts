@@ -3,11 +3,17 @@ import type { Serialize, Simplify } from "nitropack/types";
 declare module "nitropack/types" {
   type Awaited<T> = T extends PromiseLike<infer U> ? Awaited<U> : T
   interface InternalApi {
+    '/api/auth/forgot-password': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/auth/forgot-password.post').default>>>>
+    }
     '/api/auth/login': {
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/auth/login.post').default>>>>
     }
     '/api/auth/register': {
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/auth/register.post').default>>>>
+    }
+    '/api/auth/reset-password': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/auth/reset-password.post').default>>>>
     }
     '/api/clean/processos': {
       'delete': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/clean/processos.delete').default>>>>
@@ -33,6 +39,15 @@ declare module "nitropack/types" {
     '/api/ops/:id/processos/:processoId': {
       'put': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ops/[id]/processos/[processoId].put').default>>>>
       'delete': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ops/[id]/processos/[processoId]/index.delete').default>>>>
+    }
+    '/api/ops/:id/processos/:processoId/concluir': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ops/[id]/processos/[processoId]/concluir.post').default>>>>
+    }
+    '/api/ops/:id/processos/:processoId/iniciar': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ops/[id]/processos/[processoId]/iniciar.post').default>>>>
+    }
+    '/api/ops/:id/processos/:processoId/pausar': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ops/[id]/processos/[processoId]/pausar.post').default>>>>
     }
     '/api/ops/:id/processos': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ops/[id]/processos/index.get').default>>>>

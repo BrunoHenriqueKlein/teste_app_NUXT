@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
 
     const prisma = event.context.prisma
 
-    // Verificar se a OP existe - CORREÇÃO: modelo OP (não oP)
+    // Verificar se a OP existe
     const opExistente = await prisma.oP.findUnique({
       where: {
         id: parseInt(opId)
@@ -28,15 +28,32 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Validar dados obrigatórios
-    if (!body.nome || !body.sequencia) {
+    // ✅ VALIDAÇÃO MELHORADA
+    const errors = []
+    
+    if (!body.nome || body.nome.trim() === '') {
+      errors.push('Nome é obrigatório')
+    }
+    
+    if (!body.sequencia) {
+      errors.push('Sequência é obrigatória')
+    } else if (isNaN(parseInt(body.sequencia)) || parseInt(body.sequencia) <= 0) {
+      errors.push('Sequência deve ser um número positivo')
+    }
+    
+    if (!body.prazoEstimado) {
+      errors.push('Prazo estimado é obrigatório')
+    } else if (isNaN(parseInt(body.prazoEstimado)) || parseInt(body.prazoEstimado) <= 0) {
+      errors.push('Prazo estimado deve ser um número positivo')
+    }
+    
+    if (errors.length > 0) {
       throw createError({
         statusCode: 400,
-        message: 'Nome e sequência são obrigatórios'
+        message: errors.join(', ')
       })
     }
 
-    // ✅ CORREÇÃO: Usar OPProcesso (não oPProcesso)
     const sequencia = parseInt(body.sequencia)
 
     // Verificar se a sequência já existe
@@ -54,17 +71,65 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // ✅ CORREÇÃO: Tratamento de datas para OPProcesso
-    let dataPrevista = null
-    if (body.dataPrevista) {
-      if (typeof body.dataPrevista === 'string' && body.dataPrevista.includes('T')) {
-        dataPrevista = new Date(body.dataPrevista)
-      } else {
-        dataPrevista = new Date(body.dataPrevista + 'T00:00:00.000Z')
+    // ✅ FUNÇÃO AUXILIAR PARA CONVERTER DATAS
+    const parseDate = (dateValue: any): Date | null => {
+      if (!dateValue || dateValue === '' || dateValue === null) {
+        return null
+      }
+      
+      try {
+        let dateStr = dateValue
+        if (typeof dateStr === 'string' && !dateStr.includes('T')) {
+          dateStr = dateStr + 'T00:00:00.000Z'
+        }
+        const date = new Date(dateStr)
+        
+        // Verificar se a data é válida
+        if (isNaN(date.getTime())) {
+          console.warn(`⚠️ Data inválida: ${dateValue}`)
+          return null
+        }
+        
+        return date
+      } catch (error) {
+        console.warn(`⚠️ Erro ao converter data: ${dateValue}`, error)
+        return null
       }
     }
 
-    // Criar processo - CORREÇÃO: modelo OPProcesso
+    // ✅ TRATAMENTO DE DATAS - TODOS OS CAMPOS
+    const dataPrevista = parseDate(body.dataPrevista)
+    const dataInicioPrevista = parseDate(body.dataInicioPrevista)
+    const dataTerminoPrevista = parseDate(body.dataTerminoPrevista)
+    const dataInicio = parseDate(body.dataInicio)
+    const dataFim = parseDate(body.dataFim)
+
+    // ✅ CÁLCULO AUTOMÁTICO DE DATAS SE NÃO FORNECIDAS
+    let dataInicioCalculada = dataInicioPrevista
+    let dataTerminoCalculada = dataTerminoPrevista
+    
+    // Se não tem dataInicioPrevista, tentar calcular
+    if (!dataInicioCalculada) {
+      if (dataPrevista) {
+        // Usar dataPrevista como fallback
+        dataInicioCalculada = dataPrevista
+      } else {
+        // Tentar buscar a data de início da OP
+        dataInicioCalculada = opExistente.dataInicio || null
+      }
+    }
+    
+    // Se tem dataInicioPrevista mas não tem dataTerminoPrevista, calcular baseado no prazo
+    if (dataInicioCalculada && !dataTerminoCalculada && body.prazoEstimado) {
+      const prazo = parseInt(body.prazoEstimado)
+      if (prazo > 0) {
+        const terminoDate = new Date(dataInicioCalculada)
+        terminoDate.setDate(terminoDate.getDate() + prazo - 1)
+        dataTerminoCalculada = terminoDate
+      }
+    }
+
+    // ✅ DADOS DO PROCESSO COM TODOS OS CAMPOS
     const processoData = {
       opId: parseInt(opId),
       nome: body.nome.trim(),
@@ -73,12 +138,29 @@ export default defineEventHandler(async (event) => {
       status: body.status || 'NAO_INICIADO',
       progresso: parseInt(body.progresso) || 0,
       prazoEstimado: body.prazoEstimado ? parseInt(body.prazoEstimado) : null,
-      dataPrevista: dataPrevista,
+      
+      // ✅ DATAS PREVISTAS (CÁLCULO EM CASCATA)
+      dataInicioPrevista: dataInicioCalculada,
+      dataTerminoPrevista: dataTerminoCalculada,
+      
+      // ✅ DATAS REAIS (se fornecidas)
+      dataInicio: dataInicio,
+      dataFim: dataFim,
+      
+      // ✅ DATAS DE COMPATIBILIDADE (campo antigo)
+      dataPrevista: dataPrevista || dataInicioCalculada,
+      
       responsavelId: body.responsavelId ? parseInt(body.responsavelId) : null
     }
 
-    console.log('📝 DEBUG - Dados do processo a ser criado:', processoData)
+    console.log('📝 DEBUG - Dados do processo a ser criado:', {
+      ...processoData,
+      dataInicioPrevista: processoData.dataInicioPrevista?.toISOString(),
+      dataTerminoPrevista: processoData.dataTerminoPrevista?.toISOString(),
+      dataPrevista: processoData.dataPrevista?.toISOString()
+    })
 
+    // ✅ CRIAR PROCESSO
     const processo = await prisma.oPProcesso.create({
       data: processoData,
       include: {
@@ -93,13 +175,14 @@ export default defineEventHandler(async (event) => {
           select: {
             id: true,
             numeroOP: true,
-            descricaoMaquina: true
+            descricaoMaquina: true,
+            dataInicio: true
           }
         }
       }
     })
 
-    // ✅ CORREÇÃO: Atualizar progresso da OP
+    // ✅ ATUALIZAR PROGRESSO DA OP
     const processosOP = await prisma.oPProcesso.findMany({
       where: { opId: parseInt(opId) },
       select: { progresso: true }
@@ -114,21 +197,29 @@ export default defineEventHandler(async (event) => {
       data: { progresso: progressoMedio }
     })
 
-    // ✅ CORREÇÃO: Criar histórico usando ProcessoHistorico
+    console.log('📊 Progresso da OP atualizado para:', progressoMedio + '%')
+
+    // ✅ CRIAR HISTÓRICO
     try {
       await prisma.processoHistorico.create({
         data: {
           processoId: processo.id,
-          usuarioId: 1, // Em produção, pegar do usuário logado
+          usuarioId: 1, // TODO: Substituir pelo ID do usuário logado
           acao: 'Processo criado',
           detalhes: `Processo "${body.nome}" criado na OP ${opExistente.numeroOP}`
         }
       })
+      console.log('📖 Histórico criado para processo:', processo.id)
     } catch (historyError) {
       console.log('ℹ️ Tabela de histórico não disponível, continuando...')
     }
 
-    console.log('✅ Processo criado com sucesso:', processo.id)
+    console.log('✅ Processo criado com sucesso:', {
+      id: processo.id,
+      nome: processo.nome,
+      dataInicioPrevista: processo.dataInicioPrevista?.toISOString(),
+      dataTerminoPrevista: processo.dataTerminoPrevista?.toISOString()
+    })
     
     return { 
       success: true, 
@@ -142,12 +233,20 @@ export default defineEventHandler(async (event) => {
     let errorMessage = error.message || 'Erro ao criar processo'
     let statusCode = error.statusCode || 500
     
+    // ✅ TRATAMENTO DE ERROS ESPECÍFICOS DO PRISMA
     if (error.code === 'P2002') {
-      errorMessage = 'Já existe um processo com estes dados'
+      if (error.meta?.target?.includes('sequencia')) {
+        errorMessage = 'Já existe um processo com esta sequência'
+      } else {
+        errorMessage = 'Já existe um processo com estes dados'
+      }
       statusCode = 400
     } else if (error.code === 'P2003') {
       errorMessage = 'Responsável não encontrado'
       statusCode = 400
+    } else if (error.code === 'P2025') {
+      errorMessage = 'Registro relacionado não encontrado'
+      statusCode = 404
     }
     
     throw createError({

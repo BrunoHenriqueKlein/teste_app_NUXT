@@ -1,9 +1,15 @@
+// server/api/auth/login.post.ts (adicione logs)
 import { PrismaClient } from '@prisma/client'
+import bcrypt from 'bcrypt'
+import jwt from 'jsonwebtoken'
 
 const prisma = new PrismaClient()
+const jwtSecret = process.env.JWT_SECRET || 'your-secret-key-change-in-production'
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
+  
+  console.log('🔐 Tentativa de login:', body.email)
   
   try {
     // Buscar usuário pelo email
@@ -14,22 +20,49 @@ export default defineEventHandler(async (event) => {
     })
 
     if (!user) {
+      console.log('❌ Usuário não encontrado:', body.email)
       throw createError({
         statusCode: 401,
         statusMessage: 'Credenciais inválidas'
       })
     }
 
-    // Verificar senha (em produção, use bcrypt!)
-    if (user.password !== body.password) {
+    console.log('👤 Usuário encontrado:', user.email, 'ID:', user.id)
+
+    // Verificar se usuário está ativo
+    if (!user.isActive) {
+      console.log('❌ Usuário desativado:', user.email)
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Usuário desativado'
+      })
+    }
+
+    // Verificar senha com bcrypt
+    const validPassword = await bcrypt.compare(body.password, user.password)
+    
+    console.log('🔑 Validação de senha:', validPassword ? '✅ Correta' : '❌ Incorreta')
+    
+    if (!validPassword) {
       throw createError({
         statusCode: 401,
         statusMessage: 'Credenciais inválidas'
       })
     }
 
-    // Em produção, gere um JWT token aqui
-    const token = 'fake-jwt-token-' + Date.now()
+    // Gerar JWT token
+    const token = jwt.sign(
+      { 
+        id: user.id, 
+        email: user.email,
+        role: user.role,
+        department: user.department
+      },
+      jwtSecret,
+      { expiresIn: '24h' }
+    )
+
+    console.log('✅ Login bem-sucedido:', user.email)
 
     return {
       success: true,
@@ -37,13 +70,19 @@ export default defineEventHandler(async (event) => {
       user: {
         id: user.id,
         name: user.name,
-        email: user.email
+        email: user.email,
+        role: user.role,
+        department: user.department
       }
     }
-  } catch (error) {
+  } catch (error: any) {
+    console.error('❌ Erro no login:', error.message)
+    if (error.statusCode === 401) {
+      throw error
+    }
     throw createError({
       statusCode: 500,
-      statusMessage: 'Erro ao fazer login'
+      statusMessage: `Erro ao fazer login: ${error.message}`
     })
   }
 })

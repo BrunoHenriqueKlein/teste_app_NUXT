@@ -1,9 +1,18 @@
+// server/api/auth/register.post.ts
 import { PrismaClient } from '@prisma/client'
+import bcrypt from 'bcrypt'
 
 const prisma = new PrismaClient()
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
+  
+  console.log('📝 Tentativa de registro:', { 
+    email: body.email,
+    name: body.name,
+    department: body.department,
+    role: body.role
+  })
   
   try {
     // Verificar se usuário já existe
@@ -14,33 +23,53 @@ export default defineEventHandler(async (event) => {
     })
 
     if (existingUser) {
+      console.log('❌ Usuário já existe:', body.email)
       throw createError({
         statusCode: 400,
         statusMessage: 'Usuário já existe'
       })
     }
 
-    // Criar usuário (em produção, hash a senha com bcrypt!)
+    // Hash da senha
+    const hashedPassword = await bcrypt.hash(body.password, 10)
+
+    // Criar usuário com department padrão se não informado
     const user = await prisma.user.create({
       data: {
         name: body.name,
         email: body.email,
-        password: body.password // Em produção: await bcrypt.hash(body.password, 10)
+        password: hashedPassword,
+        department: body.department || 'ADMINISTRATIVO',
+        role: body.role || 'USER'
       }
     })
+
+    console.log('✅ Usuário criado com sucesso:', user.id, user.email)
 
     return {
       success: true,
       user: {
         id: user.id,
         name: user.name,
-        email: user.email
+        email: user.email,
+        role: user.role,
+        department: user.department
       }
     }
-  } catch (error) {
+  } catch (error: any) {
+    console.error('❌ Erro ao criar usuário:', error)
+    
+    // Verificar se é erro do Prisma
+    if (error.code === 'P2002') {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'E-mail já cadastrado'
+      })
+    }
+    
     throw createError({
       statusCode: 500,
-      statusMessage: 'Erro ao criar usuário'
+      statusMessage: `Erro ao criar usuário: ${error.message}`
     })
   }
 })

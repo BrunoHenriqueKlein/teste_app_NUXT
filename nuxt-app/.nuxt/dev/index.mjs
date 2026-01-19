@@ -6,6 +6,9 @@ import nodeCrypto from 'node:crypto';
 import { parentPort, threadId } from 'node:worker_threads';
 import { escapeHtml } from 'file:///app/node_modules/@vue/shared/dist/shared.cjs.js';
 import { PrismaClient } from 'file:///app/node_modules/@prisma/client/default.js';
+import { createTransport } from 'file:///app/node_modules/nodemailer/lib/nodemailer.js';
+import bcrypt from 'file:///app/node_modules/bcrypt/bcrypt.js';
+import jwt from 'file:///app/node_modules/jsonwebtoken/index.js';
 import { createRenderer, getRequestDependencies, getPreloadLinks, getPrefetchLinks } from 'file:///app/node_modules/vue-bundle-renderer/dist/runtime.mjs';
 import { parseURL, withoutBase, joinURL, getQuery, withQuery, withTrailingSlash, decodePath, withLeadingSlash, withoutTrailingSlash, joinRelativeURL } from 'file:///app/node_modules/ufo/dist/index.mjs';
 import process$1 from 'node:process';
@@ -1367,11 +1370,11 @@ function defineNitroPlugin(def) {
   return def;
 }
 
-const prisma$j = new PrismaClient();
+const prisma$o = new PrismaClient();
 const _aIQNJBgajH95T2G3WQbulkLX3hjPiBtkWRLnpkQYumM = defineNitroPlugin((nitroApp) => {
   console.log("\u2705 Prisma plugin carregado");
   nitroApp.hooks.hook("request", (event) => {
-    event.context.prisma = prisma$j;
+    event.context.prisma = prisma$o;
   });
 });
 
@@ -1879,8 +1882,10 @@ async function getIslandContext(event) {
   return ctx;
 }
 
+const _lazy_jNHpjd = () => Promise.resolve().then(function () { return forgotPassword_post$1; });
 const _lazy_MyKlQu = () => Promise.resolve().then(function () { return login_post$1; });
 const _lazy_wD64rD = () => Promise.resolve().then(function () { return register_post$1; });
+const _lazy_2vhMo2 = () => Promise.resolve().then(function () { return resetPassword_post$1; });
 const _lazy_FQxnpl = () => Promise.resolve().then(function () { return processos_delete$1; });
 const _lazy_LHV_bL = () => Promise.resolve().then(function () { return stats_get$1; });
 const _lazy_Ht9XLv = () => Promise.resolve().then(function () { return itens_get$1; });
@@ -1891,7 +1896,10 @@ const _lazy_1PdPm1 = () => Promise.resolve().then(function () { return _processo
 const _lazy_8pA3RW = () => Promise.resolve().then(function () { return actions_post$1; });
 const _lazy_qhbDcx = () => Promise.resolve().then(function () { return index_get$7; });
 const _lazy_z95cTO = () => Promise.resolve().then(function () { return _processoId__put$1; });
+const _lazy_Q81yjV = () => Promise.resolve().then(function () { return concluir_post$1; });
 const _lazy_dz98Qk = () => Promise.resolve().then(function () { return index_delete$1; });
+const _lazy_CF80Sv = () => Promise.resolve().then(function () { return iniciar_post$1; });
+const _lazy_lRS9tw = () => Promise.resolve().then(function () { return pausar_post$1; });
 const _lazy_Ti6QWP = () => Promise.resolve().then(function () { return index_get$5; });
 const _lazy_HdjEyo = () => Promise.resolve().then(function () { return index_post$3; });
 const _lazy_QaMZQF = () => Promise.resolve().then(function () { return template_post$1; });
@@ -1905,8 +1913,10 @@ const _lazy_0XwxzV = () => Promise.resolve().then(function () { return renderer$
 
 const handlers = [
   { route: '', handler: _oStzCE, lazy: false, middleware: true, method: undefined },
+  { route: '/api/auth/forgot-password', handler: _lazy_jNHpjd, lazy: true, middleware: false, method: "post" },
   { route: '/api/auth/login', handler: _lazy_MyKlQu, lazy: true, middleware: false, method: "post" },
   { route: '/api/auth/register', handler: _lazy_wD64rD, lazy: true, middleware: false, method: "post" },
+  { route: '/api/auth/reset-password', handler: _lazy_2vhMo2, lazy: true, middleware: false, method: "post" },
   { route: '/api/clean/processos', handler: _lazy_FQxnpl, lazy: true, middleware: false, method: "delete" },
   { route: '/api/dashboard/stats', handler: _lazy_LHV_bL, lazy: true, middleware: false, method: "get" },
   { route: '/api/itens', handler: _lazy_Ht9XLv, lazy: true, middleware: false, method: "get" },
@@ -1917,7 +1927,10 @@ const handlers = [
   { route: '/api/ops/:id/actions', handler: _lazy_8pA3RW, lazy: true, middleware: false, method: "post" },
   { route: '/api/ops/:id', handler: _lazy_qhbDcx, lazy: true, middleware: false, method: "get" },
   { route: '/api/ops/:id/processos/:processoId', handler: _lazy_z95cTO, lazy: true, middleware: false, method: "put" },
+  { route: '/api/ops/:id/processos/:processoId/concluir', handler: _lazy_Q81yjV, lazy: true, middleware: false, method: "post" },
   { route: '/api/ops/:id/processos/:processoId', handler: _lazy_dz98Qk, lazy: true, middleware: false, method: "delete" },
+  { route: '/api/ops/:id/processos/:processoId/iniciar', handler: _lazy_CF80Sv, lazy: true, middleware: false, method: "post" },
+  { route: '/api/ops/:id/processos/:processoId/pausar', handler: _lazy_lRS9tw, lazy: true, middleware: false, method: "post" },
   { route: '/api/ops/:id/processos', handler: _lazy_Ti6QWP, lazy: true, middleware: false, method: "get" },
   { route: '/api/ops/:id/processos', handler: _lazy_HdjEyo, lazy: true, middleware: false, method: "post" },
   { route: '/api/ops/:id/processos/template', handler: _lazy_QaMZQF, lazy: true, middleware: false, method: "post" },
@@ -2267,41 +2280,146 @@ const styles$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
   default: styles
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$i = new PrismaClient();
-const login_post = defineEventHandler(async (event) => {
+const prisma$n = new PrismaClient();
+const forgotPassword_post = defineEventHandler(async (event) => {
   const body = await readBody(event);
   try {
-    const user = await prisma$i.user.findUnique({
+    const user = await prisma$n.user.findUnique({
       where: {
         email: body.email
       }
     });
     if (!user) {
+      return {
+        success: true,
+        message: "Se o e-mail existir em nosso sistema, voc\xEA receber\xE1 um link de recupera\xE7\xE3o"
+      };
+    }
+    const resetToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
+    const resetTokenExpiry = new Date(Date.now() + 36e5);
+    await prisma$n.user.update({
+      where: { id: user.id },
+      data: {
+        resetToken,
+        resetTokenExpiry
+      }
+    });
+    const transporter = createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASSWORD
+      }
+    });
+    const resetUrl = `${process.env.APP_URL}/reset-password?token=${resetToken}`;
+    const mailOptions = {
+      from: process.env.EMAIL_FROM,
+      to: user.email,
+      subject: "Redefini\xE7\xE3o de Senha - Sistema SOMEH",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #1867C0;">Redefini\xE7\xE3o de Senha</h2>
+          <p>Ol\xE1 ${user.name},</p>
+          <p>Voc\xEA solicitou a redefini\xE7\xE3o de sua senha. Clique no link abaixo para criar uma nova senha:</p>
+          <p style="text-align: center; margin: 30px 0;">
+            <a href="${resetUrl}" 
+               style="background-color: #1867C0; color: white; padding: 12px 24px; 
+                      text-decoration: none; border-radius: 6px; font-weight: bold;">
+              Redefinir Senha
+            </a>
+          </p>
+          <p>Este link expirar\xE1 em 1 hora.</p>
+          <p>Se voc\xEA n\xE3o solicitou esta redefini\xE7\xE3o, ignore este e-mail.</p>
+          <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+          <p style="color: #666; font-size: 12px;">
+            Sistema SOMEH - Controle de Produ\xE7\xE3o
+          </p>
+        </div>
+      `
+    };
+    await transporter.sendMail(mailOptions);
+    return {
+      success: true,
+      message: "Link de recupera\xE7\xE3o enviado para seu e-mail"
+    };
+  } catch (error) {
+    console.error("Erro no forgot-password:", error);
+    return {
+      success: false,
+      message: "Erro ao processar solicita\xE7\xE3o"
+    };
+  }
+});
+
+const forgotPassword_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: forgotPassword_post
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const prisma$m = new PrismaClient();
+const jwtSecret = process.env.JWT_SECRET || "your-secret-key-change-in-production";
+const login_post = defineEventHandler(async (event) => {
+  const body = await readBody(event);
+  console.log("\u{1F510} Tentativa de login:", body.email);
+  try {
+    const user = await prisma$m.user.findUnique({
+      where: {
+        email: body.email
+      }
+    });
+    if (!user) {
+      console.log("\u274C Usu\xE1rio n\xE3o encontrado:", body.email);
       throw createError({
         statusCode: 401,
         statusMessage: "Credenciais inv\xE1lidas"
       });
     }
-    if (user.password !== body.password) {
+    console.log("\u{1F464} Usu\xE1rio encontrado:", user.email, "ID:", user.id);
+    if (!user.isActive) {
+      console.log("\u274C Usu\xE1rio desativado:", user.email);
+      throw createError({
+        statusCode: 401,
+        statusMessage: "Usu\xE1rio desativado"
+      });
+    }
+    const validPassword = await bcrypt.compare(body.password, user.password);
+    console.log("\u{1F511} Valida\xE7\xE3o de senha:", validPassword ? "\u2705 Correta" : "\u274C Incorreta");
+    if (!validPassword) {
       throw createError({
         statusCode: 401,
         statusMessage: "Credenciais inv\xE1lidas"
       });
     }
-    const token = "fake-jwt-token-" + Date.now();
+    const token = jwt.sign(
+      {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        department: user.department
+      },
+      jwtSecret,
+      { expiresIn: "24h" }
+    );
+    console.log("\u2705 Login bem-sucedido:", user.email);
     return {
       success: true,
       token,
       user: {
         id: user.id,
         name: user.name,
-        email: user.email
+        email: user.email,
+        role: user.role,
+        department: user.department
       }
     };
   } catch (error) {
+    console.error("\u274C Erro no login:", error.message);
+    if (error.statusCode === 401) {
+      throw error;
+    }
     throw createError({
       statusCode: 500,
-      statusMessage: "Erro ao fazer login"
+      statusMessage: `Erro ao fazer login: ${error.message}`
     });
   }
 });
@@ -2311,41 +2429,60 @@ const login_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProper
   default: login_post
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$h = new PrismaClient();
+const prisma$l = new PrismaClient();
 const register_post = defineEventHandler(async (event) => {
   const body = await readBody(event);
+  console.log("\u{1F4DD} Tentativa de registro:", {
+    email: body.email,
+    name: body.name,
+    department: body.department,
+    role: body.role
+  });
   try {
-    const existingUser = await prisma$h.user.findUnique({
+    const existingUser = await prisma$l.user.findUnique({
       where: {
         email: body.email
       }
     });
     if (existingUser) {
+      console.log("\u274C Usu\xE1rio j\xE1 existe:", body.email);
       throw createError({
         statusCode: 400,
         statusMessage: "Usu\xE1rio j\xE1 existe"
       });
     }
-    const user = await prisma$h.user.create({
+    const hashedPassword = await bcrypt.hash(body.password, 10);
+    const user = await prisma$l.user.create({
       data: {
         name: body.name,
         email: body.email,
-        password: body.password
-        // Em produção: await bcrypt.hash(body.password, 10)
+        password: hashedPassword,
+        department: body.department || "ADMINISTRATIVO",
+        role: body.role || "USER"
       }
     });
+    console.log("\u2705 Usu\xE1rio criado com sucesso:", user.id, user.email);
     return {
       success: true,
       user: {
         id: user.id,
         name: user.name,
-        email: user.email
+        email: user.email,
+        role: user.role,
+        department: user.department
       }
     };
   } catch (error) {
+    console.error("\u274C Erro ao criar usu\xE1rio:", error);
+    if (error.code === "P2002") {
+      throw createError({
+        statusCode: 400,
+        statusMessage: "E-mail j\xE1 cadastrado"
+      });
+    }
     throw createError({
       statusCode: 500,
-      statusMessage: "Erro ao criar usu\xE1rio"
+      statusMessage: `Erro ao criar usu\xE1rio: ${error.message}`
     });
   }
 });
@@ -2355,10 +2492,57 @@ const register_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePro
   default: register_post
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$g = new PrismaClient();
+const prisma$k = new PrismaClient();
+const resetPassword_post = defineEventHandler(async (event) => {
+  const body = await readBody(event);
+  try {
+    const user = await prisma$k.user.findFirst({
+      where: {
+        resetToken: body.token,
+        resetTokenExpiry: {
+          gt: /* @__PURE__ */ new Date()
+          // Token ainda não expirou
+        }
+      }
+    });
+    if (!user) {
+      return {
+        success: false,
+        message: "Token inv\xE1lido ou expirado"
+      };
+    }
+    const hashedPassword = await bcrypt.hash(body.password, 10);
+    await prisma$k.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        resetToken: null,
+        resetTokenExpiry: null,
+        updatedAt: /* @__PURE__ */ new Date()
+      }
+    });
+    return {
+      success: true,
+      message: "Senha redefinida com sucesso"
+    };
+  } catch (error) {
+    console.error("Erro no reset-password:", error);
+    return {
+      success: false,
+      message: "Erro ao redefinir senha"
+    };
+  }
+});
+
+const resetPassword_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: resetPassword_post
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const prisma$j = new PrismaClient();
 const processos_delete = defineEventHandler(async (event) => {
   try {
-    const result = await prisma$g.oPProcesso.deleteMany({});
+    const result = await prisma$j.oPProcesso.deleteMany({});
     return {
       success: true,
       message: `Foram exclu\xEDdos ${result.count} processos`
@@ -2376,23 +2560,23 @@ const processos_delete$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.define
   default: processos_delete
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$f = new PrismaClient();
+const prisma$i = new PrismaClient();
 const stats_get = defineEventHandler(async (event) => {
   try {
-    const opsAbertas = await prisma$f.oP.count({
+    const opsAbertas = await prisma$i.oP.count({
       where: { status: "ABERTA" }
     });
-    const opsProducao = await prisma$f.oP.count({
+    const opsProducao = await prisma$i.oP.count({
       where: {
         status: {
           in: ["EM_PROJETO", "EM_FABRICACAO", "EM_MONTAGEM"]
         }
       }
     });
-    const opsConcluidas = await prisma$f.oP.count({
+    const opsConcluidas = await prisma$i.oP.count({
       where: { status: "ENTREGUE" }
     });
-    const opsAtrasadas = await prisma$f.oP.count({
+    const opsAtrasadas = await prisma$i.oP.count({
       where: {
         dataEntrega: { lt: /* @__PURE__ */ new Date() },
         status: { not: "ENTREGUE" }
@@ -2420,10 +2604,10 @@ const stats_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePropert
   default: stats_get
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$e = new PrismaClient();
+const prisma$h = new PrismaClient();
 const itens_get = defineEventHandler(async (event) => {
   try {
-    const itens = await prisma$e.item.findMany({
+    const itens = await prisma$h.item.findMany({
       orderBy: {
         createdAt: "desc"
       }
@@ -2440,7 +2624,7 @@ const itens_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePropert
   default: itens_get
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$d = new PrismaClient();
+const prisma$g = new PrismaClient();
 const _id__delete = defineEventHandler(async (event) => {
   try {
     const id = getRouterParam(event, "id");
@@ -2450,7 +2634,7 @@ const _id__delete = defineEventHandler(async (event) => {
         statusMessage: "ID da OP n\xE3o informado"
       });
     }
-    const existingOP = await prisma$d.oP.findUnique({
+    const existingOP = await prisma$g.oP.findUnique({
       where: { id: parseInt(id) }
     });
     if (!existingOP) {
@@ -2459,10 +2643,10 @@ const _id__delete = defineEventHandler(async (event) => {
         statusMessage: "OP n\xE3o encontrada"
       });
     }
-    await prisma$d.oP.delete({
+    await prisma$g.oP.delete({
       where: { id: parseInt(id) }
     });
-    await prisma$d.oPHistorico.create({
+    await prisma$g.oPHistorico.create({
       data: {
         opId: parseInt(id),
         usuarioId: 1,
@@ -2486,7 +2670,7 @@ const _id__delete$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePrope
   default: _id__delete
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$c = new PrismaClient();
+const prisma$f = new PrismaClient();
 const _id__put = defineEventHandler(async (event) => {
   try {
     const body = await readBody(event);
@@ -2497,7 +2681,7 @@ const _id__put = defineEventHandler(async (event) => {
         statusMessage: "ID da OP n\xE3o informado"
       });
     }
-    const existingOP = await prisma$c.oP.findUnique({
+    const existingOP = await prisma$f.oP.findUnique({
       where: { id: parseInt(id) }
     });
     if (!existingOP) {
@@ -2506,7 +2690,7 @@ const _id__put = defineEventHandler(async (event) => {
         statusMessage: "OP n\xE3o encontrada"
       });
     }
-    const op = await prisma$c.oP.update({
+    const op = await prisma$f.oP.update({
       where: { id: parseInt(id) },
       data: {
         numeroOP: body.numeroOP,
@@ -2527,7 +2711,7 @@ const _id__put = defineEventHandler(async (event) => {
         }
       }
     });
-    await prisma$c.oPHistorico.create({
+    await prisma$f.oPHistorico.create({
       data: {
         opId: op.id,
         usuarioId: 1,
@@ -2551,7 +2735,7 @@ const _id__put$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty
   default: _id__put
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$b = new PrismaClient();
+const prisma$e = new PrismaClient();
 const _processoId__delete = defineEventHandler(async (event) => {
   try {
     const opId = getRouterParam(event, "id");
@@ -2562,7 +2746,7 @@ const _processoId__delete = defineEventHandler(async (event) => {
         statusMessage: "IDs n\xE3o informados"
       });
     }
-    const existingProcesso = await prisma$b.oPProcesso.findFirst({
+    const existingProcesso = await prisma$e.oPProcesso.findFirst({
       where: {
         id: parseInt(processoId),
         opId: parseInt(opId)
@@ -2574,12 +2758,12 @@ const _processoId__delete = defineEventHandler(async (event) => {
         statusMessage: "Processo n\xE3o encontrado"
       });
     }
-    await prisma$b.processoHistorico.deleteMany({
+    await prisma$e.processoHistorico.deleteMany({
       where: {
         processoId: parseInt(processoId)
       }
     });
-    await prisma$b.oPProcesso.delete({
+    await prisma$e.oPProcesso.delete({
       where: {
         id: parseInt(processoId)
       }
@@ -2599,7 +2783,7 @@ const _processoId__delete$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.def
   default: _processoId__delete
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$a = new PrismaClient();
+const prisma$d = new PrismaClient();
 const _processoId__put$2 = defineEventHandler(async (event) => {
   try {
     const opId = getRouterParam(event, "id");
@@ -2611,7 +2795,7 @@ const _processoId__put$2 = defineEventHandler(async (event) => {
         statusMessage: "IDs n\xE3o informados"
       });
     }
-    const existingProcesso = await prisma$a.oPProcesso.findFirst({
+    const existingProcesso = await prisma$d.oPProcesso.findFirst({
       where: {
         id: parseInt(processoId),
         opId: parseInt(opId)
@@ -2623,7 +2807,7 @@ const _processoId__put$2 = defineEventHandler(async (event) => {
         statusMessage: "Processo n\xE3o encontrado"
       });
     }
-    const processo = await prisma$a.oPProcesso.update({
+    const processo = await prisma$d.oPProcesso.update({
       where: {
         id: parseInt(processoId)
       },
@@ -2647,7 +2831,7 @@ const _processoId__put$2 = defineEventHandler(async (event) => {
         }
       }
     });
-    await prisma$a.processoHistorico.create({
+    await prisma$d.processoHistorico.create({
       data: {
         processoId: processo.id,
         usuarioId: 1,
@@ -2671,7 +2855,7 @@ const _processoId__put$3 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.define
   default: _processoId__put$2
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$9 = new PrismaClient();
+const prisma$c = new PrismaClient();
 const actions_post = defineEventHandler(async (event) => {
   try {
     const opId = getRouterParam(event, "id");
@@ -2683,7 +2867,7 @@ const actions_post = defineEventHandler(async (event) => {
         statusMessage: "Dados incompletos"
       });
     }
-    const existingProcesso = await prisma$9.oPProcesso.findFirst({
+    const existingProcesso = await prisma$c.oPProcesso.findFirst({
       where: {
         id: parseInt(processoId),
         opId: parseInt(opId)
@@ -2738,7 +2922,7 @@ const actions_post = defineEventHandler(async (event) => {
           statusMessage: "A\xE7\xE3o n\xE3o reconhecida"
         });
     }
-    const processo = await prisma$9.oPProcesso.update({
+    const processo = await prisma$c.oPProcesso.update({
       where: {
         id: parseInt(processoId)
       },
@@ -2753,7 +2937,7 @@ const actions_post = defineEventHandler(async (event) => {
         }
       }
     });
-    await prisma$9.processoHistorico.create({
+    await prisma$c.processoHistorico.create({
       data: {
         processoId: processo.id,
         usuarioId: 1,
@@ -2777,7 +2961,7 @@ const actions_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProp
   default: actions_post
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$8 = new PrismaClient();
+const prisma$b = new PrismaClient();
 const index_get$6 = defineEventHandler(async (event) => {
   try {
     const opId = getRouterParam(event, "id");
@@ -2787,7 +2971,7 @@ const index_get$6 = defineEventHandler(async (event) => {
         message: "ID da OP n\xE3o informado"
       });
     }
-    const op = await prisma$8.oP.findUnique({
+    const op = await prisma$b.oP.findUnique({
       where: {
         id: parseInt(opId)
       },
@@ -2855,23 +3039,96 @@ const _processoId__put = defineEventHandler(async (event) => {
         statusMessage: "Processo n\xE3o encontrado"
       });
     }
+    if (body.sequencia !== void 0) {
+      const novaSequencia = parseInt(body.sequencia);
+      const sequenciaExistente = await prisma.oPProcesso.findFirst({
+        where: {
+          opId: parseInt(opId),
+          sequencia: novaSequencia,
+          id: {
+            not: parseInt(processoId)
+          }
+        }
+      });
+      if (sequenciaExistente) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: "J\xE1 existe um processo com esta sequ\xEAncia"
+        });
+      }
+    }
     const updateData = {
-      nome: (_a = body.nome) == null ? void 0 : _a.trim(),
+      nome: ((_a = body.nome) == null ? void 0 : _a.trim()) || existingProcesso.nome,
       descricao: ((_b = body.descricao) == null ? void 0 : _b.trim()) || null,
-      sequencia: body.sequencia ? parseInt(body.sequencia) : existingProcesso.sequencia,
       status: body.status || existingProcesso.status,
-      progresso: body.progresso ? parseInt(body.progresso) : existingProcesso.progresso,
-      prazoEstimado: body.prazoEstimado ? parseInt(body.prazoEstimado) : null,
       responsavelId: body.responsavelId ? parseInt(body.responsavelId) : null
     };
+    if (body.sequencia !== void 0) {
+      updateData.sequencia = parseInt(body.sequencia);
+    }
+    if (body.progresso !== void 0) {
+      updateData.progresso = parseInt(body.progresso);
+    }
+    if (body.prazoEstimado !== void 0) {
+      updateData.prazoEstimado = body.prazoEstimado !== null ? parseInt(body.prazoEstimado) : null;
+    }
     if (body.dataPrevista !== void 0) {
       if (body.dataPrevista === null || body.dataPrevista === "") {
         updateData.dataPrevista = null;
       } else {
-        if (typeof body.dataPrevista === "string" && body.dataPrevista.includes("T")) {
-          updateData.dataPrevista = new Date(body.dataPrevista);
-        } else {
-          updateData.dataPrevista = /* @__PURE__ */ new Date(body.dataPrevista + "T00:00:00.000Z");
+        try {
+          const dateStr = typeof body.dataPrevista === "string" && !body.dataPrevista.includes("T") ? body.dataPrevista + "T00:00:00.000Z" : body.dataPrevista;
+          updateData.dataPrevista = new Date(dateStr);
+        } catch (error) {
+          console.warn("\u26A0\uFE0F Erro ao converter dataPrevista:", error);
+        }
+      }
+    }
+    if (body.dataInicioPrevista !== void 0) {
+      if (body.dataInicioPrevista === null || body.dataInicioPrevista === "") {
+        updateData.dataInicioPrevista = null;
+      } else {
+        try {
+          const dateStr = typeof body.dataInicioPrevista === "string" && !body.dataInicioPrevista.includes("T") ? body.dataInicioPrevista + "T00:00:00.000Z" : body.dataInicioPrevista;
+          updateData.dataInicioPrevista = new Date(dateStr);
+        } catch (error) {
+          console.warn("\u26A0\uFE0F Erro ao converter dataInicioPrevista:", error);
+        }
+      }
+    }
+    if (body.dataTerminoPrevista !== void 0) {
+      if (body.dataTerminoPrevista === null || body.dataTerminoPrevista === "") {
+        updateData.dataTerminoPrevista = null;
+      } else {
+        try {
+          const dateStr = typeof body.dataTerminoPrevista === "string" && !body.dataTerminoPrevista.includes("T") ? body.dataTerminoPrevista + "T00:00:00.000Z" : body.dataTerminoPrevista;
+          updateData.dataTerminoPrevista = new Date(dateStr);
+        } catch (error) {
+          console.warn("\u26A0\uFE0F Erro ao converter dataTerminoPrevista:", error);
+        }
+      }
+    }
+    if (body.dataInicio !== void 0) {
+      if (body.dataInicio === null || body.dataInicio === "") {
+        updateData.dataInicio = null;
+      } else {
+        try {
+          const dateStr = typeof body.dataInicio === "string" && !body.dataInicio.includes("T") ? body.dataInicio + "T00:00:00.000Z" : body.dataInicio;
+          updateData.dataInicio = new Date(dateStr);
+        } catch (error) {
+          console.warn("\u26A0\uFE0F Erro ao converter dataInicio:", error);
+        }
+      }
+    }
+    if (body.dataFim !== void 0) {
+      if (body.dataFim === null || body.dataFim === "") {
+        updateData.dataFim = null;
+      } else {
+        try {
+          const dateStr = typeof body.dataFim === "string" && !body.dataFim.includes("T") ? body.dataFim + "T00:00:00.000Z" : body.dataFim;
+          updateData.dataFim = new Date(dateStr);
+        } catch (error) {
+          console.warn("\u26A0\uFE0F Erro ao converter dataFim:", error);
         }
       }
     }
@@ -2893,7 +3150,8 @@ const _processoId__put = defineEventHandler(async (event) => {
           select: {
             id: true,
             numeroOP: true,
-            descricaoMaquina: true
+            descricaoMaquina: true,
+            dataInicio: true
           }
         }
       }
@@ -2921,15 +3179,21 @@ const _processoId__put = defineEventHandler(async (event) => {
         data: {
           processoId: processo.id,
           usuarioId: 1,
+          // TODO: Substituir pelo ID do usuário logado
           acao: "Processo atualizado",
-          detalhes: `Processo "${body.nome}" atualizado - Status: ${body.status || existingProcesso.status}`
+          detalhes: `Processo "${body.nome || existingProcesso.nome}" atualizado - Status: ${body.status || existingProcesso.status}`
         }
       });
       console.log("\u{1F4D6} Hist\xF3rico criado para processo:", processo.id);
     } catch (historyError) {
       console.log("\u2139\uFE0F Tabela de hist\xF3rico n\xE3o dispon\xEDvel, continuando...");
     }
-    console.log("\u2705 Processo atualizado com sucesso:", processo.id);
+    console.log("\u2705 Processo atualizado com sucesso:", {
+      id: processo.id,
+      nome: processo.nome,
+      dataInicioPrevista: processo.dataInicioPrevista,
+      dataTerminoPrevista: processo.dataTerminoPrevista
+    });
     return {
       success: true,
       processo,
@@ -2961,7 +3225,73 @@ const _processoId__put$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.define
   default: _processoId__put
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$7 = new PrismaClient();
+const prisma$a = new PrismaClient();
+const concluir_post = defineEventHandler(async (event) => {
+  try {
+    const opId = getRouterParam(event, "id");
+    const processoId = getRouterParam(event, "processoId");
+    if (!opId || !processoId) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: "IDs inv\xE1lidos"
+      });
+    }
+    const existingProcesso = await prisma$a.oPProcesso.findFirst({
+      where: {
+        id: parseInt(processoId),
+        opId: parseInt(opId)
+      }
+    });
+    if (!existingProcesso) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: "Processo n\xE3o encontrado"
+      });
+    }
+    const processo = await prisma$a.oPProcesso.update({
+      where: {
+        id: parseInt(processoId)
+      },
+      data: {
+        status: "CONCLUIDO",
+        progresso: 100,
+        dataFim: /* @__PURE__ */ new Date()
+      }
+    });
+    const processosOP = await prisma$a.oPProcesso.findMany({
+      where: { opId: parseInt(opId) },
+      select: { progresso: true }
+    });
+    const progressoMedio = processosOP.length > 0 ? Math.round(processosOP.reduce((sum, p) => sum + p.progresso, 0) / processosOP.length) : 0;
+    await prisma$a.oP.update({
+      where: { id: parseInt(opId) },
+      data: { progresso: progressoMedio }
+    });
+    await prisma$a.processoHistorico.create({
+      data: {
+        processoId: processo.id,
+        usuarioId: 1,
+        // TODO: Pegar do usuário logado
+        acao: "Processo conclu\xEDdo",
+        detalhes: `Processo "${existingProcesso.nome}" conclu\xEDdo`
+      }
+    });
+    return { success: true, processo };
+  } catch (error) {
+    console.error("Erro ao concluir processo:", error);
+    throw createError({
+      statusCode: error.statusCode || 500,
+      statusMessage: error.message || "Erro ao concluir processo"
+    });
+  }
+});
+
+const concluir_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: concluir_post
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const prisma$9 = new PrismaClient();
 const index_delete = defineEventHandler(async (event) => {
   try {
     const opId = getRouterParam(event, "id");
@@ -2973,7 +3303,7 @@ const index_delete = defineEventHandler(async (event) => {
         message: "ID da OP ou ID do processo n\xE3o informado"
       });
     }
-    const processoExistente = await prisma$7.oPProcesso.findFirst({
+    const processoExistente = await prisma$9.oPProcesso.findFirst({
       where: {
         id: parseInt(processoId),
         opId: parseInt(opId)
@@ -2989,13 +3319,13 @@ const index_delete = defineEventHandler(async (event) => {
       });
     }
     if (processoExistente.historico.length > 0) {
-      await prisma$7.processoHistorico.deleteMany({
+      await prisma$9.processoHistorico.deleteMany({
         where: {
           processoId: parseInt(processoId)
         }
       });
     }
-    await prisma$7.oPProcesso.delete({
+    await prisma$9.oPProcesso.delete({
       where: {
         id: parseInt(processoId)
       }
@@ -3014,6 +3344,118 @@ const index_delete = defineEventHandler(async (event) => {
 const index_delete$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
   __proto__: null,
   default: index_delete
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const prisma$8 = new PrismaClient();
+const iniciar_post = defineEventHandler(async (event) => {
+  try {
+    const opId = getRouterParam(event, "id");
+    const processoId = getRouterParam(event, "processoId");
+    if (!opId || !processoId) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: "IDs inv\xE1lidos"
+      });
+    }
+    const existingProcesso = await prisma$8.oPProcesso.findFirst({
+      where: {
+        id: parseInt(processoId),
+        opId: parseInt(opId)
+      }
+    });
+    if (!existingProcesso) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: "Processo n\xE3o encontrado"
+      });
+    }
+    const processo = await prisma$8.oPProcesso.update({
+      where: {
+        id: parseInt(processoId)
+      },
+      data: {
+        status: "EM_ANDAMENTO",
+        dataInicio: /* @__PURE__ */ new Date(),
+        progresso: existingProcesso.progresso > 0 ? existingProcesso.progresso : 10
+      }
+    });
+    await prisma$8.processoHistorico.create({
+      data: {
+        processoId: processo.id,
+        usuarioId: 1,
+        // TODO: Pegar do usuário logado
+        acao: "Processo iniciado",
+        detalhes: `Processo "${existingProcesso.nome}" iniciado`
+      }
+    });
+    return { success: true, processo };
+  } catch (error) {
+    console.error("Erro ao iniciar processo:", error);
+    throw createError({
+      statusCode: error.statusCode || 500,
+      statusMessage: error.message || "Erro ao iniciar processo"
+    });
+  }
+});
+
+const iniciar_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: iniciar_post
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const prisma$7 = new PrismaClient();
+const pausar_post = defineEventHandler(async (event) => {
+  try {
+    const opId = getRouterParam(event, "id");
+    const processoId = getRouterParam(event, "processoId");
+    if (!opId || !processoId) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: "IDs inv\xE1lidos"
+      });
+    }
+    const existingProcesso = await prisma$7.oPProcesso.findFirst({
+      where: {
+        id: parseInt(processoId),
+        opId: parseInt(opId)
+      }
+    });
+    if (!existingProcesso) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: "Processo n\xE3o encontrado"
+      });
+    }
+    const processo = await prisma$7.oPProcesso.update({
+      where: {
+        id: parseInt(processoId)
+      },
+      data: {
+        status: "AGUARDANDO"
+      }
+    });
+    await prisma$7.processoHistorico.create({
+      data: {
+        processoId: processo.id,
+        usuarioId: 1,
+        // TODO: Pegar do usuário logado
+        acao: "Processo pausado",
+        detalhes: `Processo "${existingProcesso.nome}" pausado`
+      }
+    });
+    return { success: true, processo };
+  } catch (error) {
+    console.error("Erro ao pausar processo:", error);
+    throw createError({
+      statusCode: error.statusCode || 500,
+      statusMessage: error.message || "Erro ao pausar processo"
+    });
+  }
+});
+
+const pausar_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: pausar_post
 }, Symbol.toStringTag, { value: 'Module' }));
 
 const prisma$6 = new PrismaClient();
@@ -3061,7 +3503,7 @@ const index_get$5 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePropert
 }, Symbol.toStringTag, { value: 'Module' }));
 
 const index_post$2 = defineEventHandler(async (event) => {
-  var _a;
+  var _a, _b, _c, _d, _e, _f, _g, _h;
   try {
     const opId = getRouterParam(event, "id");
     const body = await readBody(event);
@@ -3084,10 +3526,24 @@ const index_post$2 = defineEventHandler(async (event) => {
         message: "OP n\xE3o encontrada"
       });
     }
-    if (!body.nome || !body.sequencia) {
+    const errors = [];
+    if (!body.nome || body.nome.trim() === "") {
+      errors.push("Nome \xE9 obrigat\xF3rio");
+    }
+    if (!body.sequencia) {
+      errors.push("Sequ\xEAncia \xE9 obrigat\xF3ria");
+    } else if (isNaN(parseInt(body.sequencia)) || parseInt(body.sequencia) <= 0) {
+      errors.push("Sequ\xEAncia deve ser um n\xFAmero positivo");
+    }
+    if (!body.prazoEstimado) {
+      errors.push("Prazo estimado \xE9 obrigat\xF3rio");
+    } else if (isNaN(parseInt(body.prazoEstimado)) || parseInt(body.prazoEstimado) <= 0) {
+      errors.push("Prazo estimado deve ser um n\xFAmero positivo");
+    }
+    if (errors.length > 0) {
       throw createError({
         statusCode: 400,
-        message: "Nome e sequ\xEAncia s\xE3o obrigat\xF3rios"
+        message: errors.join(", ")
       });
     }
     const sequencia = parseInt(body.sequencia);
@@ -3103,12 +3559,46 @@ const index_post$2 = defineEventHandler(async (event) => {
         message: "J\xE1 existe um processo com esta sequ\xEAncia"
       });
     }
-    let dataPrevista = null;
-    if (body.dataPrevista) {
-      if (typeof body.dataPrevista === "string" && body.dataPrevista.includes("T")) {
-        dataPrevista = new Date(body.dataPrevista);
+    const parseDate = (dateValue) => {
+      if (!dateValue || dateValue === "" || dateValue === null) {
+        return null;
+      }
+      try {
+        let dateStr = dateValue;
+        if (typeof dateStr === "string" && !dateStr.includes("T")) {
+          dateStr = dateStr + "T00:00:00.000Z";
+        }
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) {
+          console.warn(`\u26A0\uFE0F Data inv\xE1lida: ${dateValue}`);
+          return null;
+        }
+        return date;
+      } catch (error) {
+        console.warn(`\u26A0\uFE0F Erro ao converter data: ${dateValue}`, error);
+        return null;
+      }
+    };
+    const dataPrevista = parseDate(body.dataPrevista);
+    const dataInicioPrevista = parseDate(body.dataInicioPrevista);
+    const dataTerminoPrevista = parseDate(body.dataTerminoPrevista);
+    const dataInicio = parseDate(body.dataInicio);
+    const dataFim = parseDate(body.dataFim);
+    let dataInicioCalculada = dataInicioPrevista;
+    let dataTerminoCalculada = dataTerminoPrevista;
+    if (!dataInicioCalculada) {
+      if (dataPrevista) {
+        dataInicioCalculada = dataPrevista;
       } else {
-        dataPrevista = /* @__PURE__ */ new Date(body.dataPrevista + "T00:00:00.000Z");
+        dataInicioCalculada = opExistente.dataInicio || null;
+      }
+    }
+    if (dataInicioCalculada && !dataTerminoCalculada && body.prazoEstimado) {
+      const prazo = parseInt(body.prazoEstimado);
+      if (prazo > 0) {
+        const terminoDate = new Date(dataInicioCalculada);
+        terminoDate.setDate(terminoDate.getDate() + prazo - 1);
+        dataTerminoCalculada = terminoDate;
       }
     }
     const processoData = {
@@ -3119,10 +3609,22 @@ const index_post$2 = defineEventHandler(async (event) => {
       status: body.status || "NAO_INICIADO",
       progresso: parseInt(body.progresso) || 0,
       prazoEstimado: body.prazoEstimado ? parseInt(body.prazoEstimado) : null,
-      dataPrevista,
+      // ✅ DATAS PREVISTAS (CÁLCULO EM CASCATA)
+      dataInicioPrevista: dataInicioCalculada,
+      dataTerminoPrevista: dataTerminoCalculada,
+      // ✅ DATAS REAIS (se fornecidas)
+      dataInicio,
+      dataFim,
+      // ✅ DATAS DE COMPATIBILIDADE (campo antigo)
+      dataPrevista: dataPrevista || dataInicioCalculada,
       responsavelId: body.responsavelId ? parseInt(body.responsavelId) : null
     };
-    console.log("\u{1F4DD} DEBUG - Dados do processo a ser criado:", processoData);
+    console.log("\u{1F4DD} DEBUG - Dados do processo a ser criado:", {
+      ...processoData,
+      dataInicioPrevista: (_b = processoData.dataInicioPrevista) == null ? void 0 : _b.toISOString(),
+      dataTerminoPrevista: (_c = processoData.dataTerminoPrevista) == null ? void 0 : _c.toISOString(),
+      dataPrevista: (_d = processoData.dataPrevista) == null ? void 0 : _d.toISOString()
+    });
     const processo = await prisma.oPProcesso.create({
       data: processoData,
       include: {
@@ -3137,7 +3639,8 @@ const index_post$2 = defineEventHandler(async (event) => {
           select: {
             id: true,
             numeroOP: true,
-            descricaoMaquina: true
+            descricaoMaquina: true,
+            dataInicio: true
           }
         }
       }
@@ -3151,20 +3654,27 @@ const index_post$2 = defineEventHandler(async (event) => {
       where: { id: parseInt(opId) },
       data: { progresso: progressoMedio }
     });
+    console.log("\u{1F4CA} Progresso da OP atualizado para:", progressoMedio + "%");
     try {
       await prisma.processoHistorico.create({
         data: {
           processoId: processo.id,
           usuarioId: 1,
-          // Em produção, pegar do usuário logado
+          // TODO: Substituir pelo ID do usuário logado
           acao: "Processo criado",
           detalhes: `Processo "${body.nome}" criado na OP ${opExistente.numeroOP}`
         }
       });
+      console.log("\u{1F4D6} Hist\xF3rico criado para processo:", processo.id);
     } catch (historyError) {
       console.log("\u2139\uFE0F Tabela de hist\xF3rico n\xE3o dispon\xEDvel, continuando...");
     }
-    console.log("\u2705 Processo criado com sucesso:", processo.id);
+    console.log("\u2705 Processo criado com sucesso:", {
+      id: processo.id,
+      nome: processo.nome,
+      dataInicioPrevista: (_e = processo.dataInicioPrevista) == null ? void 0 : _e.toISOString(),
+      dataTerminoPrevista: (_f = processo.dataTerminoPrevista) == null ? void 0 : _f.toISOString()
+    });
     return {
       success: true,
       processo,
@@ -3175,11 +3685,18 @@ const index_post$2 = defineEventHandler(async (event) => {
     let errorMessage = error.message || "Erro ao criar processo";
     let statusCode = error.statusCode || 500;
     if (error.code === "P2002") {
-      errorMessage = "J\xE1 existe um processo com estes dados";
+      if ((_h = (_g = error.meta) == null ? void 0 : _g.target) == null ? void 0 : _h.includes("sequencia")) {
+        errorMessage = "J\xE1 existe um processo com esta sequ\xEAncia";
+      } else {
+        errorMessage = "J\xE1 existe um processo com estes dados";
+      }
       statusCode = 400;
     } else if (error.code === "P2003") {
       errorMessage = "Respons\xE1vel n\xE3o encontrado";
       statusCode = 400;
+    } else if (error.code === "P2025") {
+      errorMessage = "Registro relacionado n\xE3o encontrado";
+      statusCode = 404;
     }
     throw createError({
       statusCode,
@@ -3272,9 +3789,17 @@ const template_post = defineEventHandler(async (event) => {
     const sequenciasExistentes = processosExistentes.map((p) => p.sequencia);
     const maiorSequencia = sequenciasExistentes.length > 0 ? Math.max(...sequenciasExistentes) : 0;
     console.log(`\u{1F4CA} Processos existentes: ${processosExistentes.length}, Maior sequ\xEAncia: ${maiorSequencia}`);
+    let dataInicioAtual = new Date(opExistente.dataInicio || opExistente.dataPedido || /* @__PURE__ */ new Date());
+    dataInicioAtual.setHours(0, 0, 0, 0);
     const processosCriados = [];
     for (const [index, processo] of templateProcesses.entries()) {
       try {
+        const dataInicioPrevista = new Date(dataInicioAtual);
+        const dataTerminoPrevista = new Date(dataInicioPrevista);
+        if (processo.prazoEstimado && processo.prazoEstimado > 0) {
+          dataTerminoPrevista.setDate(dataTerminoPrevista.getDate() + processo.prazoEstimado - 1);
+        }
+        dataTerminoPrevista.setHours(0, 0, 0, 0);
         const novoProcesso = await prisma.oPProcesso.create({
           data: {
             opId: parseInt(opId),
@@ -3284,11 +3809,16 @@ const template_post = defineEventHandler(async (event) => {
             status: processo.status,
             progresso: processo.progresso,
             prazoEstimado: processo.prazoEstimado,
+            dataInicioPrevista,
+            dataTerminoPrevista,
             dataPrevista: null
           }
         });
         processosCriados.push(novoProcesso);
-        console.log(`\u2705 Processo criado: ${processo.nome} (ID: ${novoProcesso.id})`);
+        dataInicioAtual = new Date(dataTerminoPrevista);
+        dataInicioAtual.setDate(dataInicioAtual.getDate() + 1);
+        dataInicioAtual.setHours(0, 0, 0, 0);
+        console.log(`\u2705 Processo criado: ${processo.nome} (ID: ${novoProcesso.id}) - Datas: ${dataInicioPrevista.toISOString().split("T")[0]} a ${dataTerminoPrevista.toISOString().split("T")[0]}`);
       } catch (processError) {
         console.error(`\u274C Erro ao criar processo ${processo.nome}:`, processError);
       }

@@ -15,7 +15,7 @@ export default defineEventHandler(async (event) => {
 
     const prisma = event.context.prisma
 
-    // ✅ CORREÇÃO: Usar OPProcesso
+    // Verificar se o processo existe
     const existingProcesso = await prisma.oPProcesso.findFirst({
       where: {
         id: parseInt(processoId),
@@ -30,33 +30,131 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // ✅ CORREÇÃO: Preparar dados para OPProcesso
-    const updateData = {
-      nome: body.nome?.trim(),
+    // ✅ VERIFICAR SEQUÊNCIA DUPLICADA (excluindo o próprio processo)
+    if (body.sequencia !== undefined) {
+      const novaSequencia = parseInt(body.sequencia)
+      const sequenciaExistente = await prisma.oPProcesso.findFirst({
+        where: {
+          opId: parseInt(opId),
+          sequencia: novaSequencia,
+          id: {
+            not: parseInt(processoId)
+          }
+        }
+      })
+
+      if (sequenciaExistente) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Já existe um processo com esta sequência'
+        })
+      }
+    }
+
+    // ✅ PREPARAR DADOS PARA ATUALIZAÇÃO
+    const updateData: any = {
+      nome: body.nome?.trim() || existingProcesso.nome,
       descricao: body.descricao?.trim() || null,
-      sequencia: body.sequencia ? parseInt(body.sequencia) : existingProcesso.sequencia,
       status: body.status || existingProcesso.status,
-      progresso: body.progresso ? parseInt(body.progresso) : existingProcesso.progresso,
-      prazoEstimado: body.prazoEstimado ? parseInt(body.prazoEstimado) : null,
       responsavelId: body.responsavelId ? parseInt(body.responsavelId) : null
     }
 
-    // ✅ CORREÇÃO: Tratamento de datas
+    // ✅ TRATAMENTO DE NÚMEROS
+    if (body.sequencia !== undefined) {
+      updateData.sequencia = parseInt(body.sequencia)
+    }
+    
+    if (body.progresso !== undefined) {
+      updateData.progresso = parseInt(body.progresso)
+    }
+    
+    if (body.prazoEstimado !== undefined) {
+      updateData.prazoEstimado = body.prazoEstimado !== null ? parseInt(body.prazoEstimado) : null
+    }
+
+    // ✅ TRATAMENTO DE DATAS - CAMPO ANTIGO (para compatibilidade)
     if (body.dataPrevista !== undefined) {
       if (body.dataPrevista === null || body.dataPrevista === '') {
         updateData.dataPrevista = null
       } else {
-        if (typeof body.dataPrevista === 'string' && body.dataPrevista.includes('T')) {
-          updateData.dataPrevista = new Date(body.dataPrevista)
-        } else {
-          updateData.dataPrevista = new Date(body.dataPrevista + 'T00:00:00.000Z')
+        try {
+          const dateStr = typeof body.dataPrevista === 'string' && !body.dataPrevista.includes('T') 
+            ? body.dataPrevista + 'T00:00:00.000Z'
+            : body.dataPrevista
+          updateData.dataPrevista = new Date(dateStr)
+        } catch (error) {
+          console.warn('⚠️ Erro ao converter dataPrevista:', error)
+        }
+      }
+    }
+
+    // ✅ TRATAMENTO DE DATAS - NOVOS CAMPOS
+    // dataInicioPrevista
+    if (body.dataInicioPrevista !== undefined) {
+      if (body.dataInicioPrevista === null || body.dataInicioPrevista === '') {
+        updateData.dataInicioPrevista = null
+      } else {
+        try {
+          const dateStr = typeof body.dataInicioPrevista === 'string' && !body.dataInicioPrevista.includes('T')
+            ? body.dataInicioPrevista + 'T00:00:00.000Z'
+            : body.dataInicioPrevista
+          updateData.dataInicioPrevista = new Date(dateStr)
+        } catch (error) {
+          console.warn('⚠️ Erro ao converter dataInicioPrevista:', error)
+        }
+      }
+    }
+
+    // dataTerminoPrevista
+    if (body.dataTerminoPrevista !== undefined) {
+      if (body.dataTerminoPrevista === null || body.dataTerminoPrevista === '') {
+        updateData.dataTerminoPrevista = null
+      } else {
+        try {
+          const dateStr = typeof body.dataTerminoPrevista === 'string' && !body.dataTerminoPrevista.includes('T')
+            ? body.dataTerminoPrevista + 'T00:00:00.000Z'
+            : body.dataTerminoPrevista
+          updateData.dataTerminoPrevista = new Date(dateStr)
+        } catch (error) {
+          console.warn('⚠️ Erro ao converter dataTerminoPrevista:', error)
+        }
+      }
+    }
+
+    // ✅ TRATAMENTO DE DATAS REAIS (se necessário)
+    if (body.dataInicio !== undefined) {
+      if (body.dataInicio === null || body.dataInicio === '') {
+        updateData.dataInicio = null
+      } else {
+        try {
+          const dateStr = typeof body.dataInicio === 'string' && !body.dataInicio.includes('T')
+            ? body.dataInicio + 'T00:00:00.000Z'
+            : body.dataInicio
+          updateData.dataInicio = new Date(dateStr)
+        } catch (error) {
+          console.warn('⚠️ Erro ao converter dataInicio:', error)
+        }
+      }
+    }
+
+    if (body.dataFim !== undefined) {
+      if (body.dataFim === null || body.dataFim === '') {
+        updateData.dataFim = null
+      } else {
+        try {
+          const dateStr = typeof body.dataFim === 'string' && !body.dataFim.includes('T')
+            ? body.dataFim + 'T00:00:00.000Z'
+            : body.dataFim
+          updateData.dataFim = new Date(dateStr)
+        } catch (error) {
+          console.warn('⚠️ Erro ao converter dataFim:', error)
         }
       }
     }
 
     console.log('📝 DEBUG - Dados para atualização:', updateData)
 
-    // ✅ CORREÇÃO: Atualizar OPProcesso
+    // ✅ ATUALIZAR PROCESSO
     const processo = await prisma.oPProcesso.update({
       where: {
         id: parseInt(processoId)
@@ -74,13 +172,14 @@ export default defineEventHandler(async (event) => {
           select: {
             id: true,
             numeroOP: true,
-            descricaoMaquina: true
+            descricaoMaquina: true,
+            dataInicio: true
           }
         }
       }
     })
 
-    // ✅ CORREÇÃO: Atualizar progresso da OP
+    // ✅ ATUALIZAR PROGRESSO DA OP
     try {
       const processosOP = await prisma.oPProcesso.findMany({
         where: { opId: parseInt(opId) },
@@ -103,14 +202,14 @@ export default defineEventHandler(async (event) => {
       console.log('⚠️ Não foi possível atualizar progresso da OP:', progressError)
     }
 
-    // ✅ CORREÇÃO: Criar histórico usando ProcessoHistorico
+    // ✅ CRIAR HISTÓRICO
     try {
       await prisma.processoHistorico.create({
         data: {
           processoId: processo.id,
-          usuarioId: 1,
+          usuarioId: 1, // TODO: Substituir pelo ID do usuário logado
           acao: 'Processo atualizado',
-          detalhes: `Processo "${body.nome}" atualizado - Status: ${body.status || existingProcesso.status}`
+          detalhes: `Processo "${body.nome || existingProcesso.nome}" atualizado - Status: ${body.status || existingProcesso.status}`
         }
       })
       console.log('📖 Histórico criado para processo:', processo.id)
@@ -118,7 +217,12 @@ export default defineEventHandler(async (event) => {
       console.log('ℹ️ Tabela de histórico não disponível, continuando...')
     }
 
-    console.log('✅ Processo atualizado com sucesso:', processo.id)
+    console.log('✅ Processo atualizado com sucesso:', {
+      id: processo.id,
+      nome: processo.nome,
+      dataInicioPrevista: processo.dataInicioPrevista,
+      dataTerminoPrevista: processo.dataTerminoPrevista
+    })
     
     return { 
       success: true, 
@@ -132,6 +236,7 @@ export default defineEventHandler(async (event) => {
     let errorMessage = error.message || 'Erro ao atualizar processo'
     let statusCode = error.statusCode || 500
     
+    // Tratamento de erros específicos do Prisma
     if (error.code === 'P2025') {
       errorMessage = 'Processo não encontrado'
       statusCode = 404

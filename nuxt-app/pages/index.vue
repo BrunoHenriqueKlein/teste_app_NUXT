@@ -1,18 +1,18 @@
 <template>
   <v-container fluid class="fill-height">
     <!-- Header -->
-    <v-row class="mb-6">
-      <v-col cols="12">
-        <v-card class="pa-6" color="primary" variant="flat">
-          <v-card-text class="text-center text-white">
-            <h1 class="text-h3 font-weight-bold mb-2">Dashboard de Produção</h1>
-            <p class="text-h6 font-weight-regular">
-              Visão geral do andamento das ordens de produção
-            </p>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
+      <v-row class="mb-6">
+        <v-col cols="12">
+          <v-card class="pa-6" color="primary" variant="flat">
+            <v-card-text class="text-center text-white">
+              <h1 class="text-h3 font-weight-bold mb-2">Dashboard de Produção</h1>
+              <p class="text-h6 font-weight-regular">
+                Olá, {{ userName }}! Aqui está o resumo das ordens de produção.
+              </p>
+            </v-card-text>
+          </v-card>
+        </v-col>
+      </v-row>
 
     <!-- Estatísticas -->
     <v-row class="mb-6">
@@ -181,6 +181,33 @@
 </template>
 
 <script setup>
+
+// Adicione estas computed properties no seu script
+import { computed } from 'vue'
+
+// Dados do usuário
+const user = ref({})
+
+// Carregar dados do usuário
+onMounted(() => {
+  loadUserData()
+})
+
+const loadUserData = () => {
+  try {
+    const userData = localStorage.getItem('user')
+    if (userData) {
+      user.value = JSON.parse(userData)
+    }
+  } catch (error) {
+    console.error('Erro ao carregar dados do usuário:', error)
+  }
+}
+
+const userName = computed(() => {
+  return user.value?.name?.split(' ')[0] || 'Usuário'
+})
+
 // Estado
 const stats = ref([
   { 

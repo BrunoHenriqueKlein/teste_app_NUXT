@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client'
+import bcrypt from 'bcrypt'
 
 const prisma = new PrismaClient()
 
@@ -24,12 +25,15 @@ async function main() {
     console.log('✅ Módulos criados')
 
     // 2. Criar Usuário Administrador
+    const passwordHash = await bcrypt.hash('admin123', 10)
     const adminUser = await prisma.user.upsert({
       where: { email: 'admin@empresa.com' },
-      update: {},
+      update: {
+        password: passwordHash // Atualizar senha se já existir
+      },
       create: {
         email: 'admin@empresa.com',
-        password: 'admin123',
+        password: passwordHash,
         name: 'Administrador',
         role: 'ADMIN',
         department: 'ADMINISTRATIVO',
@@ -39,24 +43,30 @@ async function main() {
     console.log('✅ Usuário admin criado')
 
     // 3. Criar alguns usuários de exemplo
+    const passwordGerente = await bcrypt.hash('gerente123', 10)
     const gerente = await prisma.user.upsert({
       where: { email: 'gerente@empresa.com' },
-      update: {},
+      update: {
+        password: passwordGerente
+      },
       create: {
         email: 'gerente@empresa.com',
-        password: 'gerente123',
+        password: passwordGerente,
         name: 'João Silva',
         role: 'GERENTE',
         department: 'ENGENHARIA',
       },
     })
 
+    const passwordEngenheiro = await bcrypt.hash('engenheiro123', 10)
     const engenheiro = await prisma.user.upsert({
       where: { email: 'engenheiro@empresa.com' },
-      update: {},
+      update: {
+        password: passwordEngenheiro
+      },
       create: {
         email: 'engenheiro@empresa.com',
-        password: 'engenheiro123',
+        password: passwordEngenheiro,
         name: 'Maria Santos',
         role: 'ENGENHEIRO',
         department: 'ENGENHARIA',
@@ -127,7 +137,7 @@ async function main() {
 
     // 6. Dar acesso total a todos módulos para o admin
     const allModules = await prisma.module.findMany()
-    
+
     for (const module of allModules) {
       await prisma.userModule.upsert({
         where: {
