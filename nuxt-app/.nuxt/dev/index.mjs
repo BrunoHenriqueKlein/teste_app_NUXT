@@ -4000,7 +4000,36 @@ const template_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePro
 const prisma$6 = new PrismaClient();
 const index_get$2 = defineEventHandler(async (event) => {
   try {
+    const query = getQuery$1(event);
+    const { status, search, atrasada, dataInicio, dataFim } = query;
+    const where = {};
+    if (status) {
+      where.status = status;
+    }
+    if (atrasada === "true") {
+      where.dataEntrega = { lt: /* @__PURE__ */ new Date() };
+      where.status = { not: "ENTREGUE" };
+    }
+    if (dataInicio || dataFim) {
+      where.dataEntrega = where.dataEntrega || {};
+      if (dataInicio) {
+        where.dataEntrega.gte = new Date(String(dataInicio));
+      }
+      if (dataFim) {
+        const end = new Date(String(dataFim));
+        end.setHours(23, 59, 59, 999);
+        where.dataEntrega.lte = end;
+      }
+    }
+    if (search) {
+      where.OR = [
+        { numeroOP: { contains: String(search), mode: "insensitive" } },
+        { cliente: { contains: String(search), mode: "insensitive" } },
+        { descricaoMaquina: { contains: String(search), mode: "insensitive" } }
+      ];
+    }
     const ops = await prisma$6.oP.findMany({
+      where,
       include: {
         criadoPor: {
           select: {

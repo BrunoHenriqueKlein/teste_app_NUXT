@@ -1,10 +1,7 @@
-<!-- pages/reset-password.vue -->
 <template>
-  <v-app>
-    <v-main>
-      <v-container fluid class="fill-height pa-0 d-flex align-center justify-center login-container">
-        <v-row no-gutters class="fill-height">
-          <v-col cols="12" class="d-flex align-center justify-center">
+  <div class="fill-height pa-0 d-flex align-center justify-center login-container w-100">
+    <v-row no-gutters class="fill-height justify-center align-center">
+      <v-col cols="12" class="d-flex align-center justify-center">
             <v-card variant="flat" class="pa-8 mx-auto custom-card glass-effect" max-width="450" width="100%">
               <v-card-text class="text-center pa-0">
                 <v-img
@@ -83,10 +80,8 @@
               </v-alert>
             </v-card>
           </v-col>
-        </v-row>
-      </v-container>
-    </v-main>
-  </v-app>
+    </v-row>
+  </div>
 </template>
 
 <script setup>

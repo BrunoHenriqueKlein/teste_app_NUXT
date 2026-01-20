@@ -1,12 +1,12 @@
 <template>
-  <v-container fluid class="fill-height">
+  <div class="w-100">
     <!-- Header -->
       <v-row class="mb-6">
         <v-col cols="12">
-          <v-card class="pa-6" color="primary" variant="flat">
+          <v-card class="pa-4" color="primary" variant="flat">
             <v-card-text class="text-center text-white">
-              <h1 class="text-h3 font-weight-bold mb-2">Dashboard de Produção</h1>
-              <p class="text-h6 font-weight-regular">
+              <h1 class="text-h5 font-weight-bold mb-1">Dashboard de Produção</h1>
+              <p class="text-subtitle-2 font-weight-regular">
                 Olá, {{ userName }}! Aqui está o resumo das ordens de produção.
               </p>
             </v-card-text>
@@ -18,15 +18,15 @@
     <v-row class="mb-6">
       <v-col v-for="stat in stats" :key="stat.title" cols="12" sm="6" md="3">
         <v-card 
-          class="stat-card pa-4" 
+          class="stat-card pa-2" 
           :color="stat.color" 
           variant="flat"
           @click="stat.action"
         >
-          <v-card-text class="text-center text-white">
-            <v-icon size="48" class="mb-3">{{ stat.icon }}</v-icon>
-            <div class="text-h3 font-weight-bold">{{ stat.value }}</div>
-            <div class="text-body-1">{{ stat.title }}</div>
+          <v-card-text class="text-center text-white py-2">
+            <v-icon size="32" class="mb-1">{{ stat.icon }}</v-icon>
+            <div class="text-h4 font-weight-bold">{{ stat.value }}</div>
+            <div class="text-caption font-weight-medium">{{ stat.title }}</div>
           </v-card-text>
         </v-card>
       </v-col>
@@ -177,7 +177,7 @@
         </v-card>
       </v-col>
     </v-row>
-  </v-container>
+  </div>
 </template>
 
 <script setup>
@@ -208,35 +208,37 @@ const userName = computed(() => {
   return user.value?.name?.split(' ')[0] || 'Usuário'
 })
 
-// Estado
-const stats = ref([
+// Carregar estatísticas reais
+const { data: dashboardStats, refresh: refreshStats } = await useFetch('/api/dashboard/stats')
+
+const stats = computed(() => [
   { 
     title: 'OPs Abertas', 
-    value: 5, 
+    value: dashboardStats.value?.opsAbertas || 0, 
     icon: 'mdi-clipboard-text-outline', 
     color: 'blue',
     action: () => navigateTo('/ops?status=ABERTA')
   },
   { 
     title: 'Em Produção', 
-    value: 12, 
+    value: dashboardStats.value?.opsProducao || 0, 
     icon: 'mdi-cog', 
     color: 'orange',
     action: () => navigateTo('/ops?status=EM_FABRICACAO')
   },
   { 
     title: 'Concluídas', 
-    value: 8, 
+    value: dashboardStats.value?.opsConcluidas || 0, 
     icon: 'mdi-check-circle', 
     color: 'green',
     action: () => navigateTo('/ops?status=ENTREGUE')
   },
   { 
     title: 'Atrasadas', 
-    value: 2, 
+    value: dashboardStats.value?.opsAtrasadas || 0, 
     icon: 'mdi-alert-circle', 
     color: 'red',
-    action: () => navigateTo('/ops?status=ATRASADA')
+    action: () => navigateTo('/ops?atrasada=true')
   }
 ])
 
@@ -269,7 +271,10 @@ const quickActions = [
 
 // Carregar dados do dashboard
 onMounted(async () => {
-  await loadDashboardData()
+  await Promise.all([
+    loadDashboardData(),
+    refreshStats()
+  ])
 })
 
 const loadDashboardData = async () => {

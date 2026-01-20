@@ -1,5 +1,5 @@
 <template>
-  <v-container fluid>
+  <div class="w-100">
     <!-- Debug -->
     <v-alert v-if="debugInfo" type="info" class="mb-4">
       {{ debugInfo }}
@@ -59,7 +59,7 @@
               </v-col>
               
               <v-col cols="12" sm="6" md="2">
-                <v-menu>
+                <v-menu :close-on-content-click="false">
                   <template v-slot:activator="{ props }">
                     <v-text-field
                       v-bind="props"
@@ -69,14 +69,20 @@
                       density="comfortable"
                       readonly
                       prepend-inner-icon="mdi-calendar"
+                      clearable
+                      @click:clear="filters.dataInicio = null; loadOPs()"
                     />
                   </template>
-                  <v-date-picker v-model="filters.dataInicio" @update:model-value="loadOPs" />
+                  <v-date-picker 
+                    v-model="filters.dataInicio" 
+                    @update:model-value="loadOPs" 
+                    hide-header
+                  />
                 </v-menu>
               </v-col>
               
               <v-col cols="12" sm="6" md="2">
-                <v-menu>
+                <v-menu :close-on-content-click="false">
                   <template v-slot:activator="{ props }">
                     <v-text-field
                       v-bind="props"
@@ -86,9 +92,15 @@
                       density="comfortable"
                       readonly
                       prepend-inner-icon="mdi-calendar"
+                      clearable
+                      @click:clear="filters.dataFim = null; loadOPs()"
                     />
                   </template>
-                  <v-date-picker v-model="filters.dataFim" @update:model-value="loadOPs" />
+                  <v-date-picker 
+                    v-model="filters.dataFim" 
+                    @update:model-value="loadOPs" 
+                    hide-header
+                  />
                 </v-menu>
               </v-col>
               
@@ -420,7 +432,7 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
-  </v-container>
+  </div>
 </template>
 
 <script setup>
@@ -441,6 +453,7 @@ const form = ref(null)
 const filters = ref({
   search: '',
   status: null,
+  atrasada: null,
   dataInicio: null,
   dataFim: null
 })
@@ -485,7 +498,13 @@ const route = useRoute()
 // Carregar dados
 onMounted(() => {
   debugInfo.value = `Página carregada. Rota: ${route.fullPath}`
-  console.log('🔍 Página OPs montada')
+  console.log('🔍 Página OPs montada', route.query)
+  
+  // Inicializar filtros da query
+  if (route.query.status) filters.value.status = route.query.status
+  if (route.query.search) filters.value.search = route.query.search
+  if (route.query.atrasada) filters.value.atrasada = route.query.atrasada
+  
   loadOPs()
 })
 
@@ -504,8 +523,16 @@ const loadOPs = async () => {
   try {
     console.log('📡 Carregando OPs da API...')
     
-    // Buscar da API real
-    const data = await $fetch('/api/ops')
+    // Buscar da API real com filtros
+    const data = await $fetch('/api/ops', {
+      params: {
+        status: filters.value.status,
+        search: filters.value.search,
+        atrasada: filters.value.atrasada,
+        dataInicio: filters.value.dataInicio,
+        dataFim: filters.value.dataFim
+      }
+    })
     ops.value = Array.isArray(data) ? data : []
     
     console.log('✅ OPs carregadas:', ops.value.length)

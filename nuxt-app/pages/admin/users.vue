@@ -1,5 +1,5 @@
 <template>
-  <v-container fluid>
+  <div class="w-100">
     <v-row class="mb-4">
       <v-col cols="12">
         <v-card color="primary" variant="flat" class="pa-4">
@@ -227,7 +227,7 @@
     <v-snackbar v-model="snackbar.show" :color="snackbar.color" timeout="3000">
       {{ snackbar.text }}
     </v-snackbar>
-  </v-container>
+  </div>
 </template>
 
 <script setup>

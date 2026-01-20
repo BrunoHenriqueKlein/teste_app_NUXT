@@ -1,16 +1,13 @@
-meu processos:
-
 <template>
-  <div v-if="loading">
-    <v-container fluid>
+  <div class="w-100">
+    <div v-if="loading">
       <div class="text-center py-16">
         <v-progress-circular indeterminate color="primary" size="64" />
         <div class="text-h6 mt-4">Carregando processos...</div>
       </div>
-    </v-container>
-  </div>
+    </div>
 
-  <v-container fluid v-else>
+    <div v-else>
     <!-- Header -->
     <v-row class="mb-4">
       <v-col cols="12">
@@ -538,7 +535,8 @@ meu processos:
         </v-card-actions>
       </v-card>
     </v-dialog>
-  </v-container>
+    </div>
+  </div>
 </template>
 
 <script setup>

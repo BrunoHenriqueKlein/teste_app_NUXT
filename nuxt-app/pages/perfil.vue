@@ -1,5 +1,5 @@
 <template>
-  <v-container>
+  <div class="w-100">
     <v-row justify="center">
       <v-col cols="12" md="8" lg="6">
         <v-card class="elevation-2 rounded-lg">
@@ -126,7 +126,7 @@
         </v-card>
       </v-col>
     </v-row>
-  </v-container>
+  </div>
 </template>
 
 <script setup>

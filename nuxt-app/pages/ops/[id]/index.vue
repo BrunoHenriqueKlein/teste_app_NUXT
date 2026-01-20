@@ -1,5 +1,5 @@
 <template>
-  <v-container fluid class="gantt-page-container">
+  <div class="w-100 gantt-page-container">
     <!-- Header Específico do Dashboard (Web) - Apenas na Tela -->
     <v-row class="no-print">
       <v-col cols="12">
@@ -421,7 +421,7 @@
       </v-card>
     </v-col>
   </v-row>
-</v-container>
+  </div>
 </template>
 
 <script setup>

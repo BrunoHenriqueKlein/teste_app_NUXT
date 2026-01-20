@@ -1,19 +1,19 @@
 <template>
   <v-app>
-    <v-app-bar color="primary" elevation="2" prominent>
+    <v-app-bar color="primary" elevation="1" height="50">
       <v-container fluid class="d-flex align-center pa-0 px-4">
         <div class="d-flex align-center">
           <!-- Logo -->
           <v-img
-            :width="120"
-            :height="40"
+            :width="100"
+            :height="30"
             :src="logosimples"
             alt="Logo SOMEH"
             class="mr-3"
             contain
           />
-          <v-divider vertical inset class="mx-3 bg-white" />
-          <span class="text-h6 font-weight-bold text-white">Sistema de Controle de Produção</span>
+          <v-divider vertical inset class="mx-2 bg-white" />
+          <span class="text-subtitle-1 font-weight-bold text-white">Sistema SOMEH</span>
         </div>
 
         <v-spacer></v-spacer>
@@ -91,8 +91,8 @@
       </v-container>
     </v-app-bar>
 
-    <v-navigation-drawer permanent color="surface" elevation="1">
-      <v-list density="comfortable" nav class="py-4">
+    <v-navigation-drawer permanent color="surface" elevation="1" width="240">
+      <v-list density="compact" nav class="py-2">
         <!-- Filtro de Módulos por Permissão -->
         <v-list-item
           v-for="module in filteredNavigation"
@@ -102,8 +102,8 @@
           :value="module.route"
           @click="navigateTo(module.route)"
           :active="$route.path === module.route"
-          variant="flat"
-          class="mb-1 mx-3 rounded-lg custom-card"
+          variant="text"
+          class="mb-0 mx-2 rounded-lg"
           :class="{ 'v-list-item--active': $route.path === module.route }"
         >
           <template v-slot:append v-if="module.badge">
@@ -130,8 +130,8 @@
     </v-navigation-drawer>
 
     <v-main class="bg-grey-lighten-3">
-      <v-container fluid class="pa-4 pa-md-6 fill-height">
-        <v-breadcrumbs :items="breadcrumbs" class="pa-0 mb-4">
+      <v-container fluid class="pt-1 px-3 pa-md-4 fill-height align-start">
+        <v-breadcrumbs :items="breadcrumbs" class="pa-0 mb-1 text-caption">
           <template v-slot:divider>
             <v-icon>mdi-chevron-right</v-icon>
           </template>
@@ -230,7 +230,7 @@ const breadcrumbs = computed(() => {
       'relatorios': 'Relatórios',
       'admin': 'Administração',
       'users': 'Usuários',
-      'profile': 'Meu Perfil'
+      'perfil': 'Meu Perfil'
     }
     crumbs.push({
       title: nameMap[segment] || segment.charAt(0).toUpperCase() + segment.slice(1),
