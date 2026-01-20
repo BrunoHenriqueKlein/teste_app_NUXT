@@ -42,15 +42,81 @@
         
         <v-spacer></v-spacer>
 
+        <!-- Controles de Escala e Margens -->
+        <div class="d-flex align-center no-print mr-4 flex-wrap gap-4" style="max-width: 600px;">
+          <div class="d-flex align-center" style="width: 200px;">
+            <v-icon size="small" class="mr-2" title="Largura dos Dias">mdi-magnify-plus-outline</v-icon>
+            <v-slider
+              v-model="celulaLargura"
+              :min="10"
+              :max="100"
+              :step="1"
+              hide-details
+              density="compact"
+              color="primary"
+            ></v-slider>
+          </div>
+          
+          <div class="d-flex align-center" style="width: 150px;">
+            <v-text-field
+              v-model.number="paddingInicio"
+              label="Folga Início (dias)"
+              type="number"
+              hide-details
+              density="compact"
+              variant="outlined"
+              class="mr-2"
+            ></v-text-field>
+          </div>
+
+          <div class="d-flex align-center" style="width: 150px;">
+            <v-text-field
+              v-model.number="paddingFim"
+              label="Folga Fim (dias)"
+              type="number"
+              hide-details
+              density="compact"
+              variant="outlined"
+            ></v-text-field>
+          </div>
+          
+          <v-btn
+            icon="mdi-arrow-expand-horizontal"
+            variant="text"
+            size="small"
+            title="Ajustar à Tela"
+            @click="ajustarATela"
+          ></v-btn>
+        </div>
+
         <v-btn
           color="secondary"
           prepend-icon="mdi-file-pdf-box"
           variant="elevated"
-          @click="imprimirGantt"
+          @click="abrirImpressao"
           class="mr-2"
         >
           Exportar PDF
         </v-btn>
+
+        <!-- Filtros de Visibilidade -->
+        <div class="d-flex align-center no-print mr-4">
+          <v-checkbox
+            v-model="mostrarPrevisto"
+            label="Previsto"
+            hide-details
+            density="compact"
+            class="mr-4"
+            color="secondary"
+          ></v-checkbox>
+          <v-checkbox
+            v-model="mostrarReal"
+            label="Real"
+            hide-details
+            density="compact"
+            color="primary"
+          ></v-checkbox>
+        </div>
 
         <v-btn
           color="primary"
@@ -139,10 +205,10 @@
 
               <!-- Container do Gantt com Scroll Horizontal -->
               <div class="gantt-scroll-container">
-                <div class="gantt-container" :style="{ width: `${300 + timelineDates.length * 40}px` }">
+                <div class="gantt-container" :style="{ width: `${taskHeaderWidth + timelineDates.length * celulaLargura}px` }">
                   <!-- Cabeçalho das Datas -->
                   <div class="gantt-header">
-                    <div class="gantt-task-header">Processos</div>
+                    <div class="gantt-task-header" :style="{ width: `${taskHeaderWidth}px`, minWidth: `${taskHeaderWidth}px` }">Processos</div>
                     <div class="gantt-timeline-header">
                       <!-- Agrupamento por Mês -->
                       <div class="gantt-months-row">
@@ -150,7 +216,7 @@
                           v-for="month in monthGroups" 
                           :key="month.id" 
                           class="gantt-month-label"
-                          :style="{ width: `${month.days * 40}px` }"
+                          :style="{ width: `${month.days * celulaLargura}px` }"
                         >
                           {{ month.label }}
                         </div>
@@ -161,6 +227,7 @@
                           v-for="date in timelineDates" 
                           :key="date.dateString"
                           class="gantt-date-cell"
+                          :style="{ width: `${celulaLargura}px`, minWidth: `${celulaLargura}px` }"
                           :class="{ 
                             'weekend': date.isWeekend, 
                             'today': date.isToday
@@ -177,7 +244,7 @@
                   <div 
                     v-if="todayPosition >= 0"
                     class="gantt-today-line"
-                    :style="{ left: `${300 + todayPosition}px` }"
+                    :style="{ left: `${taskHeaderWidth + todayPosition}px` }"
                   >
                     <div class="today-marker">HOJE</div>
                   </div>
@@ -186,7 +253,7 @@
                   <div 
                     v-if="entregaPosition >= 0"
                     class="gantt-delivery-line"
-                    :style="{ left: `${300 + entregaPosition}px` }"
+                    :style="{ left: `${taskHeaderWidth + entregaPosition}px` }"
                   >
                     <div class="delivery-marker">
                       <v-icon size="14" color="white" class="mr-1">mdi-flag-variant</v-icon>
@@ -202,7 +269,7 @@
                       class="gantt-row"
                     >
                       <!-- Nome do Processo -->
-                      <div class="gantt-task-cell">
+                      <div class="gantt-task-cell" :style="{ width: `${taskHeaderWidth}px`, minWidth: `${taskHeaderWidth}px` }">
                         <div class="task-info">
                           <v-icon 
                             small 
@@ -228,12 +295,13 @@
                             v-for="n in timelineDates.length" 
                             :key="n" 
                             class="grid-line"
+                            :style="{ width: `${celulaLargura}px`, minWidth: `${celulaLargura}px` }"
                           ></div>
                         </div>
 
                         <!-- BARRA PLANEJADA (Background/Outline) - SEMPRE VISÍVEL se houver data -->
                         <div 
-                          v-if="processo.dataInicioPrevista && processo.dataTerminoPrevista"
+                          v-if="mostrarPrevisto && processo.dataInicioPrevista && processo.dataTerminoPrevista"
                           class="gantt-bar planned"
                           :style="getGanttBarStyle(processo.dataInicioPrevista, processo.dataTerminoPrevista)"
                         >
@@ -242,13 +310,13 @@
 
                         <!-- BARRA REAL (Sólida) -->
                         <div 
-                          v-if="processo.dataInicio"
+                          v-if="mostrarReal && processo.dataInicio"
                           class="gantt-bar actual"
                           :style="getGanttBarStyle(processo.dataInicio, processo.dataFim || new Date())"
                           :class="getActualBarClass(processo)"
                         >
                           <div class="gantt-progress" :style="{ width: `${processo.progresso}%` }"></div>
-                          <div class="bar-label">
+                          <div class="bar-label exterior">
                             {{ processo.status === 'CONCLUIDO' ? 'Concluído' : 'Real' }}: {{ formatDate(processo.dataInicio) }} - {{ processo.dataFim ? formatDate(processo.dataFim) : 'Em andamento' }}
                             <span v-if="isProcessoAtrasado(processo)" class="delay-tag">(Atrasado)</span>
                           </div>
@@ -365,6 +433,16 @@ const loading = ref(true)
 const dataInicioOP = ref('')
 const showTodayLine = ref(true)
 
+// Configurações de Escala e Timeline
+const celulaLargura = ref(40)
+const taskHeaderWidth = ref(250)
+const paddingInicio = ref(7)
+const paddingFim = ref(30)
+
+// Filtros de Visibilidade
+const mostrarPrevisto = ref(true)
+const mostrarReal = ref(true)
+
 // Computed
 const processosOrdenados = computed(() => {
   if (!processos.value.length || !dataInicioOP.value) return processos.value
@@ -466,7 +544,7 @@ const timelineDates = computed(() => {
   
   const validStarts = datesForStart.filter(d => d !== null)
   const startDate = new Date(Math.min(...validStarts))
-  startDate.setDate(startDate.getDate() - 7)
+  startDate.setDate(startDate.getDate() - paddingInicio.value)
   startDate.setHours(0, 0, 0, 0)
   
   // Determinar fim: o que for mais tarde + 30 dias de padding
@@ -488,7 +566,7 @@ const timelineDates = computed(() => {
   
   const validEnds = datesForEnd.filter(d => d !== null)
   const endDate = new Date(Math.max(...validEnds))
-  endDate.setDate(endDate.getDate() + 30) // 30 dias de padding após o fim
+  endDate.setDate(endDate.getDate() + paddingFim.value)
   endDate.setHours(0, 0, 0, 0)
   
   const dates = []
@@ -501,7 +579,7 @@ const timelineDates = computed(() => {
     dates.push({
       dateString,
       day: current.getDate(),
-      weekday: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][current.getDay()],
+      weekday: ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'][current.getDay()],
       month: current.getMonth(),
       monthLabel: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'][current.getMonth()],
       year: current.getFullYear(),
@@ -527,15 +605,13 @@ const entregaPosition = computed(() => {
   const entregaDate = new Date(opData.value.dataEntrega)
   entregaDate.setHours(0, 0, 0, 0)
   
-  // Encontrar o índice do dia da entrega na timeline
   const index = timelineDates.value.findIndex(d => d.date.getTime() === entregaDate.getTime())
   
-  // Se não encontrar exatamente o dia (ex: fora do intervalo), calculamos a posição relativa
-  if (index >= 0) return index * 40
+  if (index >= 0) return index * celulaLargura.value
   
   const timelineStart = timelineDates.value[0].date.getTime()
   const diffDays = Math.floor((entregaDate.getTime() - timelineStart) / (1000 * 60 * 60 * 24))
-  return diffDays * 40
+  return diffDays * celulaLargura.value
 })
 
 const monthGroups = computed(() => {
@@ -570,7 +646,7 @@ const todayPosition = computed(() => {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const index = timelineDates.value.findIndex(d => d.date.getTime() === today.getTime())
-  return index >= 0 ? index * 40 : -1
+  return index >= 0 ? index * celulaLargura.value : -1
 })
 
 const processosAtrasados = computed(() => {
@@ -671,8 +747,8 @@ const getGanttBarStyle = (dataInicio, dataFim) => {
   const duration = Math.max(1, Math.floor((effectiveEnd.getTime() - effectiveStart.getTime()) / (1000 * 60 * 60 * 24)) + 1)
   
   return {
-    left: `${diffStart * 40}px`,
-    width: `${duration * 40}px`
+    left: `${diffStart * celulaLargura.value}px`,
+    width: `${duration * celulaLargura.value}px`
   }
 }
 
@@ -779,6 +855,247 @@ const formatDay = (dateString) => {
 
 const imprimirGantt = () => {
   window.print()
+}
+
+const ajustarATela = () => {
+  if (!timelineDates.value.length) return
+  const containerWidth = window.innerWidth * 0.9 // 90% da largura da tela
+  const totalDays = timelineDates.value.length
+  const suggestedWidth = Math.floor((containerWidth - taskHeaderWidth.value) / totalDays)
+  celulaLargura.value = Math.max(15, Math.min(suggestedWidth, 100))
+}
+
+const abrirImpressao = () => {
+  // Pegar o conteúdo da área de impressão
+  const printElement = document.querySelector('.print-content')
+  if (!printElement) return
+  
+  const printContent = printElement.innerHTML
+  const winPrint = window.open('', '', 'left=0,top=0,width=1280,height=900,toolbar=0,scrollbars=1,status=0')
+  
+  // Calcular escala para caber no A4 Paisagem (aprox 1100px para margens seguras)
+  const totalWidth = taskHeaderWidth.value + (timelineDates.value.length * celulaLargura.value)
+  const a4Width = 1100
+  const scale = totalWidth > a4Width ? (a4Width / totalWidth).toFixed(3) : 1
+
+  winPrint.document.write(`
+    <html>
+      <head>
+        <title>CRONOGRAMA - OP ${opData.value?.numeroOP}</title>
+        <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
+        <style>
+          @page { size: landscape; margin: 0.5cm; }
+          
+          /* Forçar cores e box-sizing para evitar deslocamentos */
+          * { 
+            -webkit-print-color-adjust: exact !important; 
+            print-color-adjust: exact !important; 
+            box-sizing: border-box !important;
+          }
+          
+          body { 
+            font-family: 'Segoe UI', Roboto, sans-serif; 
+            margin: 0; 
+            padding: 10px; 
+            background: white; 
+          }
+          
+          .print-content { 
+            transform-origin: top left;
+            transform: scale(${scale});
+            width: ${totalWidth}px;
+            position: relative;
+          }
+
+          .no-print { display: none !important; }
+          
+          /* Cabeçalho de Impressão */
+          .print-only-header { 
+            display: block !important; 
+            margin-bottom: 25px; 
+            border-bottom: 2px solid #000; 
+            padding-bottom: 10px; 
+            width: 100%;
+          }
+          
+          .gantt-scroll-container { width: 100%; border: 1px solid #ddd; overflow: visible !important; }
+          .gantt-container { width: 100%; position: relative; background: #fff; }
+          
+          /* Header do Gantt */
+          .gantt-header { display: flex; background: #eee !important; border-bottom: 2px solid #999; }
+          .gantt-task-header { 
+            width: ${taskHeaderWidth.value}px !important; 
+            min-width: ${taskHeaderWidth.value}px !important;
+            padding: 12px; 
+            font-weight: bold; 
+            background: #e0e0e0 !important; 
+            border-right: 2px solid #999; 
+          }
+          
+          .gantt-timeline-header { flex: 1; overflow: hidden; }
+          .gantt-months-row { display: flex; height: 32px; border-bottom: 1px solid #999; }
+          .gantt-month-label { 
+            flex-shrink: 0; 
+            padding: 6px; 
+            font-size: 12px; 
+            font-weight: bold; 
+            border-right: 1px solid #999; 
+            background: #e1f5fe !important; 
+            text-align: center; 
+          }
+          
+          .gantt-days-row { display: flex; }
+          .gantt-date-cell { 
+            width: ${celulaLargura.value}px !important;
+            min-width: ${celulaLargura.value}px !important;
+            padding: 4px 0; 
+            text-align: center; 
+            border-right: 1px solid #ccc; 
+            height: 42px; 
+            flex-shrink: 0; 
+          }
+          .gantt-date-cell.weekend { background-color: #f0f0f0 !important; }
+          .gantt-date { font-size: 11px; font-weight: bold; }
+          .gantt-weekday { font-size: 9px; color: #555; }
+
+          /* Corpo do Gantt */
+          .gantt-body { position: relative; }
+          .gantt-row { display: flex; border-bottom: 1px solid #ccc; min-height: 85px; position: relative; }
+          
+          .gantt-task-cell { 
+            width: ${taskHeaderWidth.value}px !important;
+            min-width: ${taskHeaderWidth.value}px !important;
+            padding: 12px; 
+            border-right: 2px solid #999; 
+            background: #fff !important; 
+            display: flex; 
+            align-items: center; 
+            font-size: 12px;
+          }
+          
+          .gantt-timeline-cell { flex: 1; position: relative; background: #fff !important; }
+          
+          /* Gradias */
+          .gantt-grid { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; z-index: 1; }
+          .grid-line { 
+            width: ${celulaLargura.value}px !important;
+            min-width: ${celulaLargura.value}px !important;
+            border-right: 1px solid #f1f1f1; 
+            height: 100%; 
+            flex-shrink: 0; 
+          }
+          
+          /* Barras */
+          .gantt-bar { position: absolute; border-radius: 6px; font-size: 10px; display: flex; align-items: center; white-space: nowrap; box-sizing: border-box; z-index: 5; }
+          
+          .gantt-bar.planned { 
+            top: 12px; 
+            height: 24px; 
+            background: #f3e5f5 !important; 
+            border: 1.5px solid #9c27b0 !important; 
+            color: #7b1fa2 !important; 
+          }
+          
+          .gantt-bar.actual { 
+            top: 44px; 
+            height: 30px; 
+            z-index: 6; 
+            border-width: 1.5px; 
+            border-style: solid; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2); 
+          }
+          
+          .bar-label { position: absolute; left: 100%; margin-left: 10px; font-weight: bold; font-size: 11px; }
+
+          /* Status das barras (para garantir cores no PDF) */
+          .status-delayed { background: #f44336 !important; border-color: #b71c1c !important; color: white !important; }
+          .status-concluido-ontime { background: #4caf50 !important; border-color: #1b5e20 !important; color: white !important; }
+          .status-em_andamento-ontime { background: #2196f3 !important; border-color: #0d47a1 !important; color: white !important; }
+          .status-waiting { background: #ff9800 !important; border-color: #e65100 !important; color: white !important; }
+          
+          /* Cores de texto das labels exteriores */
+          .status-delayed .bar-label { color: #b71c1c !important; }
+          .status-concluido-ontime .bar-label { color: #1b5e20 !important; }
+          .status-em_andamento-ontime .bar-label { color: #0d47a1 !important; }
+          .status-waiting .bar-label { color: #e65100 !important; }
+
+          .gantt-progress { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(255,255,255,0.2) !important; }
+
+          /* Marcos Verticais (Garantir cores e posicionamento) */
+          .gantt-today-line { 
+            position: absolute; 
+            top: 0; 
+            bottom: 0; 
+            width: 2px !important; 
+            background-color: #f44336 !important; 
+            border-left: 2px solid #f44336 !important;
+            z-index: 10; 
+          }
+          .today-marker { 
+            position: absolute; 
+            top: -28px; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            background: #f44336 !important; 
+            color: white !important; 
+            padding: 3px 8px; 
+            border-radius: 4px; 
+            font-size: 11px; 
+            font-weight: bold; 
+          }
+          
+          .gantt-delivery-line { 
+            position: absolute; 
+            top: 0; 
+            bottom: 0; 
+            width: 2px !important; 
+            background-color: #2e7d32 !important; 
+            border-left: 2px solid #2e7d32 !important;
+            z-index: 9; 
+          }
+          .delivery-marker { 
+            position: absolute; 
+            top: -28px; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            background: #2e7d32 !important; 
+            color: white !important; 
+            padding: 3px 10px; 
+            border-radius: 4px; 
+            font-size: 11px; 
+            font-weight: bold; 
+            display: flex;
+            align-items: center;
+          }
+
+          /* Textos Informativos */
+          h1 { margin: 0; font-size: 26px; color: #000; }
+          .text-h6 { color: #000; font-size: 18px; margin-top: 6px; }
+          .text-subtitle-1 { font-size: 15px; margin-top: 5px; }
+          .text-caption { font-size: 13px; color: #333; }
+          .d-flex { display: flex; }
+          .justify-space-between { justify-content: space-between; }
+          .align-center { align-items: center; }
+          .mb-4 { margin-bottom: 20px; }
+        </style>
+      </head>
+      <body>
+        <div class="print-content">
+          ${printContent}
+        </div>
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+              // window.close(); // Opcional
+            }, 1000);
+          };
+        <\/script>
+      </body>
+    </html>
+  `)
+  winPrint.document.close()
+  winPrint.focus()
 }
 
 // Lifecycle
@@ -986,12 +1303,22 @@ onMounted(() => {
   white-space: nowrap;
 }
 
-.planned .bar-label {
-  color: #a41abd; /* Roxo para o label previsto */
+.planned .bar-label,
+.actual .bar-label.exterior {
   text-shadow: none;
   left: 100%;
   margin-left: 8px;
 }
+
+.planned .bar-label {
+  color: #a41abd; /* Roxo para o label previsto */
+}
+
+/* Cores dos labels conforme o status para a barra real */
+.status-delayed .bar-label.exterior { color: #f44336; }
+.status-concluido-ontime .bar-label.exterior { color: #4caf50; }
+.status-em_andamento-ontime .bar-label.exterior { color: #2196f3; }
+.status-waiting .bar-label.exterior { color: #ff9800; }
 
 .gantt-progress {
   position: absolute;
