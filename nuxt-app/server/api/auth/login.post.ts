@@ -8,14 +8,24 @@ const jwtSecret = process.env.JWT_SECRET || 'your-secret-key-change-in-productio
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
-  
+
   console.log('🔐 Tentativa de login:', body.email)
-  
+
   try {
     // Buscar usuário pelo email
     const user = await prisma.user.findUnique({
       where: {
         email: body.email
+      },
+      include: {
+        userModules: {
+          where: {
+            canView: true
+          },
+          include: {
+            module: true
+          }
+        }
       }
     })
 
@@ -40,9 +50,9 @@ export default defineEventHandler(async (event) => {
 
     // Verificar senha com bcrypt
     const validPassword = await bcrypt.compare(body.password, user.password)
-    
+
     console.log('🔑 Validação de senha:', validPassword ? '✅ Correta' : '❌ Incorreta')
-    
+
     if (!validPassword) {
       throw createError({
         statusCode: 401,
@@ -52,8 +62,8 @@ export default defineEventHandler(async (event) => {
 
     // Gerar JWT token
     const token = jwt.sign(
-      { 
-        id: user.id, 
+      {
+        id: user.id,
         email: user.email,
         role: user.role,
         department: user.department
@@ -72,7 +82,8 @@ export default defineEventHandler(async (event) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        department: user.department
+        department: user.department,
+        userModules: user.userModules // Incluir permissões para o frontend
       }
     }
   } catch (error: any) {

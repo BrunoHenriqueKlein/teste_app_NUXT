@@ -6,7 +6,7 @@ const prisma = new PrismaClient()
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
-  
+
   try {
     // Verificar se usuário existe
     const user = await prisma.user.findUnique({
@@ -36,17 +36,19 @@ export default defineEventHandler(async (event) => {
       }
     })
 
-    // Configurar e-mail (em produção, use variáveis de ambiente)
+    // Configurar e-mail usando variáveis de ambiente
     const transporter = createTransport({
-      service: 'gmail',
+      host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+      port: parseInt(process.env.EMAIL_PORT || '587'),
+      secure: process.env.EMAIL_PORT === '465', // true para 465, false para outras portas
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASSWORD
       }
     })
 
-    const resetUrl = `${process.env.APP_URL}/reset-password?token=${resetToken}`
-    
+    const resetUrl = `${process.env.APP_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`
+
     const mailOptions = {
       from: process.env.EMAIL_FROM,
       to: user.email,

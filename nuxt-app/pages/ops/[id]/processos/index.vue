@@ -781,7 +781,7 @@ const loadProcessos = async () => {
 // Carregar usuários
 const loadUsuarios = async () => {
   try {
-    const data = await $fetch('/api/usuarios')
+    const data = await $fetch('/api/user')
     usuarios.value = Array.isArray(data) ? data : []
   } catch (error) {
     console.error('Erro ao carregar usuários:', error)

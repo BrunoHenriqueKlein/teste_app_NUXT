@@ -59,7 +59,7 @@
                   color="primary"
                   size="large"
                   block
-                  :loading="loading"
+                  :loading="authLoading"
                   class="mt-2"
                 >
                   <template v-slot:loader>
@@ -274,10 +274,11 @@ definePageMeta({
 import logo from '@/assets/imagens/logo-someh-fundo-claro.png'
 import { ref } from 'vue'
 
+const { login: authLogin, register: authRegister, loading: authLoading, error: authError } = useAuth()
+
 // Estado do login
 const email = ref('')
 const password = ref('')
-const loading = ref(false)
 const error = ref('')
 const errorColor = ref('error')
 
@@ -323,29 +324,18 @@ const roles = [
 
 // Função de login
 const handleLogin = async () => {
-  loading.value = true
   error.value = ''
   errorColor.value = 'error'
 
-  try {
-    const response = await $fetch('/api/auth/login', {
-      method: 'POST',
-      body: {
-        email: email.value,
-        password: password.value
-      }
-    })
+  const success = await authLogin({
+    email: email.value,
+    password: password.value
+  })
 
-    if (response.success) {
-      localStorage.setItem('authToken', response.token)
-      localStorage.setItem('user', JSON.stringify(response.user))
-      window.location.href = '/'
-    }
-  } catch (err) {
-    error.value = err.data?.message || 'Erro ao fazer login'
-    errorColor.value = 'error'
-  } finally {
-    loading.value = false
+  if (success) {
+    window.location.href = '/'
+  } else {
+    error.value = authError.value
   }
 }
 
@@ -381,35 +371,29 @@ const handleRegister = async () => {
   registerLoading.value = true
   error.value = ''
 
-  try {
-    const response = await $fetch('/api/auth/register', {
-      method: 'POST',
-      body: {
-        name: registerName.value,
-        email: registerEmail.value,
-        password: registerPassword.value,
-        department: registerDepartment.value,
-        role: registerRole.value
-      }
-    })
+  const response = await authRegister({
+    name: registerName.value,
+    email: registerEmail.value,
+    password: registerPassword.value,
+    department: registerDepartment.value,
+    role: registerRole.value
+  })
 
-    if (response.success) {
-      showRegister.value = false
-      resetRegisterForm()
-      
-      // Mostrar mensagem de sucesso
-      error.value = '✅ Cadastro realizado com sucesso! Faça login.'
-      errorColor.value = 'success'
-      
-      // Autofill do email no login
-      email.value = response.user.email
-    }
-  } catch (err) {
-    error.value = err.data?.message || 'Erro ao cadastrar'
+  if (response?.success) {
+    showRegister.value = false
+    resetRegisterForm()
+    
+    // Mostrar mensagem de sucesso
+    error.value = '✅ Cadastro realizado com sucesso! Faça login.'
+    errorColor.value = 'success'
+    
+    // Autofill do email no login
+    email.value = response.user.email
+  } else {
+    error.value = authError.value || 'Erro ao cadastrar'
     errorColor.value = 'error'
-  } finally {
-    registerLoading.value = false
   }
+  registerLoading.value = false
 }
 
 // Funções para recuperação de senha

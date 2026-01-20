@@ -155,14 +155,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-
+const { user, userName, userRole, userDepartment, logout, hasPermission, isAdmin } = useAuth()
 const router = useRouter()
 const route = useRoute()
 
 // Estado
-const user = ref({})
 const showLogoutConfirm = ref(false)
 const logoutTimer = ref(null)
 const currentTime = ref('')
@@ -170,44 +167,29 @@ const currentTime = ref('')
 // Importar logo
 import logosimples from '@/assets/imagens/logo-someh-fundo-escuro-simples.png'
 
-// Navegação completa
+// Navegação base
 const navigation = [
-  { title: 'Dashboard', icon: 'mdi-view-dashboard', route: '/', roles: ['ALL'] },
-  { title: 'Ordens de Produção', icon: 'mdi-clipboard-list', route: '/ops', roles: ['ALL'] },
-  { title: 'Processos', icon: 'mdi-cog', route: '/processos', roles: ['ALL'] },
-  { title: 'Peças', icon: 'mdi-cube', route: '/pecas', roles: ['ALL'] },
-  { title: 'Estoque', icon: 'mdi-warehouse', route: '/estoque', 
-    roles: ['ADMIN', 'ESTOQUE', 'COMPRADOR', 'PCP'], badge: 3 },
-  { title: 'Compras', icon: 'mdi-cart', route: '/compras', 
-    roles: ['ADMIN', 'COMPRADOR', 'PCP'], badge: 5 },
-  { title: 'Relatórios', icon: 'mdi-chart-bar', route: '/relatorios', 
-    roles: ['ADMIN', 'GERENTE', 'VENDAS'] },
-  { title: 'Administração', icon: 'mdi-cog', route: '/admin', 
-    roles: ['ADMIN'] },
+  { title: 'Dashboard', icon: 'mdi-view-dashboard', route: '/', moduleName: 'Dashboard' },
+  { title: 'Ordens de Produção', icon: 'mdi-clipboard-list', route: '/ops', moduleName: 'Ordens de Produção' },
+  { title: 'Processos', icon: 'mdi-cog', route: '/processos', moduleName: 'Processos' },
+  { title: 'Peças', icon: 'mdi-cube', route: '/pecas', moduleName: 'Peças' },
+  { title: 'Estoque', icon: 'mdi-warehouse', route: '/estoque', moduleName: 'Estoque' },
+  { title: 'Compras', icon: 'mdi-cart', route: '/compras', moduleName: 'Compras' },
+  { title: 'Relatórios', icon: 'mdi-chart-bar', route: '/relatorios', moduleName: 'Relatórios' },
 ]
 
-// Carregar dados do usuário
+// Adicionar Administração apenas para Admins
+const adminNavigation = [
+  { title: 'Usuários', icon: 'mdi-account-group', route: '/admin/users', isAdminOnly: true },
+  { title: 'Configurações', icon: 'mdi-cog', route: '/admin/config', isAdminOnly: true },
+]
+
+// Carregar dados
 onMounted(() => {
-  loadUserData()
   updateTime()
-  const timer = setInterval(updateTime, 60000) // Atualizar a cada minuto
+  const timer = setInterval(updateTime, 60000)
   onUnmounted(() => clearInterval(timer))
 })
-
-const loadUserData = () => {
-  try {
-    const userData = localStorage.getItem('user')
-    if (userData) {
-      user.value = JSON.parse(userData)
-      console.log('Usuário carregado:', user.value)
-    } else {
-      // Redirecionar para login se não houver usuário
-      router.push('/login')
-    }
-  } catch (error) {
-    console.error('Erro ao carregar dados do usuário:', error)
-  }
-}
 
 const updateTime = () => {
   const now = new Date()
@@ -218,64 +200,27 @@ const updateTime = () => {
 }
 
 // Computed Properties
-const userName = computed(() => {
-  return user.value?.name || 'Usuário'
-})
-
-const userRole = computed(() => {
-  const roleMap = {
-    'ADMIN': 'Administrador',
-    'GERENTE': 'Gerente',
-    'ENGENHEIRO': 'Engenheiro',
-    'COMPRADOR': 'Comprador',
-    'PCP': 'PCP',
-    'QUALIDADE': 'Qualidade',
-    'ESTOQUE': 'Estoque',
-    'VENDAS': 'Vendas',
-    'USER': 'Usuário'
-  }
-  return roleMap[user.value?.role] || 'Usuário'
-})
-
-const userDepartment = computed(() => {
-  const deptMap = {
-    'ADMINISTRATIVO': 'Administrativo',
-    'VENDAS': 'Vendas',
-    'ENGENHARIA': 'Engenharia',
-    'COMPRAS': 'Compras',
-    'PCP': 'PCP',
-    'QUALIDADE': 'Qualidade',
-    'ESTOQUE': 'Estoque',
-    'MONTAGEM': 'Montagem',
-    'EXPEDICAO': 'Expedição'
-  }
-  return deptMap[user.value?.department] || user.value?.department || 'Departamento'
-})
-
 const filteredNavigation = computed(() => {
-  const userRole = user.value?.role || 'USER'
-  return navigation.filter(item => {
-    if (item.roles.includes('ALL')) return true
-    return item.roles.includes(userRole)
-  })
+  // Filtrar módulos normais por permissão canView
+  const filtered = navigation.filter(item => hasPermission(item.moduleName, 'canView'))
+  
+  // Adicionar itens de admin se for ADMIN
+  if (isAdmin.value) {
+    filtered.push(...adminNavigation)
+  }
+  
+  return filtered
 })
 
 const breadcrumbs = computed(() => {
   const pathArray = route.path.split('/').filter(x => x)
   const crumbs = []
   
+  crumbs.push({ title: 'Home', disabled: pathArray.length === 0, to: '/' })
+  
   let cumulativePath = ''
-  
-  // Adicionar "Home" como primeiro item
-  crumbs.push({
-    title: 'Home',
-    disabled: pathArray.length === 0,
-    to: '/'
-  })
-  
   pathArray.forEach((segment, index) => {
     cumulativePath += '/' + segment
-    
     const nameMap = {
       'ops': 'Ordens de Produção',
       'processos': 'Processos',
@@ -284,76 +229,36 @@ const breadcrumbs = computed(() => {
       'compras': 'Compras',
       'relatorios': 'Relatórios',
       'admin': 'Administração',
-      'perfil': 'Meu Perfil',
-      'configuracoes': 'Configurações'
+      'users': 'Usuários',
+      'profile': 'Meu Perfil'
     }
-    
     crumbs.push({
       title: nameMap[segment] || segment.charAt(0).toUpperCase() + segment.slice(1),
       disabled: index === pathArray.length - 1,
       to: cumulativePath
     })
   })
-  
   return crumbs
 })
 
 // Funções
-const navigateTo = (path) => {
-  router.push(path)
-}
-
-const toggleTheme = () => {
-  const theme = document.documentElement.getAttribute('data-theme')
-  const newTheme = theme === 'dark' ? 'light' : 'dark'
-  document.documentElement.setAttribute('data-theme', newTheme)
-  localStorage.setItem('theme', newTheme)
-}
-
 const handleLogout = () => {
   if (!showLogoutConfirm.value) {
     showLogoutConfirm.value = true
-    
-    // Resetar timer se já existir
-    if (logoutTimer.value) {
-      clearTimeout(logoutTimer.value)
-    }
-    
-    // Fechar automaticamente após 4 segundos
-    logoutTimer.value = setTimeout(() => {
-      showLogoutConfirm.value = false
-    }, 4000)
-    
+    if (logoutTimer.value) clearTimeout(logoutTimer.value)
+    logoutTimer.value = setTimeout(() => { showLogoutConfirm.value = false }, 4000)
     return
   }
-  
   confirmLogout()
 }
 
-const confirmLogout = async () => {
-  try {
-    // Chamar API de logout se existir
-    // await $fetch('/api/auth/logout', { method: 'POST' })
-    
-    // Limpar localStorage
-    localStorage.removeItem('authToken')
-    localStorage.removeItem('user')
-    
-    // Limpar timer
-    if (logoutTimer.value) {
-      clearTimeout(logoutTimer.value)
-    }
-    
-    // Redirecionar para login
-    router.push('/login')
-    
-  } catch (error) {
-    console.error('Erro ao fazer logout:', error)
-    // Forçar logout mesmo com erro
-    localStorage.removeItem('authToken')
-    localStorage.removeItem('user')
-    router.push('/login')
-  }
+const confirmLogout = () => {
+  if (logoutTimer.value) clearTimeout(logoutTimer.value)
+  logout()
+}
+
+const navigateToPage = (path) => {
+  router.push(path)
 }
 </script>
 

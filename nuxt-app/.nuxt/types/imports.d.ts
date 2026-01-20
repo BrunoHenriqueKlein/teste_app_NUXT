@@ -97,6 +97,7 @@ declare global {
   const useAppConfig: typeof import('../../node_modules/nuxt/dist/app/config').useAppConfig
   const useAsyncData: typeof import('../../node_modules/nuxt/dist/app/composables/asyncData').useAsyncData
   const useAttrs: typeof import('../../node_modules/vue').useAttrs
+  const useAuth: typeof import('../../composables/useAuth').useAuth
   const useAutoDates: typeof import('../../composables/useAutoDates').useAutoDates
   const useCalendarCalculator: typeof import('../../composables/useCalendarCalculator').useCalendarCalculator
   const useCookie: typeof import('../../node_modules/nuxt/dist/app/composables/cookie').useCookie
@@ -285,6 +286,7 @@ declare module 'vue' {
     readonly useAppConfig: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/config')['useAppConfig']>
     readonly useAsyncData: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/asyncData')['useAsyncData']>
     readonly useAttrs: UnwrapRef<typeof import('../../node_modules/vue')['useAttrs']>
+    readonly useAuth: UnwrapRef<typeof import('../../composables/useAuth')['useAuth']>
     readonly useAutoDates: UnwrapRef<typeof import('../../composables/useAutoDates')['useAutoDates']>
     readonly useCalendarCalculator: UnwrapRef<typeof import('../../composables/useCalendarCalculator')['useCalendarCalculator']>
     readonly useCookie: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/cookie')['useCookie']>

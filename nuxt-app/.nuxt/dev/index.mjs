@@ -1370,11 +1370,11 @@ function defineNitroPlugin(def) {
   return def;
 }
 
-const prisma$o = new PrismaClient();
+const prisma$s = new PrismaClient();
 const _aIQNJBgajH95T2G3WQbulkLX3hjPiBtkWRLnpkQYumM = defineNitroPlugin((nitroApp) => {
   console.log("\u2705 Prisma plugin carregado");
   nitroApp.hooks.hook("request", (event) => {
-    event.context.prisma = prisma$o;
+    event.context.prisma = prisma$s;
   });
 });
 
@@ -1882,6 +1882,9 @@ async function getIslandContext(event) {
   return ctx;
 }
 
+const _lazy_vyMpl_ = () => Promise.resolve().then(function () { return list_get$1; });
+const _lazy_iYNlsX = () => Promise.resolve().then(function () { return permissions_post$1; });
+const _lazy_mbEQqI = () => Promise.resolve().then(function () { return update_post$1; });
 const _lazy_jNHpjd = () => Promise.resolve().then(function () { return forgotPassword_post$1; });
 const _lazy_MyKlQu = () => Promise.resolve().then(function () { return login_post$1; });
 const _lazy_wD64rD = () => Promise.resolve().then(function () { return register_post$1; });
@@ -1909,10 +1912,14 @@ const _lazy_qyGLAc = () => Promise.resolve().then(function () { return recent_ge
 const _lazy_5EnahH = () => Promise.resolve().then(function () { return salvar_post$1; });
 const _lazy_1uUSXj = () => Promise.resolve().then(function () { return index_get$1; });
 const _lazy__qQdIa = () => Promise.resolve().then(function () { return modules_get$1; });
+const _lazy_Y11UnV = () => Promise.resolve().then(function () { return updateProfile_post$1; });
 const _lazy_0XwxzV = () => Promise.resolve().then(function () { return renderer$1; });
 
 const handlers = [
   { route: '', handler: _oStzCE, lazy: false, middleware: true, method: undefined },
+  { route: '/api/admin/users/list', handler: _lazy_vyMpl_, lazy: true, middleware: false, method: "get" },
+  { route: '/api/admin/users/permissions', handler: _lazy_iYNlsX, lazy: true, middleware: false, method: "post" },
+  { route: '/api/admin/users/update', handler: _lazy_mbEQqI, lazy: true, middleware: false, method: "post" },
   { route: '/api/auth/forgot-password', handler: _lazy_jNHpjd, lazy: true, middleware: false, method: "post" },
   { route: '/api/auth/login', handler: _lazy_MyKlQu, lazy: true, middleware: false, method: "post" },
   { route: '/api/auth/register', handler: _lazy_wD64rD, lazy: true, middleware: false, method: "post" },
@@ -1940,6 +1947,7 @@ const handlers = [
   { route: '/api/salvar', handler: _lazy_5EnahH, lazy: true, middleware: false, method: "post" },
   { route: '/api/user', handler: _lazy_1uUSXj, lazy: true, middleware: false, method: "get" },
   { route: '/api/user/modules', handler: _lazy__qQdIa, lazy: true, middleware: false, method: "get" },
+  { route: '/api/user/update-profile', handler: _lazy_Y11UnV, lazy: true, middleware: false, method: "post" },
   { route: '/__nuxt_error', handler: _lazy_0XwxzV, lazy: true, middleware: false, method: undefined },
   { route: '/__nuxt_island/**', handler: _SxA8c9, lazy: false, middleware: false, method: undefined },
   { route: '/**', handler: _lazy_0XwxzV, lazy: true, middleware: false, method: undefined }
@@ -2280,11 +2288,132 @@ const styles$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
   default: styles
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$n = new PrismaClient();
+const prisma$r = new PrismaClient();
+const list_get = defineEventHandler(async (event) => {
+  try {
+    const users = await prisma$r.user.findMany({
+      include: {
+        userModules: {
+          include: {
+            module: true
+          }
+        }
+      },
+      orderBy: { name: "asc" }
+    });
+    return users;
+  } catch (error) {
+    throw createError({
+      statusCode: 500,
+      statusMessage: `Erro ao listar usu\xE1rios: ${error.message}`
+    });
+  }
+});
+
+const list_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: list_get
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const prisma$q = new PrismaClient();
+const permissions_post = defineEventHandler(async (event) => {
+  const body = await readBody(event);
+  const { userId, permissions } = body;
+  if (!userId || !Array.isArray(permissions)) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: "Dados inv\xE1lidos"
+    });
+  }
+  try {
+    const operations = permissions.map((p) => {
+      return prisma$q.userModule.upsert({
+        where: {
+          userId_moduleId: {
+            userId,
+            moduleId: p.moduleId
+          }
+        },
+        update: {
+          canView: !!p.canView,
+          canEdit: !!p.canEdit,
+          canDelete: !!p.canDelete
+        },
+        create: {
+          userId,
+          moduleId: p.moduleId,
+          canView: !!p.canView,
+          canEdit: !!p.canEdit,
+          canDelete: !!p.canDelete
+        }
+      });
+    });
+    await prisma$q.$transaction(operations);
+    return {
+      success: true,
+      message: "Permiss\xF5es atualizadas com sucesso"
+    };
+  } catch (error) {
+    throw createError({
+      statusCode: 500,
+      statusMessage: `Erro ao atualizar permiss\xF5es: ${error.message}`
+    });
+  }
+});
+
+const permissions_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: permissions_post
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const prisma$p = new PrismaClient();
+const update_post = defineEventHandler(async (event) => {
+  const body = await readBody(event);
+  const { id, name, email, role, department, isActive, password } = body;
+  if (!id) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: "ID do usu\xE1rio n\xE3o fornecido"
+    });
+  }
+  try {
+    const data = {
+      role,
+      department,
+      isActive
+    };
+    if (name) data.name = name;
+    if (email) data.email = email;
+    if (password) {
+      const bcrypt = await import('file:///app/node_modules/bcrypt/bcrypt.js');
+      data.password = await bcrypt.default.hash(password, 10);
+    }
+    const updatedUser = await prisma$p.user.update({
+      where: { id },
+      data
+    });
+    return {
+      success: true,
+      user: updatedUser
+    };
+  } catch (error) {
+    throw createError({
+      statusCode: 500,
+      statusMessage: `Erro ao atualizar usu\xE1rio: ${error.message}`
+    });
+  }
+});
+
+const update_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: update_post
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const prisma$o = new PrismaClient();
 const forgotPassword_post = defineEventHandler(async (event) => {
   const body = await readBody(event);
   try {
-    const user = await prisma$n.user.findUnique({
+    const user = await prisma$o.user.findUnique({
       where: {
         email: body.email
       }
@@ -2297,7 +2426,7 @@ const forgotPassword_post = defineEventHandler(async (event) => {
     }
     const resetToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
     const resetTokenExpiry = new Date(Date.now() + 36e5);
-    await prisma$n.user.update({
+    await prisma$o.user.update({
       where: { id: user.id },
       data: {
         resetToken,
@@ -2305,13 +2434,16 @@ const forgotPassword_post = defineEventHandler(async (event) => {
       }
     });
     const transporter = createTransport({
-      service: "gmail",
+      host: process.env.EMAIL_HOST || "smtp.gmail.com",
+      port: parseInt(process.env.EMAIL_PORT || "587"),
+      secure: process.env.EMAIL_PORT === "465",
+      // true para 465, false para outras portas
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASSWORD
       }
     });
-    const resetUrl = `${process.env.APP_URL}/reset-password?token=${resetToken}`;
+    const resetUrl = `${process.env.APP_URL || "http://localhost:3000"}/reset-password?token=${resetToken}`;
     const mailOptions = {
       from: process.env.EMAIL_FROM,
       to: user.email,
@@ -2356,15 +2488,25 @@ const forgotPassword_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.def
   default: forgotPassword_post
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$m = new PrismaClient();
+const prisma$n = new PrismaClient();
 const jwtSecret = process.env.JWT_SECRET || "your-secret-key-change-in-production";
 const login_post = defineEventHandler(async (event) => {
   const body = await readBody(event);
   console.log("\u{1F510} Tentativa de login:", body.email);
   try {
-    const user = await prisma$m.user.findUnique({
+    const user = await prisma$n.user.findUnique({
       where: {
         email: body.email
+      },
+      include: {
+        userModules: {
+          where: {
+            canView: true
+          },
+          include: {
+            module: true
+          }
+        }
       }
     });
     if (!user) {
@@ -2409,7 +2551,9 @@ const login_post = defineEventHandler(async (event) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        department: user.department
+        department: user.department,
+        userModules: user.userModules
+        // Incluir permissões para o frontend
       }
     };
   } catch (error) {
@@ -2429,7 +2573,7 @@ const login_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProper
   default: login_post
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$l = new PrismaClient();
+const prisma$m = new PrismaClient();
 const register_post = defineEventHandler(async (event) => {
   const body = await readBody(event);
   console.log("\u{1F4DD} Tentativa de registro:", {
@@ -2439,7 +2583,7 @@ const register_post = defineEventHandler(async (event) => {
     role: body.role
   });
   try {
-    const existingUser = await prisma$l.user.findUnique({
+    const existingUser = await prisma$m.user.findUnique({
       where: {
         email: body.email
       }
@@ -2452,7 +2596,7 @@ const register_post = defineEventHandler(async (event) => {
       });
     }
     const hashedPassword = await bcrypt.hash(body.password, 10);
-    const user = await prisma$l.user.create({
+    const user = await prisma$m.user.create({
       data: {
         name: body.name,
         email: body.email,
@@ -2492,11 +2636,11 @@ const register_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePro
   default: register_post
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$k = new PrismaClient();
+const prisma$l = new PrismaClient();
 const resetPassword_post = defineEventHandler(async (event) => {
   const body = await readBody(event);
   try {
-    const user = await prisma$k.user.findFirst({
+    const user = await prisma$l.user.findFirst({
       where: {
         resetToken: body.token,
         resetTokenExpiry: {
@@ -2512,7 +2656,7 @@ const resetPassword_post = defineEventHandler(async (event) => {
       };
     }
     const hashedPassword = await bcrypt.hash(body.password, 10);
-    await prisma$k.user.update({
+    await prisma$l.user.update({
       where: { id: user.id },
       data: {
         password: hashedPassword,
@@ -2539,10 +2683,10 @@ const resetPassword_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defi
   default: resetPassword_post
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$j = new PrismaClient();
+const prisma$k = new PrismaClient();
 const processos_delete = defineEventHandler(async (event) => {
   try {
-    const result = await prisma$j.oPProcesso.deleteMany({});
+    const result = await prisma$k.oPProcesso.deleteMany({});
     return {
       success: true,
       message: `Foram exclu\xEDdos ${result.count} processos`
@@ -2560,23 +2704,23 @@ const processos_delete$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.define
   default: processos_delete
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$i = new PrismaClient();
+const prisma$j = new PrismaClient();
 const stats_get = defineEventHandler(async (event) => {
   try {
-    const opsAbertas = await prisma$i.oP.count({
+    const opsAbertas = await prisma$j.oP.count({
       where: { status: "ABERTA" }
     });
-    const opsProducao = await prisma$i.oP.count({
+    const opsProducao = await prisma$j.oP.count({
       where: {
         status: {
           in: ["EM_PROJETO", "EM_FABRICACAO", "EM_MONTAGEM"]
         }
       }
     });
-    const opsConcluidas = await prisma$i.oP.count({
+    const opsConcluidas = await prisma$j.oP.count({
       where: { status: "ENTREGUE" }
     });
-    const opsAtrasadas = await prisma$i.oP.count({
+    const opsAtrasadas = await prisma$j.oP.count({
       where: {
         dataEntrega: { lt: /* @__PURE__ */ new Date() },
         status: { not: "ENTREGUE" }
@@ -2604,10 +2748,10 @@ const stats_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePropert
   default: stats_get
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$h = new PrismaClient();
+const prisma$i = new PrismaClient();
 const itens_get = defineEventHandler(async (event) => {
   try {
-    const itens = await prisma$h.item.findMany({
+    const itens = await prisma$i.item.findMany({
       orderBy: {
         createdAt: "desc"
       }
@@ -2624,7 +2768,7 @@ const itens_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePropert
   default: itens_get
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$g = new PrismaClient();
+const prisma$h = new PrismaClient();
 const _id__delete = defineEventHandler(async (event) => {
   try {
     const id = getRouterParam(event, "id");
@@ -2634,7 +2778,7 @@ const _id__delete = defineEventHandler(async (event) => {
         statusMessage: "ID da OP n\xE3o informado"
       });
     }
-    const existingOP = await prisma$g.oP.findUnique({
+    const existingOP = await prisma$h.oP.findUnique({
       where: { id: parseInt(id) }
     });
     if (!existingOP) {
@@ -2643,10 +2787,10 @@ const _id__delete = defineEventHandler(async (event) => {
         statusMessage: "OP n\xE3o encontrada"
       });
     }
-    await prisma$g.oP.delete({
+    await prisma$h.oP.delete({
       where: { id: parseInt(id) }
     });
-    await prisma$g.oPHistorico.create({
+    await prisma$h.oPHistorico.create({
       data: {
         opId: parseInt(id),
         usuarioId: 1,
@@ -2670,7 +2814,7 @@ const _id__delete$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePrope
   default: _id__delete
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$f = new PrismaClient();
+const prisma$g = new PrismaClient();
 const _id__put = defineEventHandler(async (event) => {
   try {
     const body = await readBody(event);
@@ -2681,7 +2825,7 @@ const _id__put = defineEventHandler(async (event) => {
         statusMessage: "ID da OP n\xE3o informado"
       });
     }
-    const existingOP = await prisma$f.oP.findUnique({
+    const existingOP = await prisma$g.oP.findUnique({
       where: { id: parseInt(id) }
     });
     if (!existingOP) {
@@ -2690,7 +2834,7 @@ const _id__put = defineEventHandler(async (event) => {
         statusMessage: "OP n\xE3o encontrada"
       });
     }
-    const op = await prisma$f.oP.update({
+    const op = await prisma$g.oP.update({
       where: { id: parseInt(id) },
       data: {
         numeroOP: body.numeroOP,
@@ -2711,7 +2855,7 @@ const _id__put = defineEventHandler(async (event) => {
         }
       }
     });
-    await prisma$f.oPHistorico.create({
+    await prisma$g.oPHistorico.create({
       data: {
         opId: op.id,
         usuarioId: 1,
@@ -2735,7 +2879,7 @@ const _id__put$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty
   default: _id__put
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$e = new PrismaClient();
+const prisma$f = new PrismaClient();
 const _processoId__delete = defineEventHandler(async (event) => {
   try {
     const opId = getRouterParam(event, "id");
@@ -2746,7 +2890,7 @@ const _processoId__delete = defineEventHandler(async (event) => {
         statusMessage: "IDs n\xE3o informados"
       });
     }
-    const existingProcesso = await prisma$e.oPProcesso.findFirst({
+    const existingProcesso = await prisma$f.oPProcesso.findFirst({
       where: {
         id: parseInt(processoId),
         opId: parseInt(opId)
@@ -2758,12 +2902,12 @@ const _processoId__delete = defineEventHandler(async (event) => {
         statusMessage: "Processo n\xE3o encontrado"
       });
     }
-    await prisma$e.processoHistorico.deleteMany({
+    await prisma$f.processoHistorico.deleteMany({
       where: {
         processoId: parseInt(processoId)
       }
     });
-    await prisma$e.oPProcesso.delete({
+    await prisma$f.oPProcesso.delete({
       where: {
         id: parseInt(processoId)
       }
@@ -2783,7 +2927,7 @@ const _processoId__delete$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.def
   default: _processoId__delete
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$d = new PrismaClient();
+const prisma$e = new PrismaClient();
 const _processoId__put$2 = defineEventHandler(async (event) => {
   try {
     const opId = getRouterParam(event, "id");
@@ -2795,7 +2939,7 @@ const _processoId__put$2 = defineEventHandler(async (event) => {
         statusMessage: "IDs n\xE3o informados"
       });
     }
-    const existingProcesso = await prisma$d.oPProcesso.findFirst({
+    const existingProcesso = await prisma$e.oPProcesso.findFirst({
       where: {
         id: parseInt(processoId),
         opId: parseInt(opId)
@@ -2807,7 +2951,7 @@ const _processoId__put$2 = defineEventHandler(async (event) => {
         statusMessage: "Processo n\xE3o encontrado"
       });
     }
-    const processo = await prisma$d.oPProcesso.update({
+    const processo = await prisma$e.oPProcesso.update({
       where: {
         id: parseInt(processoId)
       },
@@ -2831,7 +2975,7 @@ const _processoId__put$2 = defineEventHandler(async (event) => {
         }
       }
     });
-    await prisma$d.processoHistorico.create({
+    await prisma$e.processoHistorico.create({
       data: {
         processoId: processo.id,
         usuarioId: 1,
@@ -2855,7 +2999,7 @@ const _processoId__put$3 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.define
   default: _processoId__put$2
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$c = new PrismaClient();
+const prisma$d = new PrismaClient();
 const actions_post = defineEventHandler(async (event) => {
   try {
     const opId = getRouterParam(event, "id");
@@ -2867,7 +3011,7 @@ const actions_post = defineEventHandler(async (event) => {
         statusMessage: "Dados incompletos"
       });
     }
-    const existingProcesso = await prisma$c.oPProcesso.findFirst({
+    const existingProcesso = await prisma$d.oPProcesso.findFirst({
       where: {
         id: parseInt(processoId),
         opId: parseInt(opId)
@@ -2922,7 +3066,7 @@ const actions_post = defineEventHandler(async (event) => {
           statusMessage: "A\xE7\xE3o n\xE3o reconhecida"
         });
     }
-    const processo = await prisma$c.oPProcesso.update({
+    const processo = await prisma$d.oPProcesso.update({
       where: {
         id: parseInt(processoId)
       },
@@ -2937,7 +3081,7 @@ const actions_post = defineEventHandler(async (event) => {
         }
       }
     });
-    await prisma$c.processoHistorico.create({
+    await prisma$d.processoHistorico.create({
       data: {
         processoId: processo.id,
         usuarioId: 1,
@@ -2961,7 +3105,7 @@ const actions_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProp
   default: actions_post
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$b = new PrismaClient();
+const prisma$c = new PrismaClient();
 const index_get$6 = defineEventHandler(async (event) => {
   try {
     const opId = getRouterParam(event, "id");
@@ -2971,7 +3115,7 @@ const index_get$6 = defineEventHandler(async (event) => {
         message: "ID da OP n\xE3o informado"
       });
     }
-    const op = await prisma$b.oP.findUnique({
+    const op = await prisma$c.oP.findUnique({
       where: {
         id: parseInt(opId)
       },
@@ -3225,7 +3369,7 @@ const _processoId__put$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.define
   default: _processoId__put
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$a = new PrismaClient();
+const prisma$b = new PrismaClient();
 const concluir_post = defineEventHandler(async (event) => {
   try {
     const opId = getRouterParam(event, "id");
@@ -3236,7 +3380,7 @@ const concluir_post = defineEventHandler(async (event) => {
         statusMessage: "IDs inv\xE1lidos"
       });
     }
-    const existingProcesso = await prisma$a.oPProcesso.findFirst({
+    const existingProcesso = await prisma$b.oPProcesso.findFirst({
       where: {
         id: parseInt(processoId),
         opId: parseInt(opId)
@@ -3248,7 +3392,7 @@ const concluir_post = defineEventHandler(async (event) => {
         statusMessage: "Processo n\xE3o encontrado"
       });
     }
-    const processo = await prisma$a.oPProcesso.update({
+    const processo = await prisma$b.oPProcesso.update({
       where: {
         id: parseInt(processoId)
       },
@@ -3258,16 +3402,16 @@ const concluir_post = defineEventHandler(async (event) => {
         dataFim: /* @__PURE__ */ new Date()
       }
     });
-    const processosOP = await prisma$a.oPProcesso.findMany({
+    const processosOP = await prisma$b.oPProcesso.findMany({
       where: { opId: parseInt(opId) },
       select: { progresso: true }
     });
     const progressoMedio = processosOP.length > 0 ? Math.round(processosOP.reduce((sum, p) => sum + p.progresso, 0) / processosOP.length) : 0;
-    await prisma$a.oP.update({
+    await prisma$b.oP.update({
       where: { id: parseInt(opId) },
       data: { progresso: progressoMedio }
     });
-    await prisma$a.processoHistorico.create({
+    await prisma$b.processoHistorico.create({
       data: {
         processoId: processo.id,
         usuarioId: 1,
@@ -3291,7 +3435,7 @@ const concluir_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePro
   default: concluir_post
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$9 = new PrismaClient();
+const prisma$a = new PrismaClient();
 const index_delete = defineEventHandler(async (event) => {
   try {
     const opId = getRouterParam(event, "id");
@@ -3303,7 +3447,7 @@ const index_delete = defineEventHandler(async (event) => {
         message: "ID da OP ou ID do processo n\xE3o informado"
       });
     }
-    const processoExistente = await prisma$9.oPProcesso.findFirst({
+    const processoExistente = await prisma$a.oPProcesso.findFirst({
       where: {
         id: parseInt(processoId),
         opId: parseInt(opId)
@@ -3319,13 +3463,13 @@ const index_delete = defineEventHandler(async (event) => {
       });
     }
     if (processoExistente.historico.length > 0) {
-      await prisma$9.processoHistorico.deleteMany({
+      await prisma$a.processoHistorico.deleteMany({
         where: {
           processoId: parseInt(processoId)
         }
       });
     }
-    await prisma$9.oPProcesso.delete({
+    await prisma$a.oPProcesso.delete({
       where: {
         id: parseInt(processoId)
       }
@@ -3346,8 +3490,65 @@ const index_delete$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProp
   default: index_delete
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$8 = new PrismaClient();
+const prisma$9 = new PrismaClient();
 const iniciar_post = defineEventHandler(async (event) => {
+  try {
+    const opId = getRouterParam(event, "id");
+    const processoId = getRouterParam(event, "processoId");
+    if (!opId || !processoId) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: "IDs inv\xE1lidos"
+      });
+    }
+    const existingProcesso = await prisma$9.oPProcesso.findFirst({
+      where: {
+        id: parseInt(processoId),
+        opId: parseInt(opId)
+      }
+    });
+    if (!existingProcesso) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: "Processo n\xE3o encontrado"
+      });
+    }
+    const processo = await prisma$9.oPProcesso.update({
+      where: {
+        id: parseInt(processoId)
+      },
+      data: {
+        status: "EM_ANDAMENTO",
+        dataInicio: /* @__PURE__ */ new Date(),
+        progresso: existingProcesso.progresso > 0 ? existingProcesso.progresso : 10
+      }
+    });
+    await prisma$9.processoHistorico.create({
+      data: {
+        processoId: processo.id,
+        usuarioId: 1,
+        // TODO: Pegar do usuário logado
+        acao: "Processo iniciado",
+        detalhes: `Processo "${existingProcesso.nome}" iniciado`
+      }
+    });
+    return { success: true, processo };
+  } catch (error) {
+    console.error("Erro ao iniciar processo:", error);
+    throw createError({
+      statusCode: error.statusCode || 500,
+      statusMessage: error.message || "Erro ao iniciar processo"
+    });
+  }
+});
+
+const iniciar_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: iniciar_post
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const prisma$8 = new PrismaClient();
+const pausar_post = defineEventHandler(async (event) => {
   try {
     const opId = getRouterParam(event, "id");
     const processoId = getRouterParam(event, "processoId");
@@ -3374,67 +3575,10 @@ const iniciar_post = defineEventHandler(async (event) => {
         id: parseInt(processoId)
       },
       data: {
-        status: "EM_ANDAMENTO",
-        dataInicio: /* @__PURE__ */ new Date(),
-        progresso: existingProcesso.progresso > 0 ? existingProcesso.progresso : 10
-      }
-    });
-    await prisma$8.processoHistorico.create({
-      data: {
-        processoId: processo.id,
-        usuarioId: 1,
-        // TODO: Pegar do usuário logado
-        acao: "Processo iniciado",
-        detalhes: `Processo "${existingProcesso.nome}" iniciado`
-      }
-    });
-    return { success: true, processo };
-  } catch (error) {
-    console.error("Erro ao iniciar processo:", error);
-    throw createError({
-      statusCode: error.statusCode || 500,
-      statusMessage: error.message || "Erro ao iniciar processo"
-    });
-  }
-});
-
-const iniciar_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
-  __proto__: null,
-  default: iniciar_post
-}, Symbol.toStringTag, { value: 'Module' }));
-
-const prisma$7 = new PrismaClient();
-const pausar_post = defineEventHandler(async (event) => {
-  try {
-    const opId = getRouterParam(event, "id");
-    const processoId = getRouterParam(event, "processoId");
-    if (!opId || !processoId) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: "IDs inv\xE1lidos"
-      });
-    }
-    const existingProcesso = await prisma$7.oPProcesso.findFirst({
-      where: {
-        id: parseInt(processoId),
-        opId: parseInt(opId)
-      }
-    });
-    if (!existingProcesso) {
-      throw createError({
-        statusCode: 404,
-        statusMessage: "Processo n\xE3o encontrado"
-      });
-    }
-    const processo = await prisma$7.oPProcesso.update({
-      where: {
-        id: parseInt(processoId)
-      },
-      data: {
         status: "AGUARDANDO"
       }
     });
-    await prisma$7.processoHistorico.create({
+    await prisma$8.processoHistorico.create({
       data: {
         processoId: processo.id,
         usuarioId: 1,
@@ -3458,7 +3602,7 @@ const pausar_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePrope
   default: pausar_post
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$6 = new PrismaClient();
+const prisma$7 = new PrismaClient();
 const index_get$4 = defineEventHandler(async (event) => {
   try {
     const opId = getRouterParam(event, "id");
@@ -3469,7 +3613,7 @@ const index_get$4 = defineEventHandler(async (event) => {
         message: "ID da OP n\xE3o informado"
       });
     }
-    const processos = await prisma$6.oPProcesso.findMany({
+    const processos = await prisma$7.oPProcesso.findMany({
       where: {
         opId: parseInt(opId)
       },
@@ -3853,10 +3997,10 @@ const template_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePro
   default: template_post
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$5 = new PrismaClient();
+const prisma$6 = new PrismaClient();
 const index_get$2 = defineEventHandler(async (event) => {
   try {
-    const ops = await prisma$5.oP.findMany({
+    const ops = await prisma$6.oP.findMany({
       include: {
         criadoPor: {
           select: {
@@ -3892,7 +4036,7 @@ const index_get$3 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePropert
   default: index_get$2
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$4 = new PrismaClient();
+const prisma$5 = new PrismaClient();
 const index_post = defineEventHandler(async (event) => {
   try {
     const body = await readBody(event);
@@ -3902,7 +4046,7 @@ const index_post = defineEventHandler(async (event) => {
         message: "N\xFAmero da OP, descri\xE7\xE3o e cliente s\xE3o obrigat\xF3rios"
       });
     }
-    const existingOP = await prisma$4.oP.findFirst({
+    const existingOP = await prisma$5.oP.findFirst({
       where: {
         numeroOP: body.numeroOP
       }
@@ -3913,7 +4057,7 @@ const index_post = defineEventHandler(async (event) => {
         message: "J\xE1 existe uma OP com este n\xFAmero"
       });
     }
-    const primeiroUsuario = await prisma$4.user.findFirst({
+    const primeiroUsuario = await prisma$5.user.findFirst({
       select: { id: true }
     });
     if (!primeiroUsuario) {
@@ -3922,7 +4066,7 @@ const index_post = defineEventHandler(async (event) => {
         message: "Nenhum usu\xE1rio encontrado no sistema"
       });
     }
-    const op = await prisma$4.oP.create({
+    const op = await prisma$5.oP.create({
       data: {
         numeroOP: body.numeroOP,
         codigoMaquina: body.codigoMaquina,
@@ -3948,7 +4092,7 @@ const index_post = defineEventHandler(async (event) => {
         }
       }
     });
-    await prisma$4.oPHistorico.create({
+    await prisma$5.oPHistorico.create({
       data: {
         opId: op.id,
         usuarioId: primeiroUsuario.id,
@@ -3971,10 +4115,10 @@ const index_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProper
   default: index_post
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$3 = new PrismaClient();
+const prisma$4 = new PrismaClient();
 const recent_get = defineEventHandler(async (event) => {
   try {
-    const ops = await prisma$3.oP.findMany({
+    const ops = await prisma$4.oP.findMany({
       take: 6,
       orderBy: { dataCriacao: "desc" },
       include: {
@@ -3995,11 +4139,11 @@ const recent_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProper
   default: recent_get
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$2 = new PrismaClient();
+const prisma$3 = new PrismaClient();
 const salvar_post = defineEventHandler(async (event) => {
   const body = await readBody(event);
   try {
-    const item = await prisma$2.item.create({
+    const item = await prisma$3.item.create({
       data: {
         valor: body.valor
       }
@@ -4018,10 +4162,10 @@ const salvar_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePrope
   default: salvar_post
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$1 = new PrismaClient();
+const prisma$2 = new PrismaClient();
 const index_get = defineEventHandler(async (event) => {
   try {
-    const users = await prisma$1.user.findMany({
+    const users = await prisma$2.user.findMany({
       where: { isActive: true },
       select: {
         id: true,
@@ -4047,11 +4191,11 @@ const index_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePropert
   default: index_get
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma = new PrismaClient();
+const prisma$1 = new PrismaClient();
 const modules_get = defineEventHandler(async (event) => {
   try {
     const userData = await readBody(event).catch(() => null);
-    const modules = await prisma.module.findMany({
+    const modules = await prisma$1.module.findMany({
       where: {
         isActive: true
       },
@@ -4072,6 +4216,72 @@ const modules_get = defineEventHandler(async (event) => {
 const modules_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
   __proto__: null,
   default: modules_get
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const prisma = new PrismaClient();
+const updateProfile_post = defineEventHandler(async (event) => {
+  const body = await readBody(event);
+  const { name, currentPassword, newPassword } = body;
+  const userId = body.userId;
+  if (!userId) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: "ID do usu\xE1rio n\xE3o fornecido"
+    });
+  }
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    });
+    if (!user) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: "Usu\xE1rio n\xE3o encontrado"
+      });
+    }
+    const updateData = {};
+    if (name) updateData.name = name;
+    if (newPassword) {
+      if (!currentPassword) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: "Senha atual \xE9 necess\xE1ria para alterar a senha"
+        });
+      }
+      const validPassword = await bcrypt.compare(currentPassword, user.password);
+      if (!validPassword) {
+        throw createError({
+          statusCode: 401,
+          statusMessage: "Senha atual incorreta"
+        });
+      }
+      updateData.password = await bcrypt.hash(newPassword, 10);
+    }
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: updateData
+    });
+    return {
+      success: true,
+      user: {
+        id: updatedUser.id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        department: updatedUser.department
+      }
+    };
+  } catch (error) {
+    throw createError({
+      statusCode: error.statusCode || 500,
+      statusMessage: error.message || "Erro ao atualizar perfil"
+    });
+  }
+});
+
+const updateProfile_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: updateProfile_post
 }, Symbol.toStringTag, { value: 'Module' }));
 
 function renderPayloadResponse(ssrContext) {
