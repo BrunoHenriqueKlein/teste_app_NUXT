@@ -1,12 +1,12 @@
 // server/api/auth/reset-password.post.ts
 import { PrismaClient } from '@prisma/client'
-import bcrypt from 'bcrypt'
+import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
-  
+
   try {
     // Buscar usuário pelo token
     const user = await prisma.user.findFirst({

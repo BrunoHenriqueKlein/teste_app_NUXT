@@ -3,6 +3,9 @@ import type { Serialize, Simplify } from "nitropack/types";
 declare module "nitropack/types" {
   type Awaited<T> = T extends PromiseLike<infer U> ? Awaited<U> : T
   interface InternalApi {
+    '/api/admin/setup-tasks': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/setup-tasks.get').default>>>>
+    }
     '/api/admin/users/list': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/users/list.get').default>>>>
     }
@@ -27,8 +30,14 @@ declare module "nitropack/types" {
     '/api/clean/processos': {
       'delete': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/clean/processos.delete').default>>>>
     }
+    '/api/compras': {
+      'default': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/compras/index').default>>>>
+    }
     '/api/dashboard/stats': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/dashboard/stats.get').default>>>>
+    }
+    '/api/estoque': {
+      'default': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/estoque/index').default>>>>
     }
     '/api/itens': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/itens.get').default>>>>
@@ -44,6 +53,16 @@ declare module "nitropack/types" {
     }
     '/api/ops/:id/actions': {
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ops/[id]/actions.post').default>>>>
+    }
+    '/api/ops/:id/pcp/generate-os': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ops/[id]/pcp/generate-os.post').default>>>>
+    }
+    '/api/ops/:id/pecas/import': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ops/[id]/pecas/import.post').default>>>>
+    }
+    '/api/ops/:id/pecas': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ops/[id]/pecas/index.get').default>>>>
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ops/[id]/pecas/index.post').default>>>>
     }
     '/api/ops/:id/processos/:processoId': {
       'put': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ops/[id]/processos/[processoId].put').default>>>>
@@ -72,6 +91,15 @@ declare module "nitropack/types" {
     '/api/ops/recent': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ops/recent.get').default>>>>
     }
+    '/api/pcp/ordens-servico': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/pcp/ordens-servico.get').default>>>>
+    }
+    '/api/pcp/ordens-servico/:id': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/pcp/ordens-servico/[id].get').default>>>>
+    }
+    '/api/pecas/:pecaId/processos': {
+      'default': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/pecas/[pecaId]/processos').default>>>>
+    }
     '/api/salvar': {
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/salvar.post').default>>>>
     }
@@ -80,6 +108,9 @@ declare module "nitropack/types" {
     }
     '/api/user/modules': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/user/modules.get').default>>>>
+    }
+    '/api/user/tasks': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/user/tasks.get').default>>>>
     }
     '/api/user/update-profile': {
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/user/update-profile.post').default>>>>

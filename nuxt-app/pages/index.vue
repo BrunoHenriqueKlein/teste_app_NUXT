@@ -14,19 +14,39 @@
         </v-col>
       </v-row>
 
-    <!-- Estatísticas -->
     <v-row class="mb-6">
-      <v-col v-for="stat in stats" :key="stat.title" cols="12" sm="6" md="3">
+      <!-- Tarefas Pessoais - Destaque -->
+      <v-col cols="12" md="4">
+        <v-card 
+          class="stat-card pa-2" 
+          color="indigo-darken-2" 
+          variant="flat"
+          @click="navigateTo('/tarefas')"
+        >
+          <v-card-text class="d-flex align-center text-white py-2">
+            <v-icon size="48" class="mr-4">mdi-clipboard-check-multiple</v-icon>
+            <div class="text-left">
+              <div class="text-h4 font-weight-bold">{{ dashboardStats?.minhasTarefas || 0 }}</div>
+              <div class="text-subtitle-1 font-weight-medium">Minhas Tarefas Pendentes</div>
+            </div>
+            <v-spacer />
+            <v-icon size="24">mdi-chevron-right</v-icon>
+          </v-card-text>
+        </v-card>
+      </v-col>
+
+      <!-- Stats Gerais -->
+      <v-col v-for="stat in stats" :key="stat.title" cols="12" sm="6" md="2">
         <v-card 
           class="stat-card pa-2" 
           :color="stat.color" 
           variant="flat"
           @click="stat.action"
         >
-          <v-card-text class="text-center text-white py-2">
-            <v-icon size="32" class="mb-1">{{ stat.icon }}</v-icon>
-            <div class="text-h4 font-weight-bold">{{ stat.value }}</div>
-            <div class="text-caption font-weight-medium">{{ stat.title }}</div>
+          <v-card-text class="text-center text-white py-2 px-1">
+            <v-icon size="24" class="mb-1">{{ stat.icon }}</v-icon>
+            <div class="text-h5 font-weight-bold">{{ stat.value }}</div>
+            <div class="text-caption font-weight-medium" style="font-size: 0.7rem !important">{{ stat.title }}</div>
           </v-card-text>
         </v-card>
       </v-col>
@@ -247,6 +267,11 @@ const loading = ref(false)
 
 // Ações rápidas
 const quickActions = [
+  {
+    title: 'Minhas Tarefas',
+    icon: 'mdi-clipboard-check-multiple',
+    handler: () => navigateTo('/tarefas')
+  },
   {
     title: 'Nova Ordem de Produção',
     icon: 'mdi-plus-circle',

@@ -3,7 +3,7 @@ export default defineEventHandler(async (event) => {
     const opId = getRouterParam(event, 'id')
     const processoId = getRouterParam(event, 'processoId')
     const body = await readBody(event)
-    
+
     console.log('✏️ DEBUG - Editando processo:', { opId, processoId, body })
 
     if (!opId || !processoId) {
@@ -63,11 +63,11 @@ export default defineEventHandler(async (event) => {
     if (body.sequencia !== undefined) {
       updateData.sequencia = parseInt(body.sequencia)
     }
-    
+
     if (body.progresso !== undefined) {
       updateData.progresso = parseInt(body.progresso)
     }
-    
+
     if (body.prazoEstimado !== undefined) {
       updateData.prazoEstimado = body.prazoEstimado !== null ? parseInt(body.prazoEstimado) : null
     }
@@ -78,7 +78,7 @@ export default defineEventHandler(async (event) => {
         updateData.dataPrevista = null
       } else {
         try {
-          const dateStr = typeof body.dataPrevista === 'string' && !body.dataPrevista.includes('T') 
+          const dateStr = typeof body.dataPrevista === 'string' && !body.dataPrevista.includes('T')
             ? body.dataPrevista + 'T00:00:00.000Z'
             : body.dataPrevista
           updateData.dataPrevista = new Date(dateStr)
@@ -207,7 +207,7 @@ export default defineEventHandler(async (event) => {
       await prisma.processoHistorico.create({
         data: {
           processoId: processo.id,
-          usuarioId: 1, // TODO: Substituir pelo ID do usuário logado
+          usuarioId: (event.context.user as any)?.id || 1, // Usar ID do usuário logado
           acao: 'Processo atualizado',
           detalhes: `Processo "${body.nome || existingProcesso.nome}" atualizado - Status: ${body.status || existingProcesso.status}`
         }
@@ -223,19 +223,19 @@ export default defineEventHandler(async (event) => {
       dataInicioPrevista: processo.dataInicioPrevista,
       dataTerminoPrevista: processo.dataTerminoPrevista
     })
-    
-    return { 
-      success: true, 
+
+    return {
+      success: true,
       processo,
       message: 'Processo atualizado com sucesso'
     }
-    
+
   } catch (error: any) {
     console.error('❌ Erro ao atualizar processo:', error)
-    
+
     let errorMessage = error.message || 'Erro ao atualizar processo'
     let statusCode = error.statusCode || 500
-    
+
     // Tratamento de erros específicos do Prisma
     if (error.code === 'P2025') {
       errorMessage = 'Processo não encontrado'
@@ -247,7 +247,7 @@ export default defineEventHandler(async (event) => {
       errorMessage = 'Responsável não encontrado'
       statusCode = 400
     }
-    
+
     throw createError({
       statusCode: statusCode,
       statusMessage: errorMessage

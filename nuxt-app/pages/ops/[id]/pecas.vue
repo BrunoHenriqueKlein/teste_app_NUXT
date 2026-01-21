@@ -1,0 +1,408 @@
+<template>
+  <div class="pa-4">
+    <!-- Breadcrumbs -->
+    <v-breadcrumbs :items="breadcrumbs" class="px-0 pt-0"></v-breadcrumbs>
+
+    <!-- Header -->
+    <v-card color="primary" variant="flat" class="mb-4">
+      <v-card-text class="d-flex justify-space-between align-center text-white">
+        <div>
+          <h1 class="text-h4 font-weight-bold">
+            <v-icon icon="mdi-cogs" class="mr-2"></v-icon>
+            Lista de Peças (BOM)
+          </h1>
+          <p class="text-body-1 mt-1">Gestão de engenharia e materiais da OP</p>
+        </div>
+        <div class="d-flex gap-2">
+          <v-btn
+            color="white"
+            variant="tonal"
+            prepend-icon="mdi-plus"
+            @click="openAddPecaDialog"
+            class="mr-2"
+          >
+            Adicionar Peça
+          </v-btn>
+          <v-btn
+            color="white"
+            variant="outlined"
+            prepend-icon="mdi-file-excel"
+            @click="triggerImport"
+            :loading="loadingImport"
+          >
+            Importar BOM (SolidWorks)
+          </v-btn>
+          <input
+            type="file"
+            ref="fileInput"
+            style="display: none"
+            accept=".xlsx, .xls"
+            @change="handleFileUpload"
+          />
+        </div>
+      </v-card-text>
+    </v-card>
+
+    <!-- Resumo do Estoque -->
+    <v-row class="mb-4">
+      <v-col cols="12" md="3">
+        <v-card variant="outlined" class="text-center">
+          <v-card-text>
+            <div class="text-overline mb-1">Total de Peças</div>
+            <div class="text-h4 font-weight-bold">{{ pecas.length }}</div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+      <v-col cols="12" md="3">
+        <v-card variant="outlined" class="text-center" color="success">
+          <v-card-text>
+            <div class="text-overline mb-1">Disponíveis no Estoque</div>
+            <div class="text-h4 font-weight-bold">{{ pecasDisponiveis }}</div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <!-- Tabela de Peças -->
+    <v-card variant="outlined">
+      <v-data-table
+        :headers="headers"
+        :items="pecas"
+        :loading="loading"
+        hover
+        no-data-text="Nenhuma peça cadastrada. Importe um arquivo Excel para começar."
+      >
+        <!-- Customização das Colunas -->
+        <template v-slot:item.codigo="{ item }">
+          <div class="font-weight-bold text-primary">{{ item.codigo }}</div>
+        </template>
+
+        <template v-slot:item.status="{ item }">
+          <v-chip
+            :color="getStatusColor(item.status)"
+            size="small"
+            variant="flat"
+            class="text-uppercase"
+          >
+            {{ item.status.replace('_', ' ') }}
+          </v-chip>
+        </template>
+
+        <template v-slot:item.estoque="{ item }">
+          <v-tooltip v-if="item.temNoEstoque" text="Item disponível em estoque">
+            <template v-slot:activator="{ props }">
+              <v-icon v-bind="props" color="success" icon="mdi-check-circle"></v-icon>
+            </template>
+          </v-tooltip>
+          <v-icon v-else color="grey-lighten-1" icon="mdi-minus-circle-outline"></v-icon>
+        </template>
+
+        <template v-slot:item.acoes="{ item }">
+          <div class="d-flex gap-1">
+            <v-btn
+              icon="mdi-format-list-bulleted-type"
+              variant="text"
+              size="small"
+              color="primary"
+              title="Gerenciar Processos"
+              @click="openProcessos(item)"
+            >
+              <v-badge
+                v-if="item._count?.processos"
+                color="error"
+                :content="item._count.processos"
+                floating
+              >
+                <v-icon icon="mdi-format-list-bulleted-type"></v-icon>
+              </v-badge>
+            </v-btn>
+            <v-btn
+              icon="mdi-pencil"
+              variant="text"
+              size="small"
+              color="grey-darken-1"
+            ></v-btn>
+          </div>
+        </template>
+      </v-data-table>
+    </v-card>
+
+    <!-- Diálogo de Inserção Manual -->
+    <v-dialog v-model="dialogPeca.show" max-width="500px">
+      <v-card>
+        <v-card-title>Adicionar Peça Manualmente</v-card-title>
+        <v-card-text>
+          <v-text-field v-model="dialogPeca.data.codigo" label="Código" variant="outlined"></v-text-field>
+          <v-text-field v-model="dialogPeca.data.descricao" label="Descrição" variant="outlined"></v-text-field>
+          <v-row>
+            <v-col cols="6">
+              <v-text-field v-model.number="dialogPeca.data.quantidade" label="Quantidade" type="number" variant="outlined"></v-text-field>
+            </v-col>
+            <v-col cols="6">
+              <v-text-field v-model="dialogPeca.data.material" label="Material" variant="outlined"></v-text-field>
+            </v-col>
+          </v-row>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn variant="text" @click="dialogPeca.show = false">Cancelar</v-btn>
+          <v-btn color="primary" variant="flat" :loading="savingPeca" @click="savePecaManual">Salvar Peça</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Diálogo de Processos -->
+    <v-dialog v-model="dialogProcessos.show" max-width="700px">
+      <v-card>
+        <v-card-title class="d-flex justify-space-between align-center pa-4">
+          <span class="text-h5">Processos da Peça: {{ dialogProcessos.peca?.codigo }}</span>
+          <v-btn icon="mdi-close" variant="text" @click="dialogProcessos.show = false"></v-btn>
+        </v-card-title>
+        <v-card-text>
+          <p class="text-body-2 mb-4">{{ dialogProcessos.peca?.descricao }}</p>
+          
+          <v-list density="compact">
+            <v-list-item v-for="(proc, index) in dialogProcessos.items" :key="index" class="pa-0 mb-2">
+              <v-row dense align="center">
+                <v-col cols="5">
+                  <v-text-field
+                    v-model="proc.nome"
+                    label="Nome do Processo"
+                    placeholder="Ex: Usinagem, Pintura"
+                    variant="outlined"
+                    density="compact"
+                    hide-details
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="3">
+                  <v-select
+                    v-model="proc.status"
+                    :items="['NAO_INICIADO', 'EM_PRODUCAO', 'CONCLUIDA', 'INTERROMPIDA']"
+                    label="Status"
+                    variant="outlined"
+                    density="compact"
+                    hide-details
+                  ></v-select>
+                </v-col>
+                <v-col cols="3">
+                  <v-text-field
+                    v-model="proc.fornecedor"
+                    label="Fornecedor/Setor"
+                    variant="outlined"
+                    density="compact"
+                    hide-details
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="1" class="text-right">
+                  <v-btn icon="mdi-delete" color="error" variant="text" size="small" @click="removeProcess(index)"></v-btn>
+                </v-col>
+              </v-row>
+            </v-list-item>
+          </v-list>
+
+          <v-btn
+            prepend-icon="mdi-plus"
+            variant="text"
+            color="primary"
+            class="mt-2"
+            @click="addProcess"
+          >
+            Adicionar Processo
+          </v-btn>
+        </v-card-text>
+        <v-card-actions class="pa-4">
+          <v-spacer></v-spacer>
+          <v-btn variant="text" @click="dialogProcessos.show = false">Cancelar</v-btn>
+          <v-btn color="primary" variant="flat" :loading="savingProcessos" @click="saveProcessos">Salvar Processos</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Feedback de Importação -->
+    <v-snackbar v-model="snackbar.show" :color="snackbar.color" :timeout="3000">
+      {{ snackbar.text }}
+    </v-snackbar>
+  </div>
+</template>
+
+<script setup>
+const route = useRoute()
+const opId = route.params.id
+
+const pecas = ref([])
+const loading = ref(false)
+const loadingImport = ref(false)
+const savingProcessos = ref(false)
+const fileInput = ref(null)
+
+const dialogProcessos = ref({
+  show: false,
+  peca: null,
+  items: []
+})
+
+const dialogPeca = ref({
+  show: false,
+  data: { codigo: '', descricao: '', quantidade: 1, material: '' }
+})
+
+const savingPeca = ref(false)
+
+const snackbar = ref({
+  show: false,
+  text: '',
+  color: 'success'
+})
+
+const breadcrumbs = [
+  { title: 'Dashboard', disabled: false, to: '/' },
+  { title: 'OPs', disabled: false, to: '/ops' },
+  { title: `OP #${opId}`, disabled: false, to: `/ops/${opId}` },
+  { title: 'Peças', disabled: true }
+]
+
+const headers = [
+  { title: 'Código', key: 'codigo', align: 'start', sortable: true },
+  { title: 'Descrição', key: 'descricao', align: 'start', sortable: true },
+  { title: 'Qtd', key: 'quantidade', align: 'end', sortable: true },
+  { title: 'Material', key: 'material', align: 'start' },
+  { title: 'Estoque', key: 'estoque', align: 'center', sortable: false },
+  { title: 'Status', key: 'status', align: 'center', sortable: true },
+  { title: 'Ações', key: 'acoes', align: 'center', sortable: false }
+]
+
+const pecasDisponiveis = computed(() => {
+  return pecas.value.filter(p => p.temNoEstoque).length
+})
+
+const loadPecas = async () => {
+  loading.value = true
+  try {
+    const data = await $fetch(`/api/ops/${opId}/pecas`)
+    pecas.value = data
+  } catch (error) {
+    showSnackbar('Erro ao carregar peças', 'error')
+  } finally {
+    loading.value = false
+  }
+}
+
+const triggerImport = () => {
+  fileInput.value.click()
+}
+
+const openAddPecaDialog = () => {
+  dialogPeca.value = {
+    show: true,
+    data: { codigo: '', descricao: '', quantidade: 1, material: '' }
+  }
+}
+
+const savePecaManual = async () => {
+  savingPeca.value = true
+  try {
+    await $fetch(`/api/ops/${opId}/pecas`, {
+      method: 'POST',
+      body: dialogPeca.value.data
+    })
+    showSnackbar('Peça inserida com sucesso!')
+    dialogPeca.value.show = false
+    await loadPecas()
+  } catch (error) {
+    showSnackbar('Erro ao inserir peça', 'error')
+  } finally {
+    savingPeca.value = false
+  }
+}
+
+const handleFileUpload = async (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+
+  loadingImport.value = true
+  const formData = new FormData()
+  formData.append('file', file)
+
+  try {
+    const response = await $fetch(`/api/ops/${opId}/pecas/import`, {
+      method: 'POST',
+      body: formData
+    })
+    
+    showSnackbar(`Importação concluída: ${response.importedCount} itens carregados.`)
+    await loadPecas()
+  } catch (error) {
+    showSnackbar('Erro ao importar arquivo Excel', 'error')
+  } finally {
+    loadingImport.value = false
+    event.target.value = '' // Limpar input
+  }
+}
+
+const openProcessos = async (peca) => {
+  dialogProcessos.value = {
+    show: true,
+    peca,
+    items: []
+  }
+  
+  try {
+    const data = await $fetch(`/api/pecas/${peca.id}/processos`)
+    dialogProcessos.value.items = data.map(p => ({ ...p }))
+  } catch (error) {
+    showSnackbar('Erro ao carregar processos da peça', 'error')
+  }
+}
+
+const addProcess = () => {
+  dialogProcessos.value.items.push({
+    nome: '',
+    status: 'NAO_INICIADO',
+    fornecedor: ''
+  })
+}
+
+const removeProcess = (index) => {
+  dialogProcessos.value.items.splice(index, 1)
+}
+
+const saveProcessos = async () => {
+  savingProcessos.value = true
+  try {
+    await $fetch(`/api/pecas/${dialogProcessos.value.peca.id}/processos`, {
+      method: 'POST',
+      body: { processos: dialogProcessos.value.items }
+    })
+    showSnackbar('Processos salvos com sucesso!')
+    dialogProcessos.value.show = false
+    await loadPecas()
+  } catch (error) {
+    showSnackbar('Erro ao salvar processos', 'error')
+  } finally {
+    savingProcessos.value = false
+  }
+}
+
+const getStatusColor = (status) => {
+  const colors = {
+    NAO_INICIADA: 'grey',
+    EM_PRODUCAO: 'blue',
+    INTERROMPIDA: 'orange',
+    CANCELADA: 'red',
+    CONCLUIDA: 'success',
+    EM_ESTOQUE: 'green-darken-2'
+  }
+  return colors[status] || 'grey'
+}
+
+const showSnackbar = (text, color = 'success') => {
+  snackbar.value = { show: true, text, color }
+}
+
+onMounted(loadPecas)
+</script>
+
+<style scoped>
+.gap-1 { gap: 4px; }
+.gap-2 { gap: 8px; }
+</style>

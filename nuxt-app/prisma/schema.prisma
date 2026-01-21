@@ -155,6 +155,7 @@ model OP {
   movimentacoes    EstoqueMovimentacao[]
   historico        OPHistorico[]
   processos        OPProcesso[]
+  ordensServico    OrdemServico[]
   criadoPor        User                  @relation("OP_CriadaPor", fields: [criadoPorId], references: [id])
   responsavel      User?                 @relation("OP_Responsavel", fields: [responsavelId], references: [id])
   pecas            Peca[]
@@ -218,6 +219,7 @@ model Peca {
 model ProcessoPeca {
   id            Int            @id @default(autoincrement())
   pecaId        Int
+  osId          Int?           @map("os_id")
   nome          String
   sequencia     Int
   status        ProcessoStatus @default(NAO_INICIADO)
@@ -225,8 +227,24 @@ model ProcessoPeca {
   custo         Float?
   tempoEstimado Int?
   peca          Peca           @relation(fields: [pecaId], references: [id])
+  ordemServico  OrdemServico?  @relation(fields: [osId], references: [id])
 
   @@map("processo_pecas")
+}
+
+model OrdemServico {
+  id              Int            @id @default(autoincrement())
+  numero          String         @unique
+  tipo            String         // ex: USINAGEM, PINTURA, SOLDA
+  opId            Int            @map("op_id")
+  status          ProcessoStatus @default(NAO_INICIADO)
+  dataEmissao     DateTime       @default(now()) @map("data_emissao")
+  inicioPrevisto  DateTime?      @map("inicio_previsto")
+  terminoPrevisto DateTime?      @map("termino_previsto")
+  op              OP             @relation(fields: [opId], references: [id])
+  itens           ProcessoPeca[]
+
+  @@map("ordens_servico")
 }
 
 model Estoque {

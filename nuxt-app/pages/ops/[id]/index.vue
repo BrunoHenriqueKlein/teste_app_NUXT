@@ -123,8 +123,29 @@
           prepend-icon="mdi-cog"
           variant="outlined"
           @click="navigateTo(`/ops/${route.params.id}/processos`)"
+          class="mr-2"
         >
-          Gerenciar Processos
+          Etapas da Máquina
+        </v-btn>
+
+        <v-btn
+          color="info"
+          prepend-icon="mdi-cogs"
+          variant="elevated"
+          @click="navigateTo(`/ops/${route.params.id}/pecas`)"
+          class="mr-2"
+        >
+          Peças (BOM)
+        </v-btn>
+
+        <v-btn
+          color="secondary"
+          prepend-icon="mdi-factory"
+          variant="elevated"
+          @click="generateOS"
+          :loading="loadingOS"
+        >
+          Gerar Ordens (PCP)
         </v-btn>
       </div>
           </v-card-title>
@@ -427,6 +448,25 @@
 <script setup>
 // Estado
 const route = useRoute()
+const opId = route.params.id
+const loadingOS = ref(false)
+
+const generateOS = async () => {
+  loadingOS.value = true
+  try {
+    const result = await $fetch(`/api/ops/${opId}/pcp/generate-os`, { method: 'POST' })
+    if (result.success) {
+      alert(`Sucesso! ${result.createdCount} Ordens de Serviço foram geradas.`)
+      // Redirecionar para o PCP filtrando por esta OP
+      navigateTo(`/pcp?opId=${opId}`)
+    }
+  } catch (error) {
+    console.error('Erro ao gerar OS:', error)
+    alert('Erro ao gerar Ordens de Serviço. Certifique-se de que as peças possuem processos cadastrados.')
+  } finally {
+    loadingOS.value = false
+  }
+}
 const opData = ref(null)
 const processos = ref([])
 const loading = ref(true)

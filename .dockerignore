@@ -1,0 +1,7 @@
+nuxt-app/node_modules
+nuxt-app/.nuxt
+nuxt-app/.output
+nuxt-app/dist
+.git
+.env
+*.log

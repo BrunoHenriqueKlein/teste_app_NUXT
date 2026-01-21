@@ -170,9 +170,11 @@ import logosimples from '@/assets/imagens/logo-someh-fundo-escuro-simples.png'
 // Navegação base
 const navigation = [
   { title: 'Dashboard', icon: 'mdi-view-dashboard', route: '/', moduleName: 'Dashboard' },
+  { title: 'Tarefas', icon: 'mdi-clipboard-check-multiple', route: '/tarefas', moduleName: 'Tarefas' },
   { title: 'Ordens de Produção', icon: 'mdi-clipboard-list', route: '/ops', moduleName: 'Ordens de Produção' },
   { title: 'Processos', icon: 'mdi-cog', route: '/processos', moduleName: 'Processos' },
-  { title: 'Peças', icon: 'mdi-cube', route: '/pecas', moduleName: 'Peças' },
+  { title: 'Peças (BOM)', icon: 'mdi-cogs', route: '/pecas', moduleName: 'Peças' },
+  { title: 'PCP', icon: 'mdi-factory', route: '/pcp', moduleName: 'PCP' },
   { title: 'Estoque', icon: 'mdi-warehouse', route: '/estoque', moduleName: 'Estoque' },
   { title: 'Compras', icon: 'mdi-cart', route: '/compras', moduleName: 'Compras' },
   { title: 'Relatórios', icon: 'mdi-chart-bar', route: '/relatorios', moduleName: 'Relatórios' },
