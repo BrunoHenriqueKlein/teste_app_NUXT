@@ -100,11 +100,11 @@ declare module "nitropack/types" {
     '/api/pcp/budget-email': {
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/pcp/budget-email.post').default>>>>
     }
-    '/api/pcp/ordens-servico': {
-      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/pcp/ordens-servico.get').default>>>>
-    }
     '/api/pcp/ordens-servico/:id': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/pcp/ordens-servico/[id].get').default>>>>
+    }
+    '/api/pcp/ordens-servico': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/pcp/ordens-servico/index.get').default>>>>
     }
     '/api/pecas/:id': {
       'delete': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/pecas/[id].delete').default>>>>

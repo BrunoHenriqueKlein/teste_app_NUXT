@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, OPStatus } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
@@ -14,10 +14,11 @@ async function main() {
         { nome: 'Ordens de Produção', descricao: 'Gerenciar OPs', icon: 'mdi-clipboard-list', path: '/ops', order: 2 },
         { nome: 'Processos', descricao: 'Processos das OPs', icon: 'mdi-cog', path: '/processos', order: 3 },
         { nome: 'Peças', descricao: 'Gestão de peças', icon: 'mdi-cube', path: '/pecas', order: 4 },
-        { nome: 'Estoque', descricao: 'Controle de estoque', icon: 'mdi-warehouse', path: '/estoque', order: 5 },
-        { nome: 'Compras', descricao: 'Solicitações de compra', icon: 'mdi-cart', path: '/compras', order: 6 },
-        { nome: 'Relatórios', descricao: 'Dashboards e relatórios', icon: 'mdi-chart-bar', path: '/relatorios', order: 7 },
-        { nome: 'Administração', descricao: 'Configurações do sistema', icon: 'mdi-cog', path: '/admin', order: 8 },
+        { nome: 'PCP', descricao: 'Planejamento e Controle de Produção', icon: 'mdi-factory', path: '/pcp', order: 5 },
+        { nome: 'Estoque', descricao: 'Controle de estoque', icon: 'mdi-warehouse', path: '/estoque', order: 6 },
+        { nome: 'Compras', descricao: 'Solicitações de compra', icon: 'mdi-cart', path: '/compras', order: 7 },
+        { nome: 'Relatórios', descricao: 'Dashboards e relatórios', icon: 'mdi-chart-bar', path: '/relatorios', order: 8 },
+        { nome: 'Administração', descricao: 'Configurações do sistema', icon: 'mdi-cog', path: '/admin', order: 9 },
       ],
       skipDuplicates: true,
     })
@@ -86,7 +87,7 @@ async function main() {
         cliente: 'Indústria Metalúrgica ABC',
         cnpjCliente: '12.345.678/0001-90',
         enderecoCliente: 'Rua Industrial, 123 - São Paulo/SP',
-        status: 'EM_PROJETO',
+        status: OPStatus.EM_PROJETO,
         progresso: 25,
         criadoPorId: adminUser.id,
         responsavelId: gerente.id,
@@ -100,7 +101,7 @@ async function main() {
         cliente: 'Fábrica de Componentes XYZ',
         cnpjCliente: '98.765.432/0001-10',
         enderecoCliente: 'Av. Tecnológica, 456 - Campinas/SP',
-        status: 'EM_FABRICACAO',
+        status: OPStatus.EM_FABRICACAO,
         progresso: 60,
         criadoPorId: adminUser.id,
         responsavelId: engenheiro.id,
@@ -112,7 +113,7 @@ async function main() {
         dataPedido: new Date('2024-03-10'),
         dataEntrega: new Date('2024-08-20'),
         cliente: 'Logística Rápida Ltda',
-        status: 'ABERTA',
+        status: OPStatus.ABERTA,
         progresso: 10,
         criadoPorId: adminUser.id,
       }

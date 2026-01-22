@@ -1904,25 +1904,25 @@ const _lazy_CzQc1e = () => Promise.resolve().then(function () { return _id__put$
 const _lazy_2C8_wH = () => Promise.resolve().then(function () { return _processoId__delete$1; });
 const _lazy_1PdPm1 = () => Promise.resolve().then(function () { return _processoId__put$3; });
 const _lazy_8pA3RW = () => Promise.resolve().then(function () { return actions_post$1; });
-const _lazy_qhbDcx = () => Promise.resolve().then(function () { return index_get$9; });
+const _lazy_qhbDcx = () => Promise.resolve().then(function () { return index_get$b; });
 const _lazy_plWPY6 = () => Promise.resolve().then(function () { return generateOs_post$1; });
 const _lazy_CAI4Dn = () => Promise.resolve().then(function () { return import_post$1; });
-const _lazy_Q1S0hM = () => Promise.resolve().then(function () { return index_get$7; });
+const _lazy_Q1S0hM = () => Promise.resolve().then(function () { return index_get$9; });
 const _lazy_WMRTEX = () => Promise.resolve().then(function () { return index_post$5; });
 const _lazy_z95cTO = () => Promise.resolve().then(function () { return _processoId__put$1; });
 const _lazy_Q81yjV = () => Promise.resolve().then(function () { return concluir_post$1; });
 const _lazy_dz98Qk = () => Promise.resolve().then(function () { return index_delete$1; });
 const _lazy_CF80Sv = () => Promise.resolve().then(function () { return iniciar_post$1; });
 const _lazy_lRS9tw = () => Promise.resolve().then(function () { return pausar_post$1; });
-const _lazy_Ti6QWP = () => Promise.resolve().then(function () { return index_get$5; });
+const _lazy_Ti6QWP = () => Promise.resolve().then(function () { return index_get$7; });
 const _lazy_HdjEyo = () => Promise.resolve().then(function () { return index_post$3; });
 const _lazy_QaMZQF = () => Promise.resolve().then(function () { return template_post$1; });
-const _lazy_VPkvMQ = () => Promise.resolve().then(function () { return index_get$3; });
+const _lazy_VPkvMQ = () => Promise.resolve().then(function () { return index_get$5; });
 const _lazy_zKWFxN = () => Promise.resolve().then(function () { return index_post$1; });
 const _lazy_qyGLAc = () => Promise.resolve().then(function () { return recent_get$1; });
 const _lazy_csAWbe = () => Promise.resolve().then(function () { return budgetEmail_post$1; });
-const _lazy_sTlj_J = () => Promise.resolve().then(function () { return ordensServico_get$1; });
 const _lazy_kLv3lZ = () => Promise.resolve().then(function () { return _id__get$1; });
+const _lazy_22JY1C = () => Promise.resolve().then(function () { return index_get$3; });
 const _lazy_NBJF1X = () => Promise.resolve().then(function () { return _id__delete$3; });
 const _lazy_1_abMh = () => Promise.resolve().then(function () { return _id__patch$1; });
 const _lazy_2TSiCT = () => Promise.resolve().then(function () { return desenho_post$1; });
@@ -1975,8 +1975,8 @@ const handlers = [
   { route: '/api/ops', handler: _lazy_zKWFxN, lazy: true, middleware: false, method: "post" },
   { route: '/api/ops/recent', handler: _lazy_qyGLAc, lazy: true, middleware: false, method: "get" },
   { route: '/api/pcp/budget-email', handler: _lazy_csAWbe, lazy: true, middleware: false, method: "post" },
-  { route: '/api/pcp/ordens-servico', handler: _lazy_sTlj_J, lazy: true, middleware: false, method: "get" },
   { route: '/api/pcp/ordens-servico/:id', handler: _lazy_kLv3lZ, lazy: true, middleware: false, method: "get" },
+  { route: '/api/pcp/ordens-servico', handler: _lazy_22JY1C, lazy: true, middleware: false, method: "get" },
   { route: '/api/pecas/:id', handler: _lazy_NBJF1X, lazy: true, middleware: false, method: "delete" },
   { route: '/api/pecas/:id', handler: _lazy_1_abMh, lazy: true, middleware: false, method: "patch" },
   { route: '/api/pecas/:id/desenho', handler: _lazy_2TSiCT, lazy: true, middleware: false, method: "post" },
@@ -3444,7 +3444,7 @@ const actions_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProp
 }, Symbol.toStringTag, { value: 'Module' }));
 
 const prisma$c = new PrismaClient();
-const index_get$8 = defineEventHandler(async (event) => {
+const index_get$a = defineEventHandler(async (event) => {
   try {
     const opId = getRouterParam(event, "id");
     if (!opId) {
@@ -3490,9 +3490,9 @@ const index_get$8 = defineEventHandler(async (event) => {
   }
 });
 
-const index_get$9 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+const index_get$b = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
   __proto__: null,
-  default: index_get$8
+  default: index_get$a
 }, Symbol.toStringTag, { value: 'Module' }));
 
 const generateOs_post = defineEventHandler(async (event) => {
@@ -3505,6 +3505,7 @@ const generateOs_post = defineEventHandler(async (event) => {
   }
   const prisma = event.context.prisma;
   try {
+    console.log(`\u{1F3D7}\uFE0F Iniciando gera\xE7\xE3o/sincroniza\xE7\xE3o de OS para OP ${opId}`);
     const processosSemOS = await prisma.processoPeca.findMany({
       where: {
         peca: { opId: parseInt(opId) },
@@ -3514,11 +3515,13 @@ const generateOs_post = defineEventHandler(async (event) => {
         peca: true
       }
     });
+    console.log(`\u{1F50D} Encontrados ${processosSemOS.length} processos sem OS para a OP ${opId}`);
     if (processosSemOS.length === 0) {
       return {
         success: true,
-        message: "Todos os processos j\xE1 possuem OS ou n\xE3o h\xE1 processos cadastrados.",
-        createdCount: 0
+        message: "Todos os processos j\xE1 possuem OS ou n\xE3o h\xE1 novos processos para agrupar.",
+        createdCount: 0,
+        updatedCount: 0
       };
     }
     const grupos = processosSemOS.reduce((acc, proc) => {
@@ -3528,32 +3531,56 @@ const generateOs_post = defineEventHandler(async (event) => {
       return acc;
     }, {});
     const createdOS = [];
-    for (const [tipo, itens] of Object.entries(grupos)) {
-      const count = await prisma.ordemServico.count();
-      const numero = `OS-${opId}-${tipo.substring(0, 3)}-${(count + 1).toString().padStart(3, "0")}`;
-      const os = await prisma.ordemServico.create({
-        data: {
-          numero,
-          tipo,
+    let updatedCount = 0;
+    for (const [tipo, itensGroup] of Object.entries(grupos)) {
+      const itens = itensGroup;
+      const osExistente = await prisma.ordemServico.findFirst({
+        where: {
           opId: parseInt(opId),
-          status: "NAO_INICIADO",
-          itens: {
-            connect: itens.map((p) => ({ id: p.id }))
-          }
+          tipo,
+          status: { not: "CONCLUIDO" }
         }
       });
-      createdOS.push(os);
+      if (osExistente) {
+        console.log(`\u{1F4CC} Sincronizando ${itens.length} itens com OS existente: ${osExistente.numero}`);
+        await prisma.ordemServico.update({
+          where: { id: osExistente.id },
+          data: {
+            itens: {
+              connect: itens.map((p) => ({ id: p.id }))
+            }
+          }
+        });
+        updatedCount++;
+      } else {
+        const count = await prisma.ordemServico.count();
+        const numero = `OS-${opId}-${tipo.substring(0, 3)}-${(count + 1).toString().padStart(3, "0")}`;
+        console.log(`\u{1F195} Criando nova OS: ${numero}`);
+        const novaOS = await prisma.ordemServico.create({
+          data: {
+            numero,
+            tipo,
+            opId: parseInt(opId),
+            status: "NAO_INICIADO",
+            itens: {
+              connect: itens.map((p) => ({ id: p.id }))
+            }
+          }
+        });
+        createdOS.push(novaOS);
+      }
     }
     return {
       success: true,
       createdCount: createdOS.length,
-      orders: createdOS
+      updatedCount,
+      message: `Processamento conclu\xEDdo. ${createdOS.length} novas OS criadas, ${updatedCount} OS existentes atualizadas.`
     };
   } catch (error) {
-    console.error("\u274C Erro ao gerar OS:", error);
+    console.error("\u274C Erro ao gerar/sincronizar OS:", error);
     throw createError({
       statusCode: 500,
-      statusMessage: "Erro ao gerar Ordens de Servi\xE7o: " + error.message
+      message: "Erro ao processar Ordens de Servi\xE7o: " + error.message
     });
   }
 });
@@ -28003,7 +28030,7 @@ const import_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePrope
   default: import_post
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const index_get$6 = defineEventHandler(async (event) => {
+const index_get$8 = defineEventHandler(async (event) => {
   const opId = getRouterParam(event, "id");
   if (!opId) {
     throw createError({
@@ -28046,9 +28073,9 @@ const index_get$6 = defineEventHandler(async (event) => {
   }
 });
 
-const index_get$7 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+const index_get$9 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
   __proto__: null,
-  default: index_get$6
+  default: index_get$8
 }, Symbol.toStringTag, { value: 'Module' }));
 
 const index_post$4 = defineEventHandler(async (event) => {
@@ -28551,7 +28578,7 @@ const pausar_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePrope
 }, Symbol.toStringTag, { value: 'Module' }));
 
 const prisma$7 = new PrismaClient();
-const index_get$4 = defineEventHandler(async (event) => {
+const index_get$6 = defineEventHandler(async (event) => {
   try {
     const opId = getRouterParam(event, "id");
     console.log("\u{1F50D} API: Buscando processos para OP:", opId);
@@ -28589,9 +28616,9 @@ const index_get$4 = defineEventHandler(async (event) => {
   }
 });
 
-const index_get$5 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+const index_get$7 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
   __proto__: null,
-  default: index_get$4
+  default: index_get$6
 }, Symbol.toStringTag, { value: 'Module' }));
 
 const index_post$2 = defineEventHandler(async (event) => {
@@ -28946,7 +28973,7 @@ const template_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePro
 }, Symbol.toStringTag, { value: 'Module' }));
 
 const prisma$6 = new PrismaClient();
-const index_get$2 = defineEventHandler(async (event) => {
+const index_get$4 = defineEventHandler(async (event) => {
   try {
     const query = getQuery$1(event);
     const { status, search, atrasada, dataInicio, dataFim } = query;
@@ -29008,9 +29035,9 @@ const index_get$2 = defineEventHandler(async (event) => {
   }
 });
 
-const index_get$3 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+const index_get$5 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
   __proto__: null,
-  default: index_get$2
+  default: index_get$4
 }, Symbol.toStringTag, { value: 'Module' }));
 
 const prisma$5 = new PrismaClient();
@@ -29229,14 +29256,69 @@ const budgetEmail_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.define
   default: budgetEmail_post
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const ordensServico_get = defineEventHandler(async (event) => {
+const _id__get = defineEventHandler(async (event) => {
+  const osId = getRouterParam(event, "id");
+  if (!osId) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: "ID da OS n\xE3o informado"
+    });
+  }
+  const prisma = event.context.prisma;
+  try {
+    const os = await prisma.ordemServico.findUnique({
+      where: { id: parseInt(osId) },
+      include: {
+        op: true,
+        itens: {
+          include: {
+            peca: true,
+            fornecedorRef: true
+          },
+          orderBy: { sequencia: "asc" }
+        }
+      }
+    });
+    if (!os) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: "Ordem de Servi\xE7o n\xE3o encontrada"
+      });
+    }
+    return os;
+  } catch (error) {
+    if (error.statusCode && error.statusCode < 500) throw error;
+    console.error("\u274C Erro ao buscar detalhes da OS:", error);
+    throw createError({
+      statusCode: 500,
+      message: "Erro ao buscar detalhes da OS: " + error.message
+    });
+  }
+});
+
+const _id__get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: _id__get
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const index_get$2 = defineEventHandler(async (event) => {
   const prisma = event.context.prisma;
   const query = getQuery$1(event);
   try {
     const where = {};
-    if (query.opId) where.opId = parseInt(query.opId);
+    if (query.opId) {
+      const parsedOpId = parseInt(query.opId);
+      if (isNaN(parsedOpId)) {
+        throw createError({
+          statusCode: 400,
+          message: `ID da OP inv\xE1lido: ${query.opId}`
+        });
+      }
+      where.opId = parsedOpId;
+    }
     if (query.tipo) where.tipo = query.tipo;
     if (query.status) where.status = query.status;
+    console.log("\u{1F50D} Buscando ordens de servi\xE7o com filtro:", where);
     const ordensServico = await prisma.ordemServico.findMany({
       where,
       include: {
@@ -29255,60 +29337,18 @@ const ordensServico_get = defineEventHandler(async (event) => {
     });
     return ordensServico;
   } catch (error) {
+    if (error.statusCode && error.statusCode < 500) throw error;
     console.error("\u274C Erro ao buscar ordens de servi\xE7o:", error);
     throw createError({
       statusCode: 500,
-      statusMessage: "Erro ao buscar ordens de servi\xE7o"
+      message: "Erro ao buscar ordens de servi\xE7o: " + error.message
     });
   }
 });
 
-const ordensServico_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+const index_get$3 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
   __proto__: null,
-  default: ordensServico_get
-}, Symbol.toStringTag, { value: 'Module' }));
-
-const _id__get = defineEventHandler(async (event) => {
-  const osId = getRouterParam(event, "id");
-  if (!osId) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: "ID da OS n\xE3o informado"
-    });
-  }
-  const prisma = event.context.prisma;
-  try {
-    const os = await prisma.ordemServico.findUnique({
-      where: { id: parseInt(osId) },
-      include: {
-        op: true,
-        itens: {
-          include: {
-            peca: true
-          },
-          orderBy: { sequencia: "asc" }
-        }
-      }
-    });
-    if (!os) {
-      throw createError({
-        statusCode: 404,
-        statusMessage: "Ordem de Servi\xE7o n\xE3o encontrada"
-      });
-    }
-    return os;
-  } catch (error) {
-    console.error("\u274C Erro ao buscar detalhes da OS:", error);
-    throw createError({
-      statusCode: 500,
-      statusMessage: "Erro ao buscar detalhes da OS"
-    });
-  }
-});
-
-const _id__get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
-  __proto__: null,
-  default: _id__get
+  default: index_get$2
 }, Symbol.toStringTag, { value: 'Module' }));
 
 const _id__delete$2 = defineEventHandler(async (event) => {

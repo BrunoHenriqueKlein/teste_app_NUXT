@@ -192,7 +192,10 @@
                 <tr>
                   <th class="text-left border-bottom pa-2">Código</th>
                   <th class="text-left border-bottom pa-2">Descrição</th>
-                  <th class="text-right border-bottom pa-2">Quantidade</th>
+                  <th class="text-left border-bottom pa-2">Etapa / Processo</th>
+                  <th class="text-left border-bottom pa-2">Ref / Fornecedor</th>
+                  <th class="text-right border-bottom pa-2">Tempo</th>
+                  <th class="text-right border-bottom pa-2">Qtd</th>
                   <th class="text-left border-bottom pa-2">Material</th>
                   <th class="text-left border-bottom pa-2">Check (V)</th>
                 </tr>
@@ -201,10 +204,13 @@
                 <tr v-for="item in dialogOS.data?.itens" :key="item.id">
                   <td class="pa-2 border-bottom font-weight-bold">{{ item.peca?.codigo }}</td>
                   <td class="pa-2 border-bottom">{{ item.peca?.descricao }}</td>
+                  <td class="pa-2 border-bottom">{{ item.nome }}</td>
+                  <td class="pa-2 border-bottom">{{ item.fornecedorRef?.nome || '-' }}</td>
+                  <td class="pa-2 border-bottom text-right">{{ formatTime(item.tempoEstimado) }}</td>
                   <td class="pa-2 border-bottom text-right">{{ item.peca?.quantidade }}</td>
                   <td class="pa-2 border-bottom">{{ item.peca?.material }}</td>
-                  <td class="pa-2 border-bottom" style="width: 80px;">
-                    <div style="border: 1px solid #ccc; width: 20px; height: 20px;"></div>
+                  <td class="pa-2 border-bottom" style="width: 50px;">
+                    <div style="border: 1px solid #ccc; width: 18px; height: 18px; margin: 0 auto;"></div>
                   </td>
                 </tr>
               </tbody>
@@ -229,6 +235,7 @@
 </template>
 
 <script setup>
+const route = useRoute()
 const ordens = ref([])
 const loading = ref(false)
 const types = ref([])
@@ -241,6 +248,11 @@ const dialogBudget = ref({
   show: false,
   os: null,
   fornecedorId: null
+})
+
+const dialogOS = ref({
+  show: false,
+  data: null
 })
 
 const fornecedores = ref([])
@@ -275,13 +287,19 @@ const tiposProcesso = ['USINAGEM', 'PINTURA', 'SOLDA', 'CALDEIRARIA', 'MONTAGEM'
 const loadOrdens = async () => {
   loading.value = true
   try {
-    const query = new URLSearchParams()
-    if (filters.value.tipo) query.append('tipo', filters.value.tipo)
-    if (filters.value.status) query.append('status', filters.value.status)
+    const params = {}
+    if (filters.value.tipo) params.tipo = filters.value.tipo
+    if (filters.value.status) params.status = filters.value.status
+    if (route.query.opId) params.opId = route.query.opId
     
-    ordens.value = await $fetch(`/api/pcp/ordens-servico?${query.toString()}`)
+    // Usar params diretamente no $fetch para evitar problemas de query string malformada
+    ordens.value = await $fetch('/api/pcp/ordens-servico', {
+      params
+    })
   } catch (error) {
-    showSnackbar('Erro ao carregar ordens de serviço', 'error')
+    console.error('Erro detalhado no carregamento de OS:', error)
+    const message = error.data?.message || error.data?.statusMessage || error.message || 'Erro de conexão/servidor'
+    showSnackbar(`Erro: ${message}`, 'error')
   } finally {
     loading.value = false
   }
@@ -353,6 +371,13 @@ const getStatusColor = (status) => {
 const formatDate = (date) => {
   if (!date) return '-'
   return new Date(date).toLocaleDateString('pt-BR')
+}
+
+const formatTime = (minutes) => {
+  if (!minutes) return '-'
+  const hrs = Math.floor(minutes / 60)
+  const mins = minutes % 60
+  return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}h`
 }
 
 const showSnackbar = (text, color = 'success') => {

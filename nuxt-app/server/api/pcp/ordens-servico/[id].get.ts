@@ -18,7 +18,8 @@ export default defineEventHandler(async (event) => {
                 op: true,
                 itens: {
                     include: {
-                        peca: true
+                        peca: true,
+                        fornecedorRef: true
                     },
                     orderBy: { sequencia: 'asc' }
                 }
@@ -34,10 +35,12 @@ export default defineEventHandler(async (event) => {
 
         return os
     } catch (error: any) {
+        if (error.statusCode && error.statusCode < 500) throw error
+
         console.error('❌ Erro ao buscar detalhes da OS:', error)
         throw createError({
             statusCode: 500,
-            statusMessage: 'Erro ao buscar detalhes da OS'
+            message: 'Erro ao buscar detalhes da OS: ' + error.message
         })
     }
 })

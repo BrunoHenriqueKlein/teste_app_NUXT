@@ -16,6 +16,16 @@
         <div class="d-flex gap-2">
           <v-btn
             color="white"
+            variant="flat"
+            prepend-icon="mdi-factory"
+            @click="generateOS"
+            :loading="loadingOS"
+            class="mr-2"
+          >
+            Gerar Ordens (PCP)
+          </v-btn>
+          <v-btn
+            color="white"
             variant="tonal"
             prepend-icon="mdi-plus"
             @click="openAddPecaDialog"
@@ -308,6 +318,7 @@ const savingProcessos = ref(false)
 const fileInput = ref(null)
 const drawingInput = ref(null)
 const selectedPecaForDrawing = ref(null)
+const loadingOS = ref(false)
 
 const loadFornecedores = async () => {
   try {
@@ -435,6 +446,21 @@ const handleFileUpload = async (event) => {
   } finally {
     loadingImport.value = false
     event.target.value = '' // Limpar input
+  }
+}
+
+const generateOS = async () => {
+  loadingOS.value = true
+  try {
+    const result = await $fetch(`/api/ops/${opId}/pcp/generate-os`, { method: 'POST' })
+    if (result.success) {
+      showSnackbar(result.message || 'Ordens de serviço processadas com sucesso!')
+    }
+  } catch (error) {
+    console.error('Erro ao gerar OS:', error)
+    showSnackbar('Erro ao gerar Ordens de Serviço. Certifique-se de que as peças possuem processos cadastrados.', 'error')
+  } finally {
+    loadingOS.value = false
   }
 }
 

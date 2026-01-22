@@ -12,6 +12,8 @@ export default defineEventHandler(async (event) => {
     const prisma = event.context.prisma
 
     try {
+        console.log(`🏗️ Iniciando geração/sincronização de OS para OP ${opId}`)
+
         // 1. Buscar todos os processos de peças desta OP que ainda não têm OS
         const processosSemOS = await prisma.processoPeca.findMany({
             where: {
@@ -23,11 +25,14 @@ export default defineEventHandler(async (event) => {
             }
         })
 
+        console.log(`🔍 Encontrados ${processosSemOS.length} processos sem OS para a OP ${opId}`)
+
         if (processosSemOS.length === 0) {
             return {
                 success: true,
-                message: 'Todos os processos já possuem OS ou não há processos cadastrados.',
-                createdCount: 0
+                message: 'Todos os processos já possuem OS ou não há novos processos para agrupar.',
+                createdCount: 0,
+                updatedCount: 0
             }
         }
 
@@ -40,36 +45,62 @@ export default defineEventHandler(async (event) => {
         }, {})
 
         const createdOS = []
+        let updatedCount = 0
 
-        // 3. Criar uma OS para cada grupo
-        for (const [tipo, itens] of Object.entries(grupos)) {
-            const count = await prisma.ordemServico.count()
-            const numero = `OS-${opId}-${tipo.substring(0, 3)}-${(count + 1).toString().padStart(3, '0')}`
-
-            const os = await prisma.ordemServico.create({
-                data: {
-                    numero,
-                    tipo: tipo as string,
+        // 3. Processar cada grupo
+        for (const [tipo, itensGroup] of Object.entries(grupos)) {
+            const itens = itensGroup as any[]
+            // Verificar se já existe uma OS "Aberta" deste tipo para esta OP
+            const osExistente = await prisma.ordemServico.findFirst({
+                where: {
                     opId: parseInt(opId),
-                    status: 'NAO_INICIADO',
-                    itens: {
-                        connect: (itens as any[]).map(p => ({ id: p.id }))
-                    }
+                    tipo: tipo as string,
+                    status: { not: 'CONCLUIDO' }
                 }
             })
-            createdOS.push(os)
+
+            if (osExistente) {
+                console.log(`📌 Sincronizando ${itens.length} itens com OS existente: ${osExistente.numero}`)
+                await prisma.ordemServico.update({
+                    where: { id: osExistente.id },
+                    data: {
+                        itens: {
+                            connect: itens.map(p => ({ id: p.id }))
+                        }
+                    }
+                })
+                updatedCount++
+            } else {
+                const count = await prisma.ordemServico.count()
+                const numero = `OS-${opId}-${tipo.substring(0, 3)}-${(count + 1).toString().padStart(3, '0')}`
+
+                console.log(`🆕 Criando nova OS: ${numero}`)
+                const novaOS = await prisma.ordemServico.create({
+                    data: {
+                        numero,
+                        tipo: tipo as string,
+                        opId: parseInt(opId),
+                        status: 'NAO_INICIADO',
+                        itens: {
+                            connect: (itens as any[]).map(p => ({ id: p.id }))
+                        }
+                    }
+                })
+                createdOS.push(novaOS)
+            }
         }
 
         return {
             success: true,
             createdCount: createdOS.length,
-            orders: createdOS
+            updatedCount,
+            message: `Processamento concluído. ${createdOS.length} novas OS criadas, ${updatedCount} OS existentes atualizadas.`
         }
     } catch (error: any) {
-        console.error('❌ Erro ao gerar OS:', error)
+        console.error('❌ Erro ao gerar/sincronizar OS:', error)
         throw createError({
             statusCode: 500,
-            statusMessage: 'Erro ao gerar Ordens de Serviço: ' + error.message
+            message: 'Erro ao processar Ordens de Serviço: ' + error.message
         })
     }
 })
