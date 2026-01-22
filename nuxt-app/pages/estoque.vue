@@ -76,6 +76,13 @@
             color="primary"
             @click="editItem(item)"
           ></v-btn>
+          <v-btn
+            icon="mdi-delete"
+            variant="text"
+            size="small"
+            color="error"
+            @click="deleteStockItem(item)"
+          ></v-btn>
         </template>
       </v-data-table>
     </v-card>
@@ -185,6 +192,21 @@ const editItem = (item) => {
     show: true,
     isEdit: true,
     item: { ...item }
+  }
+}
+
+const deleteStockItem = async (item) => {
+  if (!confirm(`Tem certeza que deseja excluir o item "${item.codigo}" do estoque?`)) return
+  
+  loading.value = true
+  try {
+    await $fetch(`/api/estoque/${item.id}`, { method: 'DELETE' })
+    showSnackbar('Item excluído com sucesso!')
+    await loadItems()
+  } catch (error) {
+    showSnackbar('Erro ao excluir item', 'error')
+  } finally {
+    loading.value = false
   }
 }
 

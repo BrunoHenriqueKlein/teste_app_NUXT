@@ -36,8 +36,14 @@ declare module "nitropack/types" {
     '/api/dashboard/stats': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/dashboard/stats.get').default>>>>
     }
+    '/api/estoque/:id': {
+      'delete': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/estoque/[id].delete').default>>>>
+    }
     '/api/estoque': {
       'default': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/estoque/index').default>>>>
+    }
+    '/api/fornecedores': {
+      'default': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/fornecedores').default>>>>
     }
     '/api/itens': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/itens.get').default>>>>
@@ -91,14 +97,30 @@ declare module "nitropack/types" {
     '/api/ops/recent': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ops/recent.get').default>>>>
     }
+    '/api/pcp/budget-email': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/pcp/budget-email.post').default>>>>
+    }
     '/api/pcp/ordens-servico': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/pcp/ordens-servico.get').default>>>>
     }
     '/api/pcp/ordens-servico/:id': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/pcp/ordens-servico/[id].get').default>>>>
     }
-    '/api/pecas/:pecaId/processos': {
-      'default': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/pecas/[pecaId]/processos').default>>>>
+    '/api/pecas/:id': {
+      'delete': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/pecas/[id].delete').default>>>>
+      'patch': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/pecas/[id].patch').default>>>>
+    }
+    '/api/pecas/:id/desenho': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/pecas/[id]/desenho.post').default>>>>
+    }
+    '/api/pecas/:id/processos': {
+      'default': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/pecas/[id]/processos').default>>>>
+    }
+    '/api/pecas/:id/reservar': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/pecas/[id]/reservar.post').default>>>>
+    }
+    '/api/pecas/anexos/:id': {
+      'delete': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/pecas/anexos/[id].delete').default>>>>
     }
     '/api/salvar': {
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/salvar.post').default>>>>

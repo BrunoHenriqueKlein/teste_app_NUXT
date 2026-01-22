@@ -1,3 +1,4 @@
+import { defineEventHandler, readBody, createError } from 'h3'
 import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
@@ -23,7 +24,7 @@ export default defineEventHandler(async (event) => {
         if (name) data.name = name
         if (email) data.email = email
         if (password) {
-            const bcrypt = await import('bcrypt')
+            const bcrypt = await import('bcryptjs')
             data.password = await bcrypt.default.hash(password, 10)
         }
 

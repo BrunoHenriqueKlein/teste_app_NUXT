@@ -89,12 +89,60 @@
         </template>
 
         <template v-slot:item.estoque="{ item }">
-          <v-tooltip v-if="item.temNoEstoque" text="Item disponível em estoque">
-            <template v-slot:activator="{ props }">
-              <v-icon v-bind="props" color="success" icon="mdi-check-circle"></v-icon>
-            </template>
-          </v-tooltip>
-          <v-icon v-else color="grey-lighten-1" icon="mdi-minus-circle-outline"></v-icon>
+          <div class="d-flex align-center gap-2">
+            <v-tooltip v-if="item.temNoEstoque" :text="`Disponível: ${item.saldoEstoque} no estoque`">
+              <template v-slot:activator="{ props }">
+                <v-chip v-bind="props" color="success" size="x-small" variant="flat">
+                  {{ item.saldoEstoque }} em estoque
+                </v-chip>
+              </template>
+            </v-tooltip>
+            <v-chip v-else color="grey-lighten-1" size="x-small" variant="outlined">
+              Sem saldo
+            </v-chip>
+
+            <v-btn
+              v-if="item.temNoEstoque && item.status !== 'EM_ESTOQUE' && item.status !== 'CONCLUIDA'"
+              size="x-small"
+              color="success"
+              variant="elevated"
+              @click="reservarEstoque(item)"
+            >
+              Reservar
+            </v-btn>
+          </div>
+        </template>
+
+        <template v-slot:item.desenho="{ item }">
+          <div class="d-flex flex-column align-center">
+            <!-- Lista de Anexos Existentes -->
+            <div v-if="item.anexos && item.anexos.length > 0" class="d-flex flex-wrap gap-1 mb-1 justify-center">
+              <v-chip
+                v-for="anexo in item.anexos"
+                :key="anexo.id"
+                size="x-small"
+                color="info"
+                variant="tonal"
+                class="px-2"
+                closable
+                @click="viewDrawing(anexo.url)"
+                @click:close="deleteAttachment(anexo.id)"
+                :title="anexo.nome"
+              >
+                <v-icon start size="12">mdi-file-document-outline</v-icon>
+                {{ truncateName(anexo.nome) }}
+              </v-chip>
+            </div>
+            
+            <v-btn
+              icon="mdi-plus-circle"
+              variant="text"
+              size="small"
+              color="primary"
+              title="Adicionar Anexo"
+              @click="triggerDrawingUpload(item)"
+            ></v-btn>
+          </div>
         </template>
 
         <template v-slot:item.acoes="{ item }">
@@ -121,16 +169,26 @@
               variant="text"
               size="small"
               color="grey-darken-1"
+              title="Editar Peça"
+              @click="openEditPeca(item)"
+            ></v-btn>
+            <v-btn
+              icon="mdi-delete"
+              variant="text"
+              size="small"
+              color="error"
+              title="Excluir Peça"
+              @click="confirmDeletePeca(item)"
             ></v-btn>
           </div>
         </template>
       </v-data-table>
     </v-card>
 
-    <!-- Diálogo de Inserção Manual -->
+    <!-- Diálogo de Inserção/Edição de Peça -->
     <v-dialog v-model="dialogPeca.show" max-width="500px">
       <v-card>
-        <v-card-title>Adicionar Peça Manualmente</v-card-title>
+        <v-card-title>{{ dialogPeca.isEdit ? 'Editar Peça' : 'Adicionar Peça Manualmente' }}</v-card-title>
         <v-card-text>
           <v-text-field v-model="dialogPeca.data.codigo" label="Código" variant="outlined"></v-text-field>
           <v-text-field v-model="dialogPeca.data.descricao" label="Descrição" variant="outlined"></v-text-field>
@@ -185,13 +243,17 @@
                   ></v-select>
                 </v-col>
                 <v-col cols="3">
-                  <v-text-field
-                    v-model="proc.fornecedor"
-                    label="Fornecedor/Setor"
+                  <v-select
+                    v-model="proc.fornecedorId"
+                    :items="fornecedores"
+                    item-title="nome"
+                    item-value="id"
+                    label="Fornecedor / Setor"
                     variant="outlined"
                     density="compact"
                     hide-details
-                  ></v-text-field>
+                    clearable
+                  ></v-select>
                 </v-col>
                 <v-col cols="1" class="text-right">
                   <v-btn icon="mdi-delete" color="error" variant="text" size="small" @click="removeProcess(index)"></v-btn>
@@ -218,6 +280,15 @@
       </v-card>
     </v-dialog>
 
+    <!-- Hidden File Input for Drawing -->
+    <input
+      type="file"
+      ref="drawingInput"
+      style="display: none"
+      accept=".pdf,.dwg,.dxf,image/*"
+      @change="handleDrawingUpload"
+    />
+
     <!-- Feedback de Importação -->
     <v-snackbar v-model="snackbar.show" :color="snackbar.color" :timeout="3000">
       {{ snackbar.text }}
@@ -230,10 +301,21 @@ const route = useRoute()
 const opId = route.params.id
 
 const pecas = ref([])
+const fornecedores = ref([])
 const loading = ref(false)
 const loadingImport = ref(false)
 const savingProcessos = ref(false)
 const fileInput = ref(null)
+const drawingInput = ref(null)
+const selectedPecaForDrawing = ref(null)
+
+const loadFornecedores = async () => {
+  try {
+    fornecedores.value = await $fetch('/api/fornecedores')
+  } catch (error) {
+    console.error('Erro ao carregar fornecedores')
+  }
+}
 
 const dialogProcessos = ref({
   show: false,
@@ -243,7 +325,8 @@ const dialogProcessos = ref({
 
 const dialogPeca = ref({
   show: false,
-  data: { codigo: '', descricao: '', quantidade: 1, material: '' }
+  isEdit: false,
+  data: { id: null, codigo: '', descricao: '', quantidade: 1, material: '' }
 })
 
 const savingPeca = ref(false)
@@ -262,12 +345,12 @@ const breadcrumbs = [
 ]
 
 const headers = [
-  { title: 'Código', key: 'codigo', align: 'start', sortable: true },
-  { title: 'Descrição', key: 'descricao', align: 'start', sortable: true },
-  { title: 'Qtd', key: 'quantidade', align: 'end', sortable: true },
-  { title: 'Material', key: 'material', align: 'start' },
-  { title: 'Estoque', key: 'estoque', align: 'center', sortable: false },
-  { title: 'Status', key: 'status', align: 'center', sortable: true },
+  { title: 'Código', key: 'codigo', sortable: true },
+  { title: 'Descrição', key: 'descricao', sortable: true },
+  { title: 'Qtd', key: 'quantidade', align: 'end' },
+  { title: 'Material', key: 'material' },
+  { title: 'Desenho', key: 'desenho', align: 'center', sortable: false },
+  { title: 'Status', key: 'status', align: 'center' },
   { title: 'Ações', key: 'acoes', align: 'center', sortable: false }
 ]
 
@@ -294,22 +377,38 @@ const triggerImport = () => {
 const openAddPecaDialog = () => {
   dialogPeca.value = {
     show: true,
-    data: { codigo: '', descricao: '', quantidade: 1, material: '' }
+    isEdit: false,
+    data: { id: null, codigo: '', descricao: '', quantidade: 1, material: '' }
+  }
+}
+
+const openEditPeca = (peca) => {
+  dialogPeca.value = {
+    show: true,
+    isEdit: true,
+    data: { ...peca }
   }
 }
 
 const savePecaManual = async () => {
   savingPeca.value = true
   try {
-    await $fetch(`/api/ops/${opId}/pecas`, {
-      method: 'POST',
+    const method = dialogPeca.value.isEdit ? 'PATCH' : 'POST'
+    const url = dialogPeca.value.isEdit 
+      ? `/api/pecas/${dialogPeca.value.data.id}` 
+      : `/api/ops/${opId}/pecas`
+
+    await $fetch(url, {
+      method,
       body: dialogPeca.value.data
     })
-    showSnackbar('Peça inserida com sucesso!')
+    
+    showSnackbar(dialogPeca.value.isEdit ? 'Peça atualizada com sucesso!' : 'Peça inserida com sucesso!')
     dialogPeca.value.show = false
     await loadPecas()
   } catch (error) {
-    showSnackbar('Erro ao inserir peça', 'error')
+    const message = error.data?.message || error.data?.statusMessage || 'Erro ao salvar dados da peça'
+    showSnackbar(message, 'error')
   } finally {
     savingPeca.value = false
   }
@@ -358,7 +457,7 @@ const addProcess = () => {
   dialogProcessos.value.items.push({
     nome: '',
     status: 'NAO_INICIADO',
-    fornecedor: ''
+    fornecedorId: null
   })
 }
 
@@ -395,11 +494,92 @@ const getStatusColor = (status) => {
   return colors[status] || 'grey'
 }
 
+const triggerDrawingUpload = (peca) => {
+  selectedPecaForDrawing.value = peca
+  drawingInput.value.click()
+}
+
+const handleDrawingUpload = async (event) => {
+  const file = event.target.files[0]
+  if (!file || !selectedPecaForDrawing.value) return
+
+  const formData = new FormData()
+  formData.append('file', file)
+
+  try {
+    await $fetch(`/api/pecas/${selectedPecaForDrawing.value.id}/desenho`, {
+      method: 'POST',
+      body: formData
+    })
+    showSnackbar('Desenho enviado com sucesso!')
+    await loadPecas()
+  } catch (error) {
+    showSnackbar('Erro ao enviar desenho', 'error')
+  } finally {
+    event.target.value = ''
+  }
+}
+
+const reservarEstoque = async (peca) => {
+  if (!confirm(`Deseja reservar ${peca.quantidade} unidades de "${peca.codigo}" do estoque?`)) return
+  
+  loading.value = true
+  try {
+    await $fetch(`/api/pecas/${peca.id}/reservar`, { method: 'POST' })
+    showSnackbar('Reserva realizada com sucesso!')
+    await loadPecas()
+  } catch (error) {
+    showSnackbar(error.data?.statusMessage || 'Erro ao realizar reserva', 'error')
+  } finally {
+    loading.value = false
+  }
+}
+
+const confirmDeletePeca = async (peca) => {
+  if (!confirm(`Tem certeza que deseja excluir a peça "${peca.codigo}"? Todos os processos e anexos vinculados serão removidos.`)) return
+  
+  loading.value = true
+  try {
+    await $fetch(`/api/pecas/${peca.id}`, { method: 'DELETE' })
+    showSnackbar('Peça excluída com sucesso!')
+    await loadPecas()
+  } catch (error) {
+    showSnackbar('Erro ao excluir peça', 'error')
+  } finally {
+    loading.value = false
+  }
+}
+
+const viewDrawing = (url) => {
+  window.open(url, '_blank')
+}
+
+const deleteAttachment = async (anexoId) => {
+  if (!confirm('Tem certeza que deseja remover este anexo?')) return
+  
+  try {
+    await $fetch(`/api/pecas/anexos/${anexoId}`, { method: 'DELETE' })
+    showSnackbar('Anexo removido com sucesso!')
+    await loadPecas()
+  } catch (error) {
+    showSnackbar('Erro ao remover anexo', 'error')
+  }
+}
+
+const truncateName = (name) => {
+  if (!name) return ''
+  if (name.length <= 15) return name
+  return name.substring(0, 12) + '...'
+}
+
 const showSnackbar = (text, color = 'success') => {
   snackbar.value = { show: true, text, color }
 }
 
-onMounted(loadPecas)
+onMounted(() => {
+  loadPecas()
+  loadFornecedores()
+})
 </script>
 
 <style scoped>

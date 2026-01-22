@@ -205,7 +205,7 @@ model Peca {
   descricao  String
   quantidade Int            @default(1)
   material   String?
-  desenhoUrl String?
+  anexos     PecaAnexo[]
   arquivoBOM String?
   status     PecaStatus     @default(NAO_INICIADA)
   compras    CompraItem[]
@@ -216,17 +216,27 @@ model Peca {
   @@map("pecas")
 }
 
+model PecaAnexo {
+  id      Int    @id @default(autoincrement())
+  pecaId  Int    @map("peca_id")
+  nome    String
+  url     String
+  peca    Peca   @relation(fields: [pecaId], references: [id], onDelete: Cascade)
+
+  @@map("peca_anexos")
+}
+
 model ProcessoPeca {
   id            Int            @id @default(autoincrement())
   pecaId        Int
   osId          Int?           @map("os_id")
+  fornecedorId  Int?           @map("fornecedor_id")
   nome          String
   sequencia     Int
   status        ProcessoStatus @default(NAO_INICIADO)
-  fornecedor    String?
-  custo         Float?
+  fornecedorRef Fornecedor?    @relation(fields: [fornecedorId], references: [id])
   tempoEstimado Int?
-  peca          Peca           @relation(fields: [pecaId], references: [id])
+  peca          Peca           @relation(fields: [pecaId], references: [id], onDelete: Cascade)
   ordemServico  OrdemServico?  @relation(fields: [osId], references: [id])
 
   @@map("processo_pecas")
@@ -237,14 +247,32 @@ model OrdemServico {
   numero          String         @unique
   tipo            String         // ex: USINAGEM, PINTURA, SOLDA
   opId            Int            @map("op_id")
+  fornecedorId    Int?           @map("fornecedor_id")
   status          ProcessoStatus @default(NAO_INICIADO)
   dataEmissao     DateTime       @default(now()) @map("data_emissao")
   inicioPrevisto  DateTime?      @map("inicio_previsto")
   terminoPrevisto DateTime?      @map("termino_previsto")
   op              OP             @relation(fields: [opId], references: [id])
+  fornecedor      Fornecedor?    @relation(fields: [fornecedorId], references: [id])
   itens           ProcessoPeca[]
 
   @@map("ordens_servico")
+}
+
+model Fornecedor {
+  id            Int            @id @default(autoincrement())
+  nome          String
+  cnpj          String?        @unique
+  categorias    String[]       @default([])
+  telefone      String?
+  whatsapp      String?
+  email         String?
+  contato       String?
+  endereco      String?
+  ordensServico OrdemServico[]
+  processos     ProcessoPeca[]
+
+  @@map("fornecedores")
 }
 
 model Estoque {
@@ -300,7 +328,7 @@ model CompraItem {
   quantidade    Int
   valorUnitario Float
   compra        Compra @relation(fields: [compraId], references: [id])
-  peca          Peca?  @relation(fields: [pecaId], references: [id])
+  peca          Peca?  @relation(fields: [pecaId], references: [id], onDelete: SetNull)
 
   @@map("compra_itens")
 }

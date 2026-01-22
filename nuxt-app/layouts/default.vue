@@ -176,6 +176,7 @@ const navigation = [
   { title: 'Peças (BOM)', icon: 'mdi-cogs', route: '/pecas', moduleName: 'Peças' },
   { title: 'PCP', icon: 'mdi-factory', route: '/pcp', moduleName: 'PCP' },
   { title: 'Estoque', icon: 'mdi-warehouse', route: '/estoque', moduleName: 'Estoque' },
+  { title: 'Fornecedores', icon: 'mdi-account-group', route: '/fornecedores', moduleName: 'Fornecedores' },
   { title: 'Compras', icon: 'mdi-cart', route: '/compras', moduleName: 'Compras' },
   { title: 'Relatórios', icon: 'mdi-chart-bar', route: '/relatorios', moduleName: 'Relatórios' },
 ]
@@ -228,6 +229,7 @@ const breadcrumbs = computed(() => {
       'processos': 'Processos',
       'pecas': 'Peças',
       'estoque': 'Estoque',
+      'fornecedores': 'Fornecedores',
       'compras': 'Compras',
       'relatorios': 'Relatórios',
       'admin': 'Administração',

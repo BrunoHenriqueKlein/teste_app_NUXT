@@ -1,16 +1,16 @@
 import process from 'node:process';globalThis._importMeta_={url:import.meta.url,env:process.env};import { tmpdir } from 'node:os';
 import { defineEventHandler, handleCacheHeaders, splitCookiesString, createEvent, fetchWithEvent, isEvent, eventHandler, setHeaders, sendRedirect, proxyRequest, getRequestHeader, setResponseHeaders, setResponseStatus, send, getRequestHeaders, setResponseHeader, appendResponseHeader, getRequestURL, getResponseHeader, removeResponseHeader, createError, getQuery as getQuery$1, readBody, createApp, createRouter as createRouter$1, toNodeListener, lazyEventHandler, getResponseStatus, getRouterParam, readMultipartFormData, getResponseStatusText } from 'file:///app/node_modules/h3/dist/index.mjs';
 import { Server } from 'node:http';
-import { resolve, dirname, join } from 'node:path';
+import path, { resolve, dirname, join } from 'node:path';
 import nodeCrypto from 'node:crypto';
 import { parentPort, threadId } from 'node:worker_threads';
 import { escapeHtml } from 'file:///app/node_modules/@vue/shared/dist/shared.cjs.js';
 import { PrismaClient } from 'file:///app/node_modules/@prisma/client/default.js';
-import { createTransport } from 'file:///app/node_modules/nodemailer/lib/nodemailer.js';
+import nodemailer, { createTransport } from 'file:///app/node_modules/nodemailer/lib/nodemailer.js';
 import bcrypt from 'file:///app/node_modules/bcryptjs/index.js';
 import jwt from 'file:///app/node_modules/jsonwebtoken/index.js';
 import * as cpexcel from '/app/node_modules/xlsx/dist/cpexcel.js';
-import require$$1, { promises } from 'node:fs';
+import fs, { promises } from 'node:fs';
 import require$$2 from 'node:stream';
 import { createRenderer, getRequestDependencies, getPreloadLinks, getPrefetchLinks } from 'file:///app/node_modules/vue-bundle-renderer/dist/runtime.mjs';
 import { parseURL, withoutBase, joinURL, getQuery, withQuery, withTrailingSlash, decodePath, withLeadingSlash, withoutTrailingSlash, joinRelativeURL } from 'file:///app/node_modules/ufo/dist/index.mjs';
@@ -1895,9 +1895,11 @@ const _lazy_2vhMo2 = () => Promise.resolve().then(function () { return resetPass
 const _lazy_FQxnpl = () => Promise.resolve().then(function () { return processos_delete$1; });
 const _lazy_EvnYc0 = () => Promise.resolve().then(function () { return index$3; });
 const _lazy_LHV_bL = () => Promise.resolve().then(function () { return stats_get$1; });
+const _lazy_OX3cOn = () => Promise.resolve().then(function () { return _id__delete$7; });
 const _lazy_tURFXs = () => Promise.resolve().then(function () { return index$1; });
+const _lazy_IhnuwF = () => Promise.resolve().then(function () { return fornecedores$1; });
 const _lazy_Ht9XLv = () => Promise.resolve().then(function () { return itens_get$1; });
-const _lazy_5TbrLG = () => Promise.resolve().then(function () { return _id__delete$1; });
+const _lazy_5TbrLG = () => Promise.resolve().then(function () { return _id__delete$5; });
 const _lazy_CzQc1e = () => Promise.resolve().then(function () { return _id__put$1; });
 const _lazy_2C8_wH = () => Promise.resolve().then(function () { return _processoId__delete$1; });
 const _lazy_1PdPm1 = () => Promise.resolve().then(function () { return _processoId__put$3; });
@@ -1918,9 +1920,15 @@ const _lazy_QaMZQF = () => Promise.resolve().then(function () { return template_
 const _lazy_VPkvMQ = () => Promise.resolve().then(function () { return index_get$3; });
 const _lazy_zKWFxN = () => Promise.resolve().then(function () { return index_post$1; });
 const _lazy_qyGLAc = () => Promise.resolve().then(function () { return recent_get$1; });
+const _lazy_csAWbe = () => Promise.resolve().then(function () { return budgetEmail_post$1; });
 const _lazy_sTlj_J = () => Promise.resolve().then(function () { return ordensServico_get$1; });
 const _lazy_kLv3lZ = () => Promise.resolve().then(function () { return _id__get$1; });
-const _lazy_ztHeqg = () => Promise.resolve().then(function () { return processos$1; });
+const _lazy_NBJF1X = () => Promise.resolve().then(function () { return _id__delete$3; });
+const _lazy_1_abMh = () => Promise.resolve().then(function () { return _id__patch$1; });
+const _lazy_2TSiCT = () => Promise.resolve().then(function () { return desenho_post$1; });
+const _lazy_jHBWM1 = () => Promise.resolve().then(function () { return processos$1; });
+const _lazy_anMwyT = () => Promise.resolve().then(function () { return reservar_post$1; });
+const _lazy_GHeUyB = () => Promise.resolve().then(function () { return _id__delete$1; });
 const _lazy_5EnahH = () => Promise.resolve().then(function () { return salvar_post$1; });
 const _lazy_1uUSXj = () => Promise.resolve().then(function () { return index_get$1; });
 const _lazy__qQdIa = () => Promise.resolve().then(function () { return modules_get$1; });
@@ -1941,7 +1949,9 @@ const handlers = [
   { route: '/api/clean/processos', handler: _lazy_FQxnpl, lazy: true, middleware: false, method: "delete" },
   { route: '/api/compras', handler: _lazy_EvnYc0, lazy: true, middleware: false, method: undefined },
   { route: '/api/dashboard/stats', handler: _lazy_LHV_bL, lazy: true, middleware: false, method: "get" },
+  { route: '/api/estoque/:id', handler: _lazy_OX3cOn, lazy: true, middleware: false, method: "delete" },
   { route: '/api/estoque', handler: _lazy_tURFXs, lazy: true, middleware: false, method: undefined },
+  { route: '/api/fornecedores', handler: _lazy_IhnuwF, lazy: true, middleware: false, method: undefined },
   { route: '/api/itens', handler: _lazy_Ht9XLv, lazy: true, middleware: false, method: "get" },
   { route: '/api/ops/:id', handler: _lazy_5TbrLG, lazy: true, middleware: false, method: "delete" },
   { route: '/api/ops/:id', handler: _lazy_CzQc1e, lazy: true, middleware: false, method: "put" },
@@ -1964,9 +1974,15 @@ const handlers = [
   { route: '/api/ops', handler: _lazy_VPkvMQ, lazy: true, middleware: false, method: "get" },
   { route: '/api/ops', handler: _lazy_zKWFxN, lazy: true, middleware: false, method: "post" },
   { route: '/api/ops/recent', handler: _lazy_qyGLAc, lazy: true, middleware: false, method: "get" },
+  { route: '/api/pcp/budget-email', handler: _lazy_csAWbe, lazy: true, middleware: false, method: "post" },
   { route: '/api/pcp/ordens-servico', handler: _lazy_sTlj_J, lazy: true, middleware: false, method: "get" },
   { route: '/api/pcp/ordens-servico/:id', handler: _lazy_kLv3lZ, lazy: true, middleware: false, method: "get" },
-  { route: '/api/pecas/:pecaId/processos', handler: _lazy_ztHeqg, lazy: true, middleware: false, method: undefined },
+  { route: '/api/pecas/:id', handler: _lazy_NBJF1X, lazy: true, middleware: false, method: "delete" },
+  { route: '/api/pecas/:id', handler: _lazy_1_abMh, lazy: true, middleware: false, method: "patch" },
+  { route: '/api/pecas/:id/desenho', handler: _lazy_2TSiCT, lazy: true, middleware: false, method: "post" },
+  { route: '/api/pecas/:id/processos', handler: _lazy_jHBWM1, lazy: true, middleware: false, method: undefined },
+  { route: '/api/pecas/:id/reservar', handler: _lazy_anMwyT, lazy: true, middleware: false, method: "post" },
+  { route: '/api/pecas/anexos/:id', handler: _lazy_GHeUyB, lazy: true, middleware: false, method: "delete" },
   { route: '/api/salvar', handler: _lazy_5EnahH, lazy: true, middleware: false, method: "post" },
   { route: '/api/user', handler: _lazy_1uUSXj, lazy: true, middleware: false, method: "get" },
   { route: '/api/user/modules', handler: _lazy__qQdIa, lazy: true, middleware: false, method: "get" },
@@ -2476,7 +2492,7 @@ const update_post = defineEventHandler(async (event) => {
     if (name) data.name = name;
     if (email) data.email = email;
     if (password) {
-      const bcrypt = await import('bcrypt');
+      const bcrypt = await import('file:///app/node_modules/bcryptjs/index.js');
       data.password = await bcrypt.default.hash(password, 10);
     }
     const updatedUser = await prisma$p.user.update({
@@ -2909,6 +2925,34 @@ const stats_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePropert
   default: stats_get
 }, Symbol.toStringTag, { value: 'Module' }));
 
+const _id__delete$6 = defineEventHandler(async (event) => {
+  const id = getRouterParam(event, "id");
+  const prisma = event.context.prisma;
+  if (!id) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: "ID do item n\xE3o informado"
+    });
+  }
+  try {
+    await prisma.estoque.delete({
+      where: { id: parseInt(id) }
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("\u274C Erro ao excluir item de estoque:", error);
+    throw createError({
+      statusCode: 500,
+      statusMessage: "Erro ao excluir item de estoque: " + error.message
+    });
+  }
+});
+
+const _id__delete$7 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: _id__delete$6
+}, Symbol.toStringTag, { value: 'Module' }));
+
 const index = defineEventHandler(async (event) => {
   const prisma = event.context.prisma;
   const method = event.method;
@@ -2965,6 +3009,83 @@ const index$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
   default: index
 }, Symbol.toStringTag, { value: 'Module' }));
 
+const fornecedores = defineEventHandler(async (event) => {
+  const prisma = event.context.prisma;
+  const method = event.method;
+  if (method === "GET") {
+    try {
+      const fornecedores = await prisma.fornecedor.findMany({
+        orderBy: { nome: "asc" }
+      });
+      return fornecedores;
+    } catch (error) {
+      throw createError({
+        statusCode: 500,
+        statusMessage: "Erro ao buscar fornecedores"
+      });
+    }
+  }
+  if (method === "POST") {
+    const body = await readBody(event);
+    try {
+      if (body.id) {
+        const fornecedor = await prisma.fornecedor.update({
+          where: { id: body.id },
+          data: {
+            nome: body.nome,
+            cnpj: body.cnpj,
+            categorias: body.categorias || [],
+            telefone: body.telefone,
+            whatsapp: body.whatsapp,
+            email: body.email,
+            contato: body.contato,
+            endereco: body.endereco
+          }
+        });
+        return fornecedor;
+      } else {
+        const fornecedor = await prisma.fornecedor.create({
+          data: {
+            nome: body.nome,
+            cnpj: body.cnpj,
+            categorias: body.categorias || [],
+            telefone: body.telefone,
+            whatsapp: body.whatsapp,
+            email: body.email,
+            contato: body.contato,
+            endereco: body.endereco
+          }
+        });
+        return fornecedor;
+      }
+    } catch (error) {
+      throw createError({
+        statusCode: 500,
+        statusMessage: "Erro ao salvar fornecedor: " + error.message
+      });
+    }
+  }
+  if (method === "DELETE") {
+    const body = await readBody(event);
+    try {
+      await prisma.fornecedor.delete({
+        where: { id: body.id }
+      });
+      return { success: true };
+    } catch (error) {
+      throw createError({
+        statusCode: 500,
+        statusMessage: "Erro ao excluir fornecedor: " + error.message
+      });
+    }
+  }
+});
+
+const fornecedores$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: fornecedores
+}, Symbol.toStringTag, { value: 'Module' }));
+
 const prisma$i = new PrismaClient();
 const itens_get = defineEventHandler(async (event) => {
   try {
@@ -2986,7 +3107,7 @@ const itens_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePropert
 }, Symbol.toStringTag, { value: 'Module' }));
 
 const prisma$h = new PrismaClient();
-const _id__delete = defineEventHandler(async (event) => {
+const _id__delete$4 = defineEventHandler(async (event) => {
   try {
     const id = getRouterParam(event, "id");
     if (!id) {
@@ -3026,9 +3147,9 @@ const _id__delete = defineEventHandler(async (event) => {
   }
 });
 
-const _id__delete$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+const _id__delete$5 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
   __proto__: null,
-  default: _id__delete
+  default: _id__delete$4
 }, Symbol.toStringTag, { value: 'Module' }));
 
 const prisma$g = new PrismaClient();
@@ -4929,8 +5050,8 @@ const require$$0 = /*@__PURE__*/getDefaultExportFromNamespaceIfNotNamed(cpexcel)
 		}
 		return o;
 	}
-	var fs;
-	function get_fs() { return fs || (fs = require$$1); }
+	var fs$1;
+	function get_fs() { return fs$1 || (fs$1 = fs); }
 	function parse(file, options) {
 	if(file[0] == 0x50 && file[1] == 0x4b) return parse_zip(file, options);
 	if((file[0] | 0x20) == 0x6d && (file[1]|0x20) == 0x69) return parse_mad(file, options);
@@ -5251,7 +5372,7 @@ const require$$0 = /*@__PURE__*/getDefaultExportFromNamespaceIfNotNamed(cpexcel)
 
 	function read_file(filename, options) {
 		get_fs();
-		return parse(fs.readFileSync(filename), options);
+		return parse(fs$1.readFileSync(filename), options);
 	}
 
 	function read(blob, options) {
@@ -5564,7 +5685,7 @@ const require$$0 = /*@__PURE__*/getDefaultExportFromNamespaceIfNotNamed(cpexcel)
 	function write_file(cfb, filename, options) {
 		get_fs();
 		var o = _write(cfb, options);
-	fs.writeFileSync(filename, o);
+	fs$1.writeFileSync(filename, o);
 	}
 
 	function a2s(o) {
@@ -5576,7 +5697,7 @@ const require$$0 = /*@__PURE__*/getDefaultExportFromNamespaceIfNotNamed(cpexcel)
 	function write(cfb, options) {
 		var o = _write(cfb, options);
 		switch(options && options.type || "buffer") {
-			case "file": get_fs(); fs.writeFileSync(options.filename, (o)); return o;
+			case "file": get_fs(); fs$1.writeFileSync(options.filename, (o)); return o;
 			case "binary": return typeof o == "string" ? o : a2s(o);
 			case "base64": return Base64_encode(typeof o == "string" ? o : a2s(o));
 			case "buffer": if(has_buf) return Buffer.isBuffer(o) ? o : Buffer_from(o);
@@ -6533,7 +6654,7 @@ const require$$0 = /*@__PURE__*/getDefaultExportFromNamespaceIfNotNamed(cpexcel)
 	})();
 
 	var _fs;
-	if(typeof commonjsRequire !== 'undefined') try { _fs = require$$1; } catch(e) {}
+	if(typeof commonjsRequire !== 'undefined') try { _fs = fs; } catch(e) {}
 
 	/* normalize data for blob ctor */
 	function blobify(data) {
@@ -27896,13 +28017,26 @@ const index_get$6 = defineEventHandler(async (event) => {
       where: { opId: parseInt(opId) },
       include: {
         processos: true,
+        anexos: true,
         _count: {
           select: { processos: true }
         }
       },
       orderBy: { codigo: "asc" }
     });
-    return pecas;
+    const codigos = pecas.map((p) => p.codigo);
+    const estoques = await prisma.estoque.findMany({
+      where: { codigo: { in: codigos } }
+    });
+    const pecasComEstoque = pecas.map((peca) => {
+      const itemEstoque = estoques.find((e) => e.codigo === peca.codigo);
+      return {
+        ...peca,
+        temNoEstoque: !!itemEstoque && itemEstoque.quantidade > 0,
+        saldoEstoque: itemEstoque ? itemEstoque.quantidade : 0
+      };
+    });
+    return pecasComEstoque;
   } catch (error) {
     console.error("\u274C Erro ao buscar pe\xE7as:", error);
     throw createError({
@@ -27928,6 +28062,20 @@ const index_post$4 = defineEventHandler(async (event) => {
   const prisma = event.context.prisma;
   const body = await readBody(event);
   try {
+    const existePeca = await prisma.peca.findUnique({
+      where: {
+        opId_codigo: {
+          opId: parseInt(opId),
+          codigo: body.codigo
+        }
+      }
+    });
+    if (existePeca) {
+      throw createError({
+        statusCode: 409,
+        message: `J\xE1 existe uma pe\xE7a cadastrada com o c\xF3digo "${body.codigo}" nesta lista (BOM).`
+      });
+    }
     const estoqueItem = await prisma.estoque.findUnique({
       where: { codigo: body.codigo }
     });
@@ -27943,10 +28091,11 @@ const index_post$4 = defineEventHandler(async (event) => {
     });
     return peca;
   } catch (error) {
+    if (error.statusCode && error.statusCode < 500) throw error;
     console.error("\u274C Erro ao inserir pe\xE7a manualmente:", error);
     throw createError({
       statusCode: 500,
-      statusMessage: "Erro ao inserir pe\xE7a: " + error.message
+      message: "Erro ao inserir pe\xE7a: " + error.message
     });
   }
 });
@@ -28967,6 +29116,119 @@ const recent_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProper
   default: recent_get
 }, Symbol.toStringTag, { value: 'Module' }));
 
+const budgetEmail_post = defineEventHandler(async (event) => {
+  const prisma = event.context.prisma;
+  const body = await readBody(event);
+  const { osId, fornecedorId } = body;
+  if (!osId || !fornecedorId) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: "ID da OS e do Fornecedor s\xE3o obrigat\xF3rios"
+    });
+  }
+  try {
+    const os = await prisma.ordemServico.findUnique({
+      where: { id: parseInt(osId) },
+      include: {
+        op: true,
+        itens: {
+          include: {
+            peca: {
+              include: {
+                anexos: true
+              }
+            }
+          }
+        }
+      }
+    });
+    if (!os) throw new Error("Ordem de Servi\xE7o n\xE3o encontrada");
+    const fornecedor = await prisma.fornecedor.findUnique({
+      where: { id: parseInt(fornecedorId) }
+    });
+    if (!fornecedor || !fornecedor.email) {
+      throw new Error("Fornecedor n\xE3o encontrado ou sem e-mail cadastrado");
+    }
+    const pecasTable = os.itens.map((item) => `
+            <tr>
+                <td style="border: 1px solid #ddd; padding: 8px;">${item.peca.codigo}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">${item.peca.descricao}</td>
+                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${item.peca.quantidade}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">${item.peca.material || "-"}</td>
+            </tr>
+        `).join("");
+    const attachments = [];
+    for (const item of os.itens) {
+      if (item.peca.anexos && item.peca.anexos.length > 0) {
+        for (const anexo of item.peca.anexos) {
+          const filePath = path.join(process.cwd(), "public", anexo.url);
+          if (fs.existsSync(filePath)) {
+            attachments.push({
+              filename: anexo.nome,
+              path: filePath
+            });
+          }
+        }
+      }
+    }
+    const transporter = nodemailer.createTransport({
+      host: process.env.EMAIL_HOST,
+      port: parseInt(process.env.EMAIL_PORT || "587"),
+      secure: false,
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASSWORD
+      }
+    });
+    const mailOptions = {
+      from: `"${process.env.EMAIL_FROM_NAME || "Sistema SOMEH"}" <${process.env.EMAIL_USER}>`,
+      to: fornecedor.email,
+      subject: `Solicita\xE7\xE3o de Or\xE7amento - OS ${os.numero} - OP ${os.op.numeroOP}`,
+      html: `
+                <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+                    <h2>Solicita\xE7\xE3o de Or\xE7amento</h2>
+                    <p>Ol\xE1 <strong>${fornecedor.contato || fornecedor.nome}</strong>,</p>
+                    <p>Gostar\xEDamos de solicitar um or\xE7amento para os itens listados abaixo, referentes \xE0 <strong>OS ${os.numero}</strong> da <strong>OP ${os.op.numeroOP}</strong>.</p>
+                    
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+                        <thead>
+                            <tr style="background-color: #f2f2f2;">
+                                <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">C\xF3digo</th>
+                                <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Descri\xE7\xE3o</th>
+                                <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">Qtd</th>
+                                <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Material</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${pecasTable}
+                        </tbody>
+                    </table>
+                    
+                    <p style="margin-top: 20px;">Os desenhos t\xE9cnicos seguem em anexo para an\xE1lise.</p>
+                    <p>Ficamos no aguardo de sua proposta t\xE9cnica e comercial.</p>
+                    <br>
+                    <p>Atenciosamente,</p>
+                    <p><strong>Departamento de Compras/PCP</strong><br>Sistema SOMEH</p>
+                </div>
+            `,
+      attachments
+    };
+    await transporter.sendMail(mailOptions);
+    return { success: true, message: "Solicita\xE7\xE3o enviada com sucesso!" };
+  } catch (error) {
+    console.error("\u274C Erro ao enviar e-mail de or\xE7amento:", error);
+    throw createError({
+      statusCode: 500,
+      statusMessage: "Falha ao enviar e-mail: " + error.message
+    });
+  }
+});
+
+const budgetEmail_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: budgetEmail_post
+}, Symbol.toStringTag, { value: 'Module' }));
+
 const ordensServico_get = defineEventHandler(async (event) => {
   const prisma = event.context.prisma;
   const query = getQuery$1(event);
@@ -29049,10 +29311,145 @@ const _id__get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty
   default: _id__get
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const processos = defineEventHandler(async (event) => {
-  const pecaId = getRouterParam(event, "pecaId");
-  const method = event.method;
+const _id__delete$2 = defineEventHandler(async (event) => {
+  const id = getRouterParam(event, "id");
+  if (!id) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: "ID da pe\xE7a n\xE3o informado"
+    });
+  }
+  const prisma = event.context.prisma;
+  try {
+    console.log(`\u{1F5D1}\uFE0F Iniciando exclus\xE3o da pe\xE7a ${id}`);
+    const anexos = await prisma.pecaAnexo.findMany({
+      where: { pecaId: parseInt(id) }
+    });
+    for (const anexo of anexos) {
+      const filePath = path.join(process.cwd(), "public", anexo.url);
+      console.log(`\u{1F4C2} Removendo arquivo: ${filePath}`);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+    await prisma.peca.delete({
+      where: { id: parseInt(id) }
+    });
+    console.log(`\u2705 Pe\xE7a ${id} exclu\xEDda com sucesso`);
+    return { success: true };
+  } catch (error) {
+    if (error.statusCode && error.statusCode < 500) throw error;
+    console.error("\u274C Erro ao excluir pe\xE7a:", error);
+    throw createError({
+      statusCode: 500,
+      message: "Erro ao excluir a pe\xE7a do sistema"
+    });
+  }
+});
+
+const _id__delete$3 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: _id__delete$2
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const _id__patch = defineEventHandler(async (event) => {
+  const id = getRouterParam(event, "id");
+  if (!id) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: "ID da pe\xE7a n\xE3o informado"
+    });
+  }
+  const prisma = event.context.prisma;
+  const body = await readBody(event);
+  try {
+    console.log(`\u{1F4DD} Atualizando pe\xE7a ${id}:`, body);
+    const updatedPeca = await prisma.peca.update({
+      where: { id: parseInt(id) },
+      data: {
+        codigo: body.codigo,
+        descricao: body.descricao,
+        quantidade: body.quantidade !== void 0 && body.quantidade !== null ? parseInt(body.quantidade) : void 0,
+        material: body.material,
+        status: body.status
+      }
+    });
+    console.log(`\u2705 Pe\xE7a ${id} atualizada com sucesso`);
+    return updatedPeca;
+  } catch (error) {
+    if (error.statusCode && error.statusCode < 500) throw error;
+    console.error("\u274C Erro ao atualizar pe\xE7a:", error);
+    throw createError({
+      statusCode: 500,
+      message: "Erro ao atualizar os dados da pe\xE7a"
+    });
+  }
+});
+
+const _id__patch$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: _id__patch
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const desenho_post = defineEventHandler(async (event) => {
+  const pecaId = getRouterParam(event, "id");
   if (!pecaId) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: "ID da pe\xE7a n\xE3o informado"
+    });
+  }
+  const prisma = event.context.prisma;
+  const formData = await readMultipartFormData(event);
+  if (!formData || formData.length === 0) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: "Nenhum arquivo enviado"
+    });
+  }
+  const file = formData.find((item) => item.name === "file");
+  if (!file) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: "Arquivo n\xE3o encontrado"
+    });
+  }
+  try {
+    const uploadDir = path.join(process.cwd(), "public", "uploads", "desenhos");
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    const fileExt = path.extname(file.filename || "");
+    const fileName = `desenho_${pecaId}_${Date.now()}${fileExt}`;
+    const filePath = path.join(uploadDir, fileName);
+    fs.writeFileSync(filePath, file.data);
+    const url = `/uploads/desenhos/${fileName}`;
+    const anexo = await prisma.pecaAnexo.create({
+      data: {
+        pecaId: parseInt(pecaId),
+        nome: file.filename || "Anexo",
+        url
+      }
+    });
+    return { success: true, anexo };
+  } catch (error) {
+    console.error("\u274C Erro ao salvar desenho:", error);
+    throw createError({
+      statusCode: 500,
+      statusMessage: "Erro ao salvar o arquivo: " + error.message
+    });
+  }
+});
+
+const desenho_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: desenho_post
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const processos = defineEventHandler(async (event) => {
+  const id = getRouterParam(event, "id");
+  const method = event.method;
+  if (!id) {
     throw createError({
       statusCode: 400,
       statusMessage: "ID da pe\xE7a n\xE3o informado"
@@ -29061,13 +29458,16 @@ const processos = defineEventHandler(async (event) => {
   const prisma = event.context.prisma;
   if (method === "GET") {
     try {
+      console.log(`\u{1F50D} Buscando processos para a pe\xE7a ${id}`);
       const processos = await prisma.processoPeca.findMany({
-        where: { pecaId: parseInt(pecaId) },
+        where: { pecaId: parseInt(id) },
         include: { ordemServico: true },
         orderBy: { sequencia: "asc" }
       });
+      console.log(`\u2705 Sucesso: ${processos.length} processos encontrados`);
       return processos;
     } catch (error) {
+      console.error("\u274C Erro ao buscar processos:", error);
       throw createError({
         statusCode: 500,
         statusMessage: "Erro ao buscar processos da pe\xE7a"
@@ -29077,29 +29477,38 @@ const processos = defineEventHandler(async (event) => {
   if (method === "POST") {
     const body = await readBody(event);
     const { processos } = body;
+    console.log(`\u{1F4E6} Recebendo ${(processos == null ? void 0 : processos.length) || 0} processos para a pe\xE7a ${id}`);
     try {
       return await prisma.$transaction(async (tx) => {
+        const sentIds = processos.filter((p) => p.id).map((p) => p.id);
+        await tx.processoPeca.deleteMany({
+          where: {
+            pecaId: parseInt(id),
+            id: { notIn: sentIds }
+          }
+        });
         const results = [];
         for (let i = 0; i < processos.length; i++) {
           const p = processos[i];
+          let fId = p.fornecedorId;
+          if (fId === "" || fId === void 0) fId = null;
+          if (fId !== null) fId = parseInt(fId);
           const proc = await tx.processoPeca.upsert({
             where: { id: p.id || -1 },
             update: {
               nome: p.nome,
               sequencia: i + 1,
               status: p.status || "NAO_INICIADO",
-              fornecedor: p.fornecedor,
-              custo: p.custo,
-              tempoEstimado: p.tempoEstimado
+              fornecedorId: fId,
+              tempoEstimado: p.tempoEstimado ? parseInt(p.tempoEstimado) : null
             },
             create: {
-              pecaId: parseInt(pecaId),
+              pecaId: parseInt(id),
               nome: p.nome,
               sequencia: i + 1,
               status: p.status || "NAO_INICIADO",
-              fornecedor: p.fornecedor,
-              custo: p.custo,
-              tempoEstimado: p.tempoEstimado
+              fornecedorId: fId,
+              tempoEstimado: p.tempoEstimado ? parseInt(p.tempoEstimado) : null
             }
           });
           results.push(proc);
@@ -29119,6 +29528,114 @@ const processos = defineEventHandler(async (event) => {
 const processos$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
   __proto__: null,
   default: processos
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const reservar_post = defineEventHandler(async (event) => {
+  const id = getRouterParam(event, "id");
+  if (!id) {
+    throw createError({
+      statusCode: 400,
+      message: "ID da pe\xE7a n\xE3o informado"
+    });
+  }
+  const prisma = event.context.prisma;
+  try {
+    const body = await readBody(event);
+    const { quantidade } = body;
+    const peca = await prisma.peca.findUnique({
+      where: { id: parseInt(id) }
+    });
+    if (!peca) {
+      throw createError({
+        statusCode: 404,
+        message: "Pe\xE7a n\xE3o encontrada"
+      });
+    }
+    const itemEstoque = await prisma.estoque.findUnique({
+      where: { codigo: peca.codigo }
+    });
+    if (!itemEstoque || itemEstoque.quantidade < (quantidade || peca.quantidade)) {
+      throw createError({
+        statusCode: 400,
+        message: "Saldo insuficiente no estoque"
+      });
+    }
+    const qtdReserva = quantidade || peca.quantidade;
+    return await prisma.$transaction(async (tx) => {
+      await tx.estoqueMovimentacao.create({
+        data: {
+          estoqueId: itemEstoque.id,
+          tipo: "SAIDA",
+          quantidade: qtdReserva,
+          motivo: `Reserva para OP #${peca.opId} (Pe\xE7a: ${peca.codigo})`,
+          opId: peca.opId,
+          usuarioId: 1
+        }
+      });
+      await tx.estoque.update({
+        where: { id: itemEstoque.id },
+        data: { quantidade: { decrement: qtdReserva } }
+      });
+      const updatedPeca = await tx.peca.update({
+        where: { id: peca.id },
+        data: { status: "EM_ESTOQUE" }
+      });
+      return updatedPeca;
+    });
+  } catch (error) {
+    if (error.statusCode && error.statusCode < 500) throw error;
+    console.error("\u274C Erro ao reservar estoque:", error);
+    throw createError({
+      statusCode: 500,
+      message: "Erro ao processar reserva: " + error.message
+    });
+  }
+});
+
+const reservar_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: reservar_post
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const _id__delete = defineEventHandler(async (event) => {
+  const id = getRouterParam(event, "id");
+  if (!id) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: "ID do anexo n\xE3o informado"
+    });
+  }
+  const prisma = event.context.prisma;
+  try {
+    const anexo = await prisma.pecaAnexo.findUnique({
+      where: { id: parseInt(id) }
+    });
+    if (!anexo) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: "Anexo n\xE3o encontrado"
+      });
+    }
+    const filePath = path.join(process.cwd(), "public", anexo.url);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+    await prisma.pecaAnexo.delete({
+      where: { id: parseInt(id) }
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("\u274C Erro ao deletar anexo:", error);
+    throw createError({
+      statusCode: 500,
+      statusMessage: "Erro ao deletar anexo: " + error.message
+    });
+  }
+});
+
+const _id__delete$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: _id__delete
 }, Symbol.toStringTag, { value: 'Module' }));
 
 const prisma$3 = new PrismaClient();

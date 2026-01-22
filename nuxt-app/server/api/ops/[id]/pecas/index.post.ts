@@ -13,7 +13,24 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event)
 
     try {
-        // Verificar se o código já existe no estoque para marcar temNoEstoque
+        // 1. Verificar se a peça já existe nesta OP (Evitar erro de unique constraint)
+        const existePeca = await prisma.peca.findUnique({
+            where: {
+                opId_codigo: {
+                    opId: parseInt(opId),
+                    codigo: body.codigo
+                }
+            }
+        })
+
+        if (existePeca) {
+            throw createError({
+                statusCode: 409,
+                message: `Já existe uma peça cadastrada com o código "${body.codigo}" nesta lista (BOM).`
+            })
+        }
+
+        // 2. Verificar se o código já existe no estoque para marcar temNoEstoque
         const estoqueItem = await prisma.estoque.findUnique({
             where: { codigo: body.codigo }
         })
@@ -31,10 +48,13 @@ export default defineEventHandler(async (event) => {
 
         return peca
     } catch (error: any) {
+        // Se já for um erro do H3 (como o 409 acima), apenas repassa
+        if (error.statusCode && error.statusCode < 500) throw error
+
         console.error('❌ Erro ao inserir peça manualmente:', error)
         throw createError({
             statusCode: 500,
-            statusMessage: 'Erro ao inserir peça: ' + error.message
+            message: 'Erro ao inserir peça: ' + error.message
         })
     }
 })

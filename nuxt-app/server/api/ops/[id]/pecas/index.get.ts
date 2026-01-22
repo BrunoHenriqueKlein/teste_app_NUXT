@@ -16,6 +16,7 @@ export default defineEventHandler(async (event) => {
             where: { opId: parseInt(opId) },
             include: {
                 processos: true,
+                anexos: true,
                 _count: {
                     select: { processos: true }
                 }
@@ -23,7 +24,23 @@ export default defineEventHandler(async (event) => {
             orderBy: { codigo: 'asc' }
         })
 
-        return pecas
+        // 2. Buscar saldos de estoque para os códigos dessas peças
+        const codigos = pecas.map((p: any) => p.codigo)
+        const estoques = await prisma.estoque.findMany({
+            where: { codigo: { in: codigos } }
+        })
+
+        // 3. Cruzar dados
+        const pecasComEstoque = pecas.map((peca: any) => {
+            const itemEstoque = estoques.find((e: any) => e.codigo === peca.codigo)
+            return {
+                ...peca,
+                temNoEstoque: !!itemEstoque && itemEstoque.quantidade > 0,
+                saldoEstoque: itemEstoque ? itemEstoque.quantidade : 0
+            }
+        })
+
+        return pecasComEstoque
     } catch (error) {
         console.error('❌ Erro ao buscar peças:', error)
         throw createError({

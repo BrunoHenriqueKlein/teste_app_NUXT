@@ -100,6 +100,14 @@
             @click="printOS(item)"
           ></v-btn>
           <v-btn
+            icon="mdi-email-send"
+            variant="text"
+            size="small"
+            color="success"
+            title="Solicitar Orçamento"
+            @click="openBudgetDialog(item)"
+          ></v-btn>
+          <v-btn
             icon="mdi-eye"
             variant="text"
             size="small"
@@ -110,6 +118,45 @@
         </template>
       </v-data-table>
     </v-card>
+
+    <!-- Diálogo de Solicitação de Orçamento -->
+    <v-dialog v-model="dialogBudget.show" max-width="500px">
+      <v-card>
+        <v-card-title class="pa-4 bg-success text-white">Solicitar Orçamento</v-card-title>
+        <v-card-text class="pa-4">
+          <p class="mb-4">Selecione o fornecedor para enviar a solicitação da <strong>OS {{ dialogBudget.os?.numero }}</strong>.</p>
+          <v-select
+            v-model="dialogBudget.fornecedorId"
+            :items="suggestedFornecedores"
+            item-title="nome"
+            item-value="id"
+            label="Escolha o Fornecedor"
+            variant="outlined"
+            placeholder="Selecione um fornecedor"
+            :rules="[v => !!v || 'Campo obrigatório']"
+            :hint="dialogBudget.showAll ? 'Mostrando todos os fornecedores' : 'Mostrando apenas fornecedores para ' + dialogBudget.os?.tipo"
+            persistent-hint
+          >
+            <template v-slot:append-item v-if="!dialogBudget.showAll">
+              <v-divider class="mb-2"></v-divider>
+              <v-btn block variant="text" size="small" @click="dialogBudget.showAll = true">
+                Ver todos os fornecedores
+              </v-btn>
+            </template>
+          </v-select>
+          <div v-if="selectedSupplierEmail" class="text-caption text-grey mt-1">
+            <v-icon size="x-small" icon="mdi-email"></v-icon> {{ selectedSupplierEmail }}
+          </div>
+        </v-card-text>
+        <v-card-actions class="pa-4">
+          <v-spacer></v-spacer>
+          <v-btn variant="text" @click="dialogBudget.show = false">Cancelar</v-btn>
+          <v-btn color="success" variant="flat" :loading="sendingBudget" :disabled="!dialogBudget.fornecedorId" @click="sendBudgetEmail">
+            Enviar por E-mail
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
     <!-- Diálogo de Visualização/Impressão -->
     <v-dialog v-model="dialogOS.show" fullscreen transition="dialog-bottom-transition">
@@ -190,11 +237,14 @@ const filters = ref({
   status: null
 })
 
-const dialogOS = ref({
+const dialogBudget = ref({
   show: false,
-  data: null
+  os: null,
+  fornecedorId: null
 })
 
+const fornecedores = ref([])
+const sendingBudget = ref(false)
 const snackbar = ref({ show: false, text: '', color: 'success' })
 
 const headers = [
@@ -205,6 +255,20 @@ const headers = [
   { title: 'Volume', key: 'itens', align: 'center' },
   { title: 'Ações', key: 'acoes', align: 'center', sortable: false }
 ]
+
+const selectedSupplierEmail = computed(() => {
+  const f = fornecedores.value.find(forn => forn.id === dialogBudget.value.fornecedorId)
+  return f?.email || ''
+})
+
+const suggestedFornecedores = computed(() => {
+  if (dialogBudget.value.showAll || !dialogBudget.value.os) return fornecedores.value
+  
+  const type = dialogBudget.value.os.tipo.toLowerCase()
+  return fornecedores.value.filter(f => {
+    return f.categorias?.some(cat => cat.toLowerCase() === type)
+  })
+})
 
 const tiposProcesso = ['USINAGEM', 'PINTURA', 'SOLDA', 'CALDEIRARIA', 'MONTAGEM']
 
@@ -220,6 +284,42 @@ const loadOrdens = async () => {
     showSnackbar('Erro ao carregar ordens de serviço', 'error')
   } finally {
     loading.value = false
+  }
+}
+
+const loadFornecedores = async () => {
+  try {
+    fornecedores.value = await $fetch('/api/fornecedores')
+  } catch (error) {
+    console.error('Erro ao buscar fornecedores')
+  }
+}
+
+const openBudgetDialog = (os) => {
+  dialogBudget.value = {
+    show: true,
+    os,
+    fornecedorId: null,
+    showAll: false
+  }
+}
+
+const sendBudgetEmail = async () => {
+  sendingBudget.value = true
+  try {
+    await $fetch('/api/pcp/budget-email', {
+      method: 'POST',
+      body: {
+        osId: dialogBudget.value.os.id,
+        fornecedorId: dialogBudget.value.fornecedorId
+      }
+    })
+    showSnackbar('Solicitação de orçamento enviada com sucesso!')
+    dialogBudget.value.show = false
+  } catch (error) {
+    showSnackbar('Erro ao enviar e-mail: ' + (error.data?.statusMessage || error.message), 'error')
+  } finally {
+    sendingBudget.value = false
   }
 }
 
@@ -259,7 +359,10 @@ const showSnackbar = (text, color = 'success') => {
   snackbar.value = { show: true, text, color }
 }
 
-onMounted(loadOrdens)
+onMounted(() => {
+  loadOrdens()
+  loadFornecedores()
+})
 </script>
 
 <style scoped>
