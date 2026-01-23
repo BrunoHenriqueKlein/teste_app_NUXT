@@ -29,6 +29,7 @@
           </v-card-title>
           <v-data-table :headers="headersSimple" :items="categorias" :loading="loading">
             <template v-slot:item.acoes="{ item }">
+              <v-btn icon="mdi-pencil" variant="text" size="small" color="primary" @click="editItem('categoria', item)"></v-btn>
               <v-btn icon="mdi-delete" variant="text" size="small" color="error" @click="deleteItem('categoria', item)"></v-btn>
             </template>
           </v-data-table>
@@ -42,8 +43,9 @@
             Processos Superiores (OP)
             <v-btn color="primary" prepend-icon="mdi-plus" @click="openDialog('processo-op')">Novo Processo</v-btn>
           </v-card-title>
-          <v-data-table :headers="headersSimple" :items="processosOp" :loading="loading">
+          <v-data-table :headers="headersProcessoOp" :items="processosOp" :loading="loading">
             <template v-slot:item.acoes="{ item }">
+               <v-btn icon="mdi-pencil" variant="text" size="small" color="primary" @click="editItem('processo-op', item)"></v-btn>
               <v-btn icon="mdi-delete" variant="text" size="small" color="error" @click="deleteItem('processo-op', item)"></v-btn>
             </template>
           </v-data-table>
@@ -57,8 +59,9 @@
             Processos de Fabricação (Peças)
             <v-btn color="primary" prepend-icon="mdi-plus" @click="openDialog('processo-peca')">Novo Processo</v-btn>
           </v-card-title>
-          <v-data-table :headers="headersSimple" :items="processosPeca" :loading="loading">
+          <v-data-table :headers="headersProcessoPeca" :items="processosPeca" :loading="loading">
             <template v-slot:item.acoes="{ item }">
+              <v-btn icon="mdi-pencil" variant="text" size="small" color="primary" @click="editItem('processo-peca', item)"></v-btn>
               <v-btn icon="mdi-delete" variant="text" size="small" color="error" @click="deleteItem('processo-peca', item)"></v-btn>
             </template>
           </v-data-table>
@@ -81,6 +84,7 @@
               </div>
             </template>
             <template v-slot:item.acoes="{ item }">
+              <v-btn icon="mdi-pencil" variant="text" size="small" color="primary" @click="editTemplate(item)"></v-btn>
               <v-btn icon="mdi-delete" variant="text" size="small" color="error" @click="deleteItem('template', item)"></v-btn>
             </template>
           </v-data-table>
@@ -95,18 +99,30 @@
         <v-card-text>
           <v-text-field v-model="dialog.nome" label="Nome" variant="outlined"></v-text-field>
           <v-textarea v-model="dialog.descricao" label="Descrição (Opcional)" variant="outlined" rows="2"></v-textarea>
-          <v-text-field 
+            <v-text-field 
             v-if="dialog.type === 'processo-op'" 
             v-model.number="dialog.prazoEstimadoPadrao" 
             label="Prazo Estimado Padrão (Dias)" 
             type="number" 
             variant="outlined"
           ></v-text-field>
+          <v-autocomplete
+            v-if="dialog.type === 'processo-op'"
+            v-model="dialog.responsavelId"
+            :items="usuarios"
+            item-title="name"
+            item-value="id"
+            label="Responsável Padrão"
+            variant="outlined"
+            clearable
+          ></v-autocomplete>
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
           <v-btn variant="text" @click="dialog.show = false">Cancelar</v-btn>
-          <v-btn color="primary" variant="flat" :loading="saving" @click="saveSimple">Salvar</v-btn>
+          <v-btn color="primary" variant="flat" :loading="saving" @click="saveSimple">
+            {{ dialog.id ? 'Atualizar' : 'Salvar' }}
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -120,7 +136,7 @@
           
           <div class="text-subtitle-1 mb-2 font-weight-bold">Selecione os Processos (em ordem):</div>
           <v-list density="compact" class="border rounded px-2">
-            <v-list-item v-for="(proc, index) in procesosOp" :key="proc.id">
+            <v-list-item v-for="(proc, index) in processosOp" :key="proc.id">
               <template v-slot:prepend>
                 <v-checkbox-btn v-model="dialogTemplate.selecionados" :value="proc"></v-checkbox-btn>
               </template>
@@ -140,7 +156,9 @@
         <v-card-actions>
           <v-spacer></v-spacer>
           <v-btn variant="text" @click="dialogTemplate.show = false">Cancelar</v-btn>
-          <v-btn color="primary" variant="flat" :loading="saving" @click="saveTemplate">Criar Template</v-btn>
+          <v-btn color="primary" variant="flat" :loading="saving" @click="saveTemplate">
+            {{ dialogTemplate.id ? 'Atualizar Template' : 'Criar Template' }}
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -158,6 +176,7 @@ const categorias = ref([])
 const processosOp = ref([])
 const processosPeca = ref([])
 const templates = ref([])
+const usuarios = ref([])
 
 const dialog = ref({ show: false, type: '', title: '', nome: '' })
 const dialogTemplate = ref({ show: false, nome: '', selecionados: [] })
@@ -165,6 +184,21 @@ const snackbar = ref({ show: false, text: '', color: 'success' })
 
 const headersSimple = [
   { title: 'Nome', key: 'nome', sortable: true },
+  { title: 'Descrição', key: 'descricao', sortable: true },
+  { title: 'Ações', key: 'acoes', align: 'end', sortable: false }
+]
+
+const headersProcessoOp = [
+  { title: 'Nome', key: 'nome', sortable: true },
+  { title: 'Descrição', key: 'descricao', sortable: true },
+  { title: 'Prazo Padrão', key: 'prazoEstimadoPadrao', sortable: true },
+  { title: 'Responsável', key: 'responsavel.name', sortable: true },
+  { title: 'Ações', key: 'acoes', align: 'end', sortable: false }
+]
+
+const headersProcessoPeca = [
+  { title: 'Nome', key: 'nome', sortable: true },
+  { title: 'Descrição', key: 'descricao', sortable: true },
   { title: 'Ações', key: 'acoes', align: 'end', sortable: false }
 ]
 
@@ -177,16 +211,18 @@ const headersTemplate = [
 const loadData = async () => {
   loading.value = true
   try {
-    const [cat, pop, ppec, temp] = await Promise.all([
+    const [cat, pop, ppec, temp, userList] = await Promise.all([
       $fetch('/api/configuracoes/categorias-fornecedor'),
       $fetch('/api/configuracoes/processos-padrao'),
       $fetch('/api/configuracoes/processos-peca'),
-      $fetch('/api/configuracoes/templates-op')
+      $fetch('/api/configuracoes/templates-op'),
+      $fetch('/api/admin/users')
     ])
     categorias.value = cat
     processosOp.value = pop
     processosPeca.value = ppec
     templates.value = temp
+    usuarios.value = userList
   } catch (error) {
     showSnackbar('Erro ao carregar configurações', 'error')
   } finally {
@@ -200,11 +236,38 @@ const openDialog = (type) => {
     'processo-op': 'Processo Superior (OP)',
     'processo-peca': 'Processo de Peça'
   }
-  dialog.value = { show: true, type, title: titles[type], nome: '', descricao: '', prazoEstimadoPadrao: null }
+  dialog.value = { show: true, type, title: titles[type], id: null, nome: '', descricao: '', prazoEstimadoPadrao: null, responsavelId: null }
+}
+
+const editItem = (type, item) => {
+  const titles = {
+    'categoria': 'Categoria de Fornecedor',
+    'processo-op': 'Processo Superior (OP)',
+    'processo-peca': 'Processo de Peça'
+  }
+  dialog.value = { 
+    show: true, 
+    type, 
+    title: titles[type], 
+    id: item.id, 
+    nome: item.nome, 
+    descricao: item.descricao || '', 
+    prazoEstimadoPadrao: item.prazoEstimadoPadrao || null,
+    responsavelId: item.responsavelId || null
+  }
 }
 
 const openTemplateDialog = () => {
-  dialogTemplate.value = { show: true, nome: '', selecionados: [] }
+  dialogTemplate.value = { show: true, id: null, nome: '', selecionados: [] }
+}
+
+const editTemplate = (item) => {
+  dialogTemplate.value = { 
+    show: true, 
+    id: item.id, 
+    nome: item.nome, 
+    selecionados: item.processos.map(p => p.processo) 
+  }
 }
 
 const saveSimple = async () => {
@@ -217,14 +280,16 @@ const saveSimple = async () => {
       'processo-peca': 'processos-peca'
     }
     await $fetch(`/api/configuracoes/${endpoints[dialog.value.type]}`, {
-      method: 'POST',
+      method: dialog.value.id ? 'PUT' : 'POST',
       body: { 
+        id: dialog.value.id,
         nome: dialog.value.nome,
         descricao: dialog.value.descricao,
-        prazoEstimadoPadrao: dialog.value.prazoEstimadoPadrao
+        prazoEstimadoPadrao: dialog.value.prazoEstimadoPadrao,
+        responsavelId: dialog.value.responsavelId
       }
     })
-    showSnackbar('Salvo com sucesso!')
+    showSnackbar(dialog.value.id ? 'Atualizado com sucesso!' : 'Salvo com sucesso!')
     dialog.value.show = false
     await loadData()
   } catch (error) {
@@ -235,17 +300,18 @@ const saveSimple = async () => {
 }
 
 const saveTemplate = async () => {
-  if (!dialogTemplate.value.nome || dialogTemplate.value.selecionados.length === 0) return
+  if (!dialogTemplate.value.nome) return
   saving.value = true
   try {
     await $fetch('/api/configuracoes/templates-op', {
-      method: 'POST',
+      method: dialogTemplate.value.id ? 'PUT' : 'POST',
       body: { 
+        id: dialogTemplate.value.id,
         nome: dialogTemplate.value.nome,
         processos: dialogTemplate.value.selecionados 
       }
     })
-    showSnackbar('Template criado com sucesso!')
+    showSnackbar(dialogTemplate.value.id ? 'Template atualizado!' : 'Template criado!')
     dialogTemplate.value.show = false
     await loadData()
   } catch (error) {

@@ -21,7 +21,7 @@ export default defineEventHandler(async (event) => {
         const { nome, processos } = body
 
         // Criar template e itens em uma transação
-        return await prisma.$transaction(async (tx) => {
+        return await prisma.$transaction(async (tx: any) => {
             const template = await tx.configTemplateOP.create({
                 data: { nome }
             })
@@ -38,6 +38,40 @@ export default defineEventHandler(async (event) => {
 
             return tx.configTemplateOP.findUnique({
                 where: { id: template.id },
+                include: { processos: { include: { processo: true } } }
+            })
+        })
+    }
+
+    if (method === 'PUT') {
+        const body = await readBody(event)
+        const { id, nome, processos } = body
+
+        return await prisma.$transaction(async (tx: any) => {
+            // Atualizar nome do template
+            const template = await tx.configTemplateOP.update({
+                where: { id },
+                data: { nome }
+            })
+
+            // Remover itens antigos
+            await tx.configTemplateOPItem.deleteMany({
+                where: { templateId: id }
+            })
+
+            // Criar novos itens
+            if (processos && processos.length > 0) {
+                await tx.configTemplateOPItem.createMany({
+                    data: procesos.map((p: any, idx: number) => ({
+                        templateId: id,
+                        processoId: p.id,
+                        sequencia: idx + 1
+                    }))
+                })
+            }
+
+            return tx.configTemplateOP.findUnique({
+                where: { id },
                 include: { processos: { include: { processo: true } } }
             })
         })

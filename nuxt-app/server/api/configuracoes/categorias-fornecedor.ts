@@ -13,7 +13,21 @@ export default defineEventHandler(async (event) => {
     if (method === 'POST') {
         const body = await readBody(event)
         return await prisma.configCategoriaFornecedor.create({
-            data: { nome: body.nome }
+            data: {
+                nome: body.nome,
+                descricao: body.descricao
+            }
+        })
+    }
+
+    if (method === 'PUT') {
+        const body = await readBody(event)
+        return await prisma.configCategoriaFornecedor.update({
+            where: { id: body.id },
+            data: {
+                nome: body.nome,
+                descricao: body.descricao
+            }
         })
     }
 

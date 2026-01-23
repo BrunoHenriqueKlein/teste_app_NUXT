@@ -98,6 +98,7 @@ model User {
   createdOPs           OP[]                  @relation("OP_CriadaPor")
   responsibleOPs       OP[]                  @relation("OP_Responsavel")
   processoHistorico    ProcessoHistorico[]   @relation("ProcessoHistorico_Usuario")
+  configProcessosPadrao ConfigProcessoPadrao[]
   userModules          UserModule[]
   resetToken        String?   @map("reset_token")
   resetTokenExpiry  DateTime? @map("reset_token_expiry")
@@ -382,8 +383,9 @@ enum SuprimentoStatus {
 
 // Modelos de Configuração e Padronização
 model ConfigCategoriaFornecedor {
-  id    Int    @id @default(autoincrement())
-  nome  String @unique
+  id        Int     @id @default(autoincrement())
+  nome      String  @unique
+  descricao String?
 
   @@map("config_categorias_fornecedor")
 }
@@ -393,6 +395,8 @@ model ConfigProcessoPadrao {
   nome                String                 @unique
   descricao           String?
   prazoEstimadoPadrao Int?                   @map("prazo_estimado_padrao")
+  responsavelId       Int?                   @map("responsavel_id")
+  responsavel         User?                  @relation(fields: [responsavelId], references: [id])
   itens               ConfigTemplateOPItem[]
 
   @@map("config_processos_padrao")

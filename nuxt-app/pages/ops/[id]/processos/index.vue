@@ -609,7 +609,7 @@ const showTemplateDialog = ref(false)
 const aplicandoTemplate = ref(false)
 const editingProcesso = ref(null)
 const usuarios = ref([])
-const selectedTemplate = ref('PADRAO_MAQUINA')
+const selectedTemplate = ref(null)
 
 // ✅ VARIÁVEIS PARA CÁLCULO AUTOMÁTICO
 const dataInicioOP = ref('')
@@ -847,13 +847,13 @@ const aplicarTemplate = async () => {
     const result = await $fetch(`/api/ops/${route.params.id}/processos/template`, {
       method: 'POST',
       body: {
-        templateName: selectedTemplate.value
+        templateId: selectedTemplate.value
       }
     })
     
     await loadProcessos()
     showTemplateDialog.value = false
-    selectedTemplate.value = 'PADRAO_MAQUINA'
+    selectedTemplate.value = null
     
     alert(`✅ ${result.message}`)
   } catch (error) {

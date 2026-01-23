@@ -61,11 +61,12 @@ export default defineEventHandler(async (event) => {
           nome: pData.nome,
           descricao: pData.descricao,
           sequencia: maiorSequencia + index + 1,
-          status: 'PENDENTE',
+          status: 'NAO_INICIADO',
           progresso: 0,
           prazoEstimado: prazo,
           dataInicioPrevista: dataInicioPrevista,
-          dataTerminoPrevista: dataTerminoPrevista
+          dataTerminoPrevista: dataTerminoPrevista,
+          responsavelId: pData.responsavelId // ✅ Copiar responsável padrão
         }
       })
       processosCriados.push(novoProcesso)

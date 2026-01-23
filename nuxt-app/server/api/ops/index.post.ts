@@ -61,7 +61,7 @@ export default defineEventHandler(async (event) => {
         }
       })
 
-      // Se houver template, carregar processos e criar na OP
+      // Se houver template, carregar processos e criar na OP com cálculo de datas base
       if (body.templateId) {
         const template = await tx.configTemplateOP.findUnique({
           where: { id: parseInt(body.templateId) },
@@ -69,13 +69,37 @@ export default defineEventHandler(async (event) => {
         })
 
         if (template && template.processos.length > 0) {
-          await tx.oPProcesso.createMany({
-            data: template.processos.map((tp: any) => ({
-              opId: newOp.id,
-              nome: tp.processo.nome,
-              status: 'PENDENTE'
-            }))
-          })
+          let dataInicioAtual = new Date(newOp.dataPedido)
+          dataInicioAtual.setHours(0, 0, 0, 0)
+
+          for (const [index, tp] of template.processos.entries()) {
+            const pData = tp.processo
+            const prazo = pData.prazoEstimadoPadrao || 1
+
+            const dataInicioPrevista = new Date(dataInicioAtual)
+            const dataTerminoPrevista = new Date(dataInicioPrevista)
+            dataTerminoPrevista.setDate(dataTerminoPrevista.getDate() + prazo - 1)
+            dataTerminoPrevista.setHours(0, 0, 0, 0)
+
+            await tx.oPProcesso.create({
+              data: {
+                opId: newOp.id,
+                nome: pData.nome,
+                descricao: pData.descricao,
+                sequencia: index + 1,
+                status: 'NAO_INICIADO',
+                progresso: 0,
+                prazoEstimado: prazo,
+                dataInicioPrevista: dataInicioPrevista,
+                dataTerminoPrevista: dataTerminoPrevista,
+                responsavelId: pData.responsavelId
+              }
+            })
+
+            dataInicioAtual = new Date(dataTerminoPrevista)
+            dataInicioAtual.setDate(dataInicioAtual.getDate() + 1)
+            dataInicioAtual.setHours(0, 0, 0, 0)
+          }
         }
       }
 

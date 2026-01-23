@@ -6,6 +6,7 @@ export default defineEventHandler(async (event) => {
 
     if (method === 'GET') {
         return await prisma.configProcessoPadrao.findMany({
+            include: { responsavel: { select: { id: true, name: true } } },
             orderBy: { nome: 'asc' }
         })
     }
@@ -16,8 +17,24 @@ export default defineEventHandler(async (event) => {
             data: {
                 nome: body.nome,
                 descricao: body.descricao,
-                prazoEstimadoPadrao: body.prazoEstimadoPadrao ? parseInt(body.prazoEstimadoPadrao) : null
-            }
+                prazoEstimadoPadrao: body.prazoEstimadoPadrao ? parseInt(body.prazoEstimadoPadrao) : null,
+                responsavelId: body.responsavelId ? parseInt(body.responsavelId) : null
+            },
+            include: { responsavel: { select: { id: true, name: true } } }
+        })
+    }
+
+    if (method === 'PUT') {
+        const body = await readBody(event)
+        return await prisma.configProcessoPadrao.update({
+            where: { id: body.id },
+            data: {
+                nome: body.nome,
+                descricao: body.descricao,
+                prazoEstimadoPadrao: body.prazoEstimadoPadrao ? parseInt(body.prazoEstimadoPadrao) : null,
+                responsavelId: body.responsavelId ? parseInt(body.responsavelId) : null
+            },
+            include: { responsavel: { select: { id: true, name: true } } }
         })
     }
 

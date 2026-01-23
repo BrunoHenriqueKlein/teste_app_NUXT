@@ -61,7 +61,7 @@
                     <v-list-item-title>Meu Perfil</v-list-item-title>
                   </v-list-item>
 
-                  <v-list-item @click="navigateTo('/configuracoes')">
+                  <v-list-item @click="router.push('/admin/config')">
                     <template v-slot:prepend>
                       <v-icon>mdi-cog</v-icon>
                     </template>

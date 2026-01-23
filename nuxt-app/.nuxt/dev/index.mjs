@@ -2935,7 +2935,20 @@ const categoriasFornecedor = defineEventHandler(async (event) => {
   if (method === "POST") {
     const body = await readBody(event);
     return await prisma.configCategoriaFornecedor.create({
-      data: { nome: body.nome }
+      data: {
+        nome: body.nome,
+        descricao: body.descricao
+      }
+    });
+  }
+  if (method === "PUT") {
+    const body = await readBody(event);
+    return await prisma.configCategoriaFornecedor.update({
+      where: { id: body.id },
+      data: {
+        nome: body.nome,
+        descricao: body.descricao
+      }
     });
   }
   if (method === "DELETE") {
@@ -2956,6 +2969,7 @@ const processosPadrao = defineEventHandler(async (event) => {
   const method = event.method;
   if (method === "GET") {
     return await prisma.configProcessoPadrao.findMany({
+      include: { responsavel: { select: { id: true, name: true } } },
       orderBy: { nome: "asc" }
     });
   }
@@ -2965,8 +2979,23 @@ const processosPadrao = defineEventHandler(async (event) => {
       data: {
         nome: body.nome,
         descricao: body.descricao,
-        prazoEstimadoPadrao: body.prazoEstimadoPadrao ? parseInt(body.prazoEstimadoPadrao) : null
-      }
+        prazoEstimadoPadrao: body.prazoEstimadoPadrao ? parseInt(body.prazoEstimadoPadrao) : null,
+        responsavelId: body.responsavelId ? parseInt(body.responsavelId) : null
+      },
+      include: { responsavel: { select: { id: true, name: true } } }
+    });
+  }
+  if (method === "PUT") {
+    const body = await readBody(event);
+    return await prisma.configProcessoPadrao.update({
+      where: { id: body.id },
+      data: {
+        nome: body.nome,
+        descricao: body.descricao,
+        prazoEstimadoPadrao: body.prazoEstimadoPadrao ? parseInt(body.prazoEstimadoPadrao) : null,
+        responsavelId: body.responsavelId ? parseInt(body.responsavelId) : null
+      },
+      include: { responsavel: { select: { id: true, name: true } } }
     });
   }
   if (method === "DELETE") {
@@ -2993,6 +3022,16 @@ const processosPeca = defineEventHandler(async (event) => {
   if (method === "POST") {
     const body = await readBody(event);
     return await prisma.configProcessoPeca.create({
+      data: {
+        nome: body.nome,
+        descricao: body.descricao
+      }
+    });
+  }
+  if (method === "PUT") {
+    const body = await readBody(event);
+    return await prisma.configProcessoPeca.update({
+      where: { id: body.id },
       data: {
         nome: body.nome,
         descricao: body.descricao
@@ -3044,6 +3083,32 @@ const templatesOp = defineEventHandler(async (event) => {
       }
       return tx.configTemplateOP.findUnique({
         where: { id: template.id },
+        include: { processos: { include: { processo: true } } }
+      });
+    });
+  }
+  if (method === "PUT") {
+    const body = await readBody(event);
+    const { id, nome, processos } = body;
+    return await prisma.$transaction(async (tx) => {
+      await tx.configTemplateOP.update({
+        where: { id },
+        data: { nome }
+      });
+      await tx.configTemplateOPItem.deleteMany({
+        where: { templateId: id }
+      });
+      if (processos && processos.length > 0) {
+        await tx.configTemplateOPItem.createMany({
+          data: procesos.map((p, idx) => ({
+            templateId: id,
+            processoId: p.id,
+            sequencia: idx + 1
+          }))
+        });
+      }
+      return tx.configTemplateOP.findUnique({
+        where: { id },
         include: { processos: { include: { processo: true } } }
       });
     });
@@ -29080,11 +29145,13 @@ const template_post = defineEventHandler(async (event) => {
           nome: pData.nome,
           descricao: pData.descricao,
           sequencia: maiorSequencia + index + 1,
-          status: "PENDENTE",
+          status: "NAO_INICIADO",
           progresso: 0,
           prazoEstimado: prazo,
           dataInicioPrevista,
-          dataTerminoPrevista
+          dataTerminoPrevista,
+          responsavelId: pData.responsavelId
+          // ✅ Copiar responsável padrão
         }
       });
       processosCriados.push(novoProcesso);
@@ -29240,13 +29307,33 @@ const index_post = defineEventHandler(async (event) => {
           include: { processos: { include: { processo: true }, orderBy: { sequencia: "asc" } } }
         });
         if (template && template.processos.length > 0) {
-          await tx.oPProcesso.createMany({
-            data: template.processos.map((tp) => ({
-              opId: newOp.id,
-              nome: tp.processo.nome,
-              status: "PENDENTE"
-            }))
-          });
+          let dataInicioAtual = new Date(newOp.dataPedido);
+          dataInicioAtual.setHours(0, 0, 0, 0);
+          for (const [index, tp] of template.processos.entries()) {
+            const pData = tp.processo;
+            const prazo = pData.prazoEstimadoPadrao || 1;
+            const dataInicioPrevista = new Date(dataInicioAtual);
+            const dataTerminoPrevista = new Date(dataInicioPrevista);
+            dataTerminoPrevista.setDate(dataTerminoPrevista.getDate() + prazo - 1);
+            dataTerminoPrevista.setHours(0, 0, 0, 0);
+            await tx.oPProcesso.create({
+              data: {
+                opId: newOp.id,
+                nome: pData.nome,
+                descricao: pData.descricao,
+                sequencia: index + 1,
+                status: "NAO_INICIADO",
+                progresso: 0,
+                prazoEstimado: prazo,
+                dataInicioPrevista,
+                dataTerminoPrevista,
+                responsavelId: pData.responsavelId
+              }
+            });
+            dataInicioAtual = new Date(dataTerminoPrevista);
+            dataInicioAtual.setDate(dataInicioAtual.getDate() + 1);
+            dataInicioAtual.setHours(0, 0, 0, 0);
+          }
         }
       }
       return newOp;
