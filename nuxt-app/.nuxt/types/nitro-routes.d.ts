@@ -36,6 +36,18 @@ declare module "nitropack/types" {
     '/api/compras': {
       'default': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/compras/index').default>>>>
     }
+    '/api/configuracoes/categorias-fornecedor': {
+      'default': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/configuracoes/categorias-fornecedor').default>>>>
+    }
+    '/api/configuracoes/processos-padrao': {
+      'default': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/configuracoes/processos-padrao').default>>>>
+    }
+    '/api/configuracoes/processos-peca': {
+      'default': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/configuracoes/processos-peca').default>>>>
+    }
+    '/api/configuracoes/templates-op': {
+      'default': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/configuracoes/templates-op').default>>>>
+    }
     '/api/dashboard/stats': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/dashboard/stats.get').default>>>>
     }

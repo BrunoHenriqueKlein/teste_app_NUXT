@@ -390,12 +390,15 @@
 
             <v-row>
               <v-col cols="12">
-                <v-text-field
+                <v-combobox
                   v-model="formProcesso.nome"
+                  :items="padronizados"
                   label="Nome do Processo *"
                   variant="outlined"
                   required
                   :rules="[v => !!v || 'Nome é obrigatório']"
+                  hint="Selecione um processo padronizado ou digite um novo"
+                  persistent-hint
                 />
               </v-col>
               
@@ -509,13 +512,15 @@
           <v-select
             v-model="selectedTemplate"
             label="Selecione um template"
-            :items="templateOptions"
+            :items="templatesDB"
+            item-title="nome"
+            item-value="id"
             variant="outlined"
             class="mb-4"
           />
           
           <v-alert v-if="selectedTemplate" type="info" variant="tonal">
-            Serão criados {{ getTemplateProcesses(selectedTemplate).length }} processos com datas calculadas automaticamente
+            Serão criados processos com datas calculadas automaticamente baseados no template selecionado
           </v-alert>
         </v-card-text>
 
@@ -595,6 +600,8 @@ const { getTemplate, getTemplateNames } = useProcessosTemplates()
 const route = useRoute()
 const op = ref(null)
 const processos = ref([])
+const templatesDB = ref([])
+const padronizados = ref([])
 const loading = ref(true)
 const salvando = ref(false)
 const showProcessoDialog = ref(false)
@@ -766,12 +773,18 @@ const loadOP = async () => {
 // Carregar processos
 const loadProcessos = async () => {
   try {
-    console.log('📡 Carregando processos...')
-    const data = await $fetch(`/api/ops/${route.params.id}/processos`)
+    console.log('📡 Carregando processos e configurações...')
+    const [data, tps, pads] = await Promise.all([
+      $fetch(`/api/ops/${route.params.id}/processos`),
+      $fetch('/api/configuracoes/templates-op'),
+      $fetch('/api/configuracoes/processos-padrao')
+    ])
     processos.value = Array.isArray(data) ? data : []
-    console.log('✅ Processos carregados:', processos.value.length)
+    templatesDB.value = tps
+    padronizados.value = pads.map(p => p.nome)
+    console.log('✅ Dados carregados')
   } catch (error) {
-    console.error('❌ Erro ao carregar processos:', error)
+    console.error('❌ Erro ao carregar dados:', error)
     processos.value = []
   }
 }

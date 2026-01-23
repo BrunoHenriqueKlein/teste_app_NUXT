@@ -1,11 +1,10 @@
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { defineEventHandler, createError, readBody } from 'h3'
 
 export default defineEventHandler(async (event) => {
+  const prisma = event.context.prisma
   try {
     const body = await readBody(event)
-    
+
     // Validar dados obrigatórios
     if (!body.numeroOP || !body.descricaoMaquina || !body.cliente) {
       throw createError({
@@ -40,31 +39,47 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Criar OP com usuário válido
-    const op = await prisma.oP.create({
-      data: {
-        numeroOP: body.numeroOP,
-        codigoMaquina: body.codigoMaquina,
-        descricaoMaquina: body.descricaoMaquina,
-        dataPedido: body.dataPedido ? new Date(body.dataPedido) : null,
-        dataEntrega: body.dataEntrega ? new Date(body.dataEntrega) : null,
-        cliente: body.cliente,
-        cnpjCliente: body.cnpjCliente,
-        enderecoCliente: body.enderecoCliente,
-        observacoes: body.observacoes,
-        status: body.status || 'ABERTA',
-        progresso: body.progresso || 0,
-        criadoPorId: primeiroUsuario.id // ✅ Usar usuário válido
-      },
-      include: {
-        criadoPor: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
+    // Criar OP com usuário válido e processos do template se houver
+    const op = await prisma.$transaction(async (tx: any) => {
+      const newOp = await tx.oP.create({
+        data: {
+          numeroOP: body.numeroOP,
+          codigoMaquina: body.codigoMaquina,
+          descricaoMaquina: body.descricaoMaquina,
+          dataPedido: body.dataPedido ? new Date(body.dataPedido) : new Date(),
+          dataEntrega: body.dataEntrega ? new Date(body.dataEntrega) : new Date(),
+          cliente: body.cliente,
+          cnpjCliente: body.cnpjCliente,
+          enderecoCliente: body.enderecoCliente,
+          observacoes: body.observacoes,
+          status: body.status || 'ABERTA',
+          progresso: (body.progresso ? parseInt(body.progresso) : 0) as number,
+          criadoPorId: primeiroUsuario.id
+        },
+        include: {
+          criadoPor: { select: { id: true, name: true, email: true } }
+        }
+      })
+
+      // Se houver template, carregar processos e criar na OP
+      if (body.templateId) {
+        const template = await tx.configTemplateOP.findUnique({
+          where: { id: parseInt(body.templateId) },
+          include: { processos: { include: { processo: true }, orderBy: { sequencia: 'asc' } } }
+        })
+
+        if (template && template.processos.length > 0) {
+          await tx.oPProcesso.createMany({
+            data: template.processos.map((tp: any) => ({
+              opId: newOp.id,
+              nome: tp.processo.nome,
+              status: 'PENDENTE'
+            }))
+          })
         }
       }
+
+      return newOp
     })
 
     // Criar histórico

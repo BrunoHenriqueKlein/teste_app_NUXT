@@ -111,13 +111,13 @@
             <v-col cols="12">
               <v-combobox
                 v-model="dialog.item.categorias"
-                :items="['Usinagem', 'Pintura', 'Solda', 'Caldeiraria', 'Montagem', 'Matéria-prima', 'Componentes Comerciais', 'Tratamento Térmico', 'Galvanoplastia']"
+                :items="categoriasDisponiveis"
                 label="Categorias / O que fornece?"
                 multiple
                 chips
                 variant="outlined"
                 density="comfortable"
-                hint="Selecione ou digite novas especialidades"
+                hint="Selecione as especialidades cadastradas nas Configurações"
                 persistent-hint
               ></v-combobox>
             </v-col>
@@ -155,6 +155,7 @@
 
 <script setup>
 const fornecedores = ref([])
+const categoriasDisponiveis = ref([])
 const loading = ref(false)
 const saving = ref(false)
 const search = ref('')
@@ -177,9 +178,14 @@ const headers = [
 const loadFornecedores = async () => {
   loading.value = true
   try {
-    fornecedores.value = await $fetch('/api/fornecedores')
+    const [forns, cats] = await Promise.all([
+      $fetch('/api/fornecedores'),
+      $fetch('/api/configuracoes/categorias-fornecedor')
+    ])
+    fornecedores.value = forns
+    categoriasDisponiveis.value = cats.map(c => c.nome)
   } catch (error) {
-    showSnackbar('Erro ao carregar fornecedores', 'error')
+    showSnackbar('Erro ao carregar dados', 'error')
   } finally {
     loading.value = false
   }

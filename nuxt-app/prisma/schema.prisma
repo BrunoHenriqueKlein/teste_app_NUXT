@@ -379,3 +379,48 @@ enum SuprimentoStatus {
   COMPRADO
   RECEBIDO
 }
+
+// Modelos de Configuração e Padronização
+model ConfigCategoriaFornecedor {
+  id    Int    @id @default(autoincrement())
+  nome  String @unique
+
+  @@map("config_categorias_fornecedor")
+}
+
+model ConfigProcessoPadrao {
+  id                  Int                    @id @default(autoincrement())
+  nome                String                 @unique
+  descricao           String?
+  prazoEstimadoPadrao Int?                   @map("prazo_estimado_padrao")
+  itens               ConfigTemplateOPItem[]
+
+  @@map("config_processos_padrao")
+}
+
+model ConfigProcessoPeca {
+  id        Int     @id @default(autoincrement())
+  nome      String  @unique
+  descricao String?
+
+  @@map("config_processos_peca")
+}
+
+model ConfigTemplateOP {
+  id        Int                    @id @default(autoincrement())
+  nome      String                 @unique
+  processos ConfigTemplateOPItem[]
+
+  @@map("config_templates_op")
+}
+
+model ConfigTemplateOPItem {
+  id         Int                  @id @default(autoincrement())
+  templateId Int                  @map("template_id")
+  processoId Int                  @map("processo_id")
+  sequencia  Int
+  template   ConfigTemplateOP     @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  processo   ConfigProcessoPadrao @relation(fields: [processoId], references: [id])
+
+  @@map("config_template_op_itens")
+}

@@ -308,11 +308,11 @@
             <v-col cols="12">
               <v-combobox
                 v-model="dialogPeca.data.subcategoria"
-                :items="['Usinagem', 'Pneumática', 'Elétrica', 'Hardware', 'Pintura', 'Caldeiraria']"
+                :items="categoriasDisponiveis"
                 label="Subcategoria (Filtro de Fornecedor)"
                 variant="outlined"
                 density="compact"
-                hint="Digite ou selecione uma subcategoria para filtrar os fornecedores"
+                hint="Filtrado pelas categorias oficiais de fornecedores"
                 persistent-hint
               ></v-combobox>
             </v-col>
@@ -364,14 +364,15 @@
             <v-list-item v-for="(proc, index) in dialogProcessos.items" :key="index" class="pa-0 mb-2">
               <v-row dense align="center">
                 <v-col cols="5">
-                  <v-text-field
+                  <v-combobox
                     v-model="proc.nome"
+                    :items="processosDisponiveis"
                     label="Nome do Processo"
-                    placeholder="Ex: Usinagem, Pintura"
+                    placeholder="Selecione ou digite"
                     variant="outlined"
                     density="compact"
                     hide-details
-                  ></v-text-field>
+                  ></v-combobox>
                 </v-col>
                 <v-col cols="3">
                   <v-select
@@ -443,6 +444,8 @@ const opId = route.params.id
 
 const pecas = ref([])
 const fornecedores = ref([])
+const processosDisponiveis = ref([])
+const categoriasDisponiveis = ref([])
 const loading = ref(false)
 const loadingImport = ref(false)
 const savingProcessos = ref(false)
@@ -520,6 +523,19 @@ const headers = [
 const pecasDisponiveis = computed(() => {
   return pecas.value.filter(p => p.temNoEstoque).length
 })
+
+const loadSettings = async () => {
+  try {
+    const [ppec, cforn] = await Promise.all([
+      $fetch('/api/configuracoes/processos-peca'),
+      $fetch('/api/configuracoes/categorias-fornecedor')
+    ])
+    processosDisponiveis.value = ppec.map(p => p.nome)
+    categoriasDisponiveis.value = cforn.map(c => c.nome)
+  } catch (error) {
+    console.error('Erro ao carregar configurações de padronização')
+  }
+}
 
 const loadPecas = async () => {
   loading.value = true
@@ -777,6 +793,7 @@ const showSnackbar = (text, color = 'success') => {
 onMounted(() => {
   loadPecas()
   loadFornecedores()
+  loadSettings()
 })
 </script>
 

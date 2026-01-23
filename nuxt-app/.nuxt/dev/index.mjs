@@ -1372,11 +1372,11 @@ function defineNitroPlugin(def) {
   return def;
 }
 
-const prisma$s = new PrismaClient();
+const prisma$r = new PrismaClient();
 const _aIQNJBgajH95T2G3WQbulkLX3hjPiBtkWRLnpkQYumM = defineNitroPlugin((nitroApp) => {
   console.log("\u2705 Prisma plugin carregado");
   nitroApp.hooks.hook("request", (event) => {
-    event.context.prisma = prisma$s;
+    event.context.prisma = prisma$r;
   });
 });
 
@@ -1895,6 +1895,10 @@ const _lazy_2vhMo2 = () => Promise.resolve().then(function () { return resetPass
 const _lazy_FQxnpl = () => Promise.resolve().then(function () { return processos_delete$1; });
 const _lazy_LhAVqT = () => Promise.resolve().then(function () { return demandas_get$1; });
 const _lazy_EvnYc0 = () => Promise.resolve().then(function () { return index$3; });
+const _lazy_FFg_Ye = () => Promise.resolve().then(function () { return categoriasFornecedor$1; });
+const _lazy_v2oky8 = () => Promise.resolve().then(function () { return processosPadrao$1; });
+const _lazy_RlmS3K = () => Promise.resolve().then(function () { return processosPeca$1; });
+const _lazy_4BDE3F = () => Promise.resolve().then(function () { return templatesOp$1; });
 const _lazy_LHV_bL = () => Promise.resolve().then(function () { return stats_get$1; });
 const _lazy_OX3cOn = () => Promise.resolve().then(function () { return _id__delete$7; });
 const _lazy_tURFXs = () => Promise.resolve().then(function () { return index$1; });
@@ -1950,6 +1954,10 @@ const handlers = [
   { route: '/api/clean/processos', handler: _lazy_FQxnpl, lazy: true, middleware: false, method: "delete" },
   { route: '/api/compras/demandas', handler: _lazy_LhAVqT, lazy: true, middleware: false, method: "get" },
   { route: '/api/compras', handler: _lazy_EvnYc0, lazy: true, middleware: false, method: undefined },
+  { route: '/api/configuracoes/categorias-fornecedor', handler: _lazy_FFg_Ye, lazy: true, middleware: false, method: undefined },
+  { route: '/api/configuracoes/processos-padrao', handler: _lazy_v2oky8, lazy: true, middleware: false, method: undefined },
+  { route: '/api/configuracoes/processos-peca', handler: _lazy_RlmS3K, lazy: true, middleware: false, method: undefined },
+  { route: '/api/configuracoes/templates-op', handler: _lazy_4BDE3F, lazy: true, middleware: false, method: undefined },
   { route: '/api/dashboard/stats', handler: _lazy_LHV_bL, lazy: true, middleware: false, method: "get" },
   { route: '/api/estoque/:id', handler: _lazy_OX3cOn, lazy: true, middleware: false, method: "delete" },
   { route: '/api/estoque', handler: _lazy_tURFXs, lazy: true, middleware: false, method: undefined },
@@ -2397,10 +2405,10 @@ const setupTasks_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePr
   default: setupTasks_get
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$r = new PrismaClient();
+const prisma$q = new PrismaClient();
 const list_get = defineEventHandler(async (event) => {
   try {
-    const users = await prisma$r.user.findMany({
+    const users = await prisma$q.user.findMany({
       include: {
         userModules: {
           include: {
@@ -2424,7 +2432,7 @@ const list_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty
   default: list_get
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$q = new PrismaClient();
+const prisma$p = new PrismaClient();
 const permissions_post = defineEventHandler(async (event) => {
   const body = await readBody(event);
   const { userId, permissions } = body;
@@ -2436,7 +2444,7 @@ const permissions_post = defineEventHandler(async (event) => {
   }
   try {
     const operations = permissions.map((p) => {
-      return prisma$q.userModule.upsert({
+      return prisma$p.userModule.upsert({
         where: {
           userId_moduleId: {
             userId,
@@ -2457,7 +2465,7 @@ const permissions_post = defineEventHandler(async (event) => {
         }
       });
     });
-    await prisma$q.$transaction(operations);
+    await prisma$p.$transaction(operations);
     return {
       success: true,
       message: "Permiss\xF5es atualizadas com sucesso"
@@ -2475,7 +2483,7 @@ const permissions_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.define
   default: permissions_post
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$p = new PrismaClient();
+const prisma$o = new PrismaClient();
 const update_post = defineEventHandler(async (event) => {
   const body = await readBody(event);
   const { id, name, email, role, department, isActive, password } = body;
@@ -2497,7 +2505,7 @@ const update_post = defineEventHandler(async (event) => {
       const bcrypt = await import('file:///app/node_modules/bcryptjs/index.js');
       data.password = await bcrypt.default.hash(password, 10);
     }
-    const updatedUser = await prisma$p.user.update({
+    const updatedUser = await prisma$o.user.update({
       where: { id },
       data
     });
@@ -2518,11 +2526,11 @@ const update_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePrope
   default: update_post
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$o = new PrismaClient();
+const prisma$n = new PrismaClient();
 const forgotPassword_post = defineEventHandler(async (event) => {
   const body = await readBody(event);
   try {
-    const user = await prisma$o.user.findUnique({
+    const user = await prisma$n.user.findUnique({
       where: {
         email: body.email
       }
@@ -2535,7 +2543,7 @@ const forgotPassword_post = defineEventHandler(async (event) => {
     }
     const resetToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
     const resetTokenExpiry = new Date(Date.now() + 36e5);
-    await prisma$o.user.update({
+    await prisma$n.user.update({
       where: { id: user.id },
       data: {
         resetToken,
@@ -2597,13 +2605,13 @@ const forgotPassword_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.def
   default: forgotPassword_post
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$n = new PrismaClient();
+const prisma$m = new PrismaClient();
 const jwtSecret = process.env.JWT_SECRET || "your-secret-key-change-in-production";
 const login_post = defineEventHandler(async (event) => {
   const body = await readBody(event);
   console.log("\u{1F510} Tentativa de login:", body.email);
   try {
-    const user = await prisma$n.user.findUnique({
+    const user = await prisma$m.user.findUnique({
       where: {
         email: body.email
       },
@@ -2682,7 +2690,7 @@ const login_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProper
   default: login_post
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$m = new PrismaClient();
+const prisma$l = new PrismaClient();
 const register_post = defineEventHandler(async (event) => {
   const body = await readBody(event);
   console.log("\u{1F4DD} Tentativa de registro:", {
@@ -2692,7 +2700,7 @@ const register_post = defineEventHandler(async (event) => {
     role: body.role
   });
   try {
-    const existingUser = await prisma$m.user.findUnique({
+    const existingUser = await prisma$l.user.findUnique({
       where: {
         email: body.email
       }
@@ -2705,7 +2713,7 @@ const register_post = defineEventHandler(async (event) => {
       });
     }
     const hashedPassword = await bcrypt.hash(body.password, 10);
-    const user = await prisma$m.user.create({
+    const user = await prisma$l.user.create({
       data: {
         name: body.name,
         email: body.email,
@@ -2745,11 +2753,11 @@ const register_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePro
   default: register_post
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$l = new PrismaClient();
+const prisma$k = new PrismaClient();
 const resetPassword_post = defineEventHandler(async (event) => {
   const body = await readBody(event);
   try {
-    const user = await prisma$l.user.findFirst({
+    const user = await prisma$k.user.findFirst({
       where: {
         resetToken: body.token,
         resetTokenExpiry: {
@@ -2765,7 +2773,7 @@ const resetPassword_post = defineEventHandler(async (event) => {
       };
     }
     const hashedPassword = await bcrypt.hash(body.password, 10);
-    await prisma$l.user.update({
+    await prisma$k.user.update({
       where: { id: user.id },
       data: {
         password: hashedPassword,
@@ -2792,10 +2800,10 @@ const resetPassword_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defi
   default: resetPassword_post
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$k = new PrismaClient();
+const prisma$j = new PrismaClient();
 const processos_delete = defineEventHandler(async (event) => {
   try {
-    const result = await prisma$k.oPProcesso.deleteMany({});
+    const result = await prisma$j.oPProcesso.deleteMany({});
     return {
       success: true,
       message: `Foram exclu\xEDdos ${result.count} processos`
@@ -2916,23 +2924,160 @@ const index$3 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
   default: index$2
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$j = new PrismaClient();
+const categoriasFornecedor = defineEventHandler(async (event) => {
+  const prisma = event.context.prisma;
+  const method = event.method;
+  if (method === "GET") {
+    return await prisma.configCategoriaFornecedor.findMany({
+      orderBy: { nome: "asc" }
+    });
+  }
+  if (method === "POST") {
+    const body = await readBody(event);
+    return await prisma.configCategoriaFornecedor.create({
+      data: { nome: body.nome }
+    });
+  }
+  if (method === "DELETE") {
+    const body = await readBody(event);
+    return await prisma.configCategoriaFornecedor.delete({
+      where: { id: body.id }
+    });
+  }
+});
+
+const categoriasFornecedor$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: categoriasFornecedor
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const processosPadrao = defineEventHandler(async (event) => {
+  const prisma = event.context.prisma;
+  const method = event.method;
+  if (method === "GET") {
+    return await prisma.configProcessoPadrao.findMany({
+      orderBy: { nome: "asc" }
+    });
+  }
+  if (method === "POST") {
+    const body = await readBody(event);
+    return await prisma.configProcessoPadrao.create({
+      data: {
+        nome: body.nome,
+        descricao: body.descricao,
+        prazoEstimadoPadrao: body.prazoEstimadoPadrao ? parseInt(body.prazoEstimadoPadrao) : null
+      }
+    });
+  }
+  if (method === "DELETE") {
+    const body = await readBody(event);
+    return await prisma.configProcessoPadrao.delete({
+      where: { id: body.id }
+    });
+  }
+});
+
+const processosPadrao$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: processosPadrao
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const processosPeca = defineEventHandler(async (event) => {
+  const prisma = event.context.prisma;
+  const method = event.method;
+  if (method === "GET") {
+    return await prisma.configProcessoPeca.findMany({
+      orderBy: { nome: "asc" }
+    });
+  }
+  if (method === "POST") {
+    const body = await readBody(event);
+    return await prisma.configProcessoPeca.create({
+      data: {
+        nome: body.nome,
+        descricao: body.descricao
+      }
+    });
+  }
+  if (method === "DELETE") {
+    const body = await readBody(event);
+    return await prisma.configProcessoPeca.delete({
+      where: { id: body.id }
+    });
+  }
+});
+
+const processosPeca$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: processosPeca
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const templatesOp = defineEventHandler(async (event) => {
+  const prisma = event.context.prisma;
+  const method = event.method;
+  if (method === "GET") {
+    return await prisma.configTemplateOP.findMany({
+      include: {
+        processos: {
+          include: { processo: true },
+          orderBy: { sequencia: "asc" }
+        }
+      },
+      orderBy: { nome: "asc" }
+    });
+  }
+  if (method === "POST") {
+    const body = await readBody(event);
+    const { nome, processos } = body;
+    return await prisma.$transaction(async (tx) => {
+      const template = await tx.configTemplateOP.create({
+        data: { nome }
+      });
+      if (processos && processos.length > 0) {
+        await tx.configTemplateOPItem.createMany({
+          data: processos.map((p, idx) => ({
+            templateId: template.id,
+            processoId: p.id,
+            sequencia: idx + 1
+          }))
+        });
+      }
+      return tx.configTemplateOP.findUnique({
+        where: { id: template.id },
+        include: { processos: { include: { processo: true } } }
+      });
+    });
+  }
+  if (method === "DELETE") {
+    const body = await readBody(event);
+    return await prisma.configTemplateOP.delete({
+      where: { id: body.id }
+    });
+  }
+});
+
+const templatesOp$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: templatesOp
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const prisma$i = new PrismaClient();
 const stats_get = defineEventHandler(async (event) => {
   try {
-    const opsAbertas = await prisma$j.oP.count({
+    const opsAbertas = await prisma$i.oP.count({
       where: { status: "ABERTA" }
     });
-    const opsProducao = await prisma$j.oP.count({
+    const opsProducao = await prisma$i.oP.count({
       where: {
         status: {
           in: ["EM_PROJETO", "EM_FABRICACAO", "EM_MONTAGEM"]
         }
       }
     });
-    const opsConcluidas = await prisma$j.oP.count({
+    const opsConcluidas = await prisma$i.oP.count({
       where: { status: "ENTREGUE" }
     });
-    const opsAtrasadas = await prisma$j.oP.count({
+    const opsAtrasadas = await prisma$i.oP.count({
       where: {
         dataEntrega: { lt: /* @__PURE__ */ new Date() },
         status: { not: "ENTREGUE" }
@@ -2941,7 +3086,7 @@ const stats_get = defineEventHandler(async (event) => {
     const user = event.context.user;
     let minhasTarefas = 0;
     if (user) {
-      minhasTarefas = await prisma$j.oPProcesso.count({
+      minhasTarefas = await prisma$i.oPProcesso.count({
         where: {
           responsavelId: user.id,
           status: { in: ["NAO_INICIADO", "EM_ANDAMENTO", "AGUARDANDO"] }
@@ -3132,10 +3277,10 @@ const fornecedores$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProp
   default: fornecedores
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$i = new PrismaClient();
+const prisma$h = new PrismaClient();
 const itens_get = defineEventHandler(async (event) => {
   try {
-    const itens = await prisma$i.item.findMany({
+    const itens = await prisma$h.item.findMany({
       orderBy: {
         createdAt: "desc"
       }
@@ -3152,7 +3297,7 @@ const itens_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePropert
   default: itens_get
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$h = new PrismaClient();
+const prisma$g = new PrismaClient();
 const _id__delete$4 = defineEventHandler(async (event) => {
   try {
     const id = getRouterParam(event, "id");
@@ -3162,7 +3307,7 @@ const _id__delete$4 = defineEventHandler(async (event) => {
         statusMessage: "ID da OP n\xE3o informado"
       });
     }
-    const existingOP = await prisma$h.oP.findUnique({
+    const existingOP = await prisma$g.oP.findUnique({
       where: { id: parseInt(id) }
     });
     if (!existingOP) {
@@ -3171,10 +3316,10 @@ const _id__delete$4 = defineEventHandler(async (event) => {
         statusMessage: "OP n\xE3o encontrada"
       });
     }
-    await prisma$h.oP.delete({
+    await prisma$g.oP.delete({
       where: { id: parseInt(id) }
     });
-    await prisma$h.oPHistorico.create({
+    await prisma$g.oPHistorico.create({
       data: {
         opId: parseInt(id),
         usuarioId: 1,
@@ -3198,7 +3343,7 @@ const _id__delete$5 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePrope
   default: _id__delete$4
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$g = new PrismaClient();
+const prisma$f = new PrismaClient();
 const _id__put = defineEventHandler(async (event) => {
   try {
     const body = await readBody(event);
@@ -3209,7 +3354,7 @@ const _id__put = defineEventHandler(async (event) => {
         statusMessage: "ID da OP n\xE3o informado"
       });
     }
-    const existingOP = await prisma$g.oP.findUnique({
+    const existingOP = await prisma$f.oP.findUnique({
       where: { id: parseInt(id) }
     });
     if (!existingOP) {
@@ -3218,7 +3363,7 @@ const _id__put = defineEventHandler(async (event) => {
         statusMessage: "OP n\xE3o encontrada"
       });
     }
-    const op = await prisma$g.oP.update({
+    const op = await prisma$f.oP.update({
       where: { id: parseInt(id) },
       data: {
         numeroOP: body.numeroOP,
@@ -3239,7 +3384,7 @@ const _id__put = defineEventHandler(async (event) => {
         }
       }
     });
-    await prisma$g.oPHistorico.create({
+    await prisma$f.oPHistorico.create({
       data: {
         opId: op.id,
         usuarioId: 1,
@@ -3263,7 +3408,7 @@ const _id__put$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty
   default: _id__put
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$f = new PrismaClient();
+const prisma$e = new PrismaClient();
 const _processoId__delete = defineEventHandler(async (event) => {
   try {
     const opId = getRouterParam(event, "id");
@@ -3274,7 +3419,7 @@ const _processoId__delete = defineEventHandler(async (event) => {
         statusMessage: "IDs n\xE3o informados"
       });
     }
-    const existingProcesso = await prisma$f.oPProcesso.findFirst({
+    const existingProcesso = await prisma$e.oPProcesso.findFirst({
       where: {
         id: parseInt(processoId),
         opId: parseInt(opId)
@@ -3286,12 +3431,12 @@ const _processoId__delete = defineEventHandler(async (event) => {
         statusMessage: "Processo n\xE3o encontrado"
       });
     }
-    await prisma$f.processoHistorico.deleteMany({
+    await prisma$e.processoHistorico.deleteMany({
       where: {
         processoId: parseInt(processoId)
       }
     });
-    await prisma$f.oPProcesso.delete({
+    await prisma$e.oPProcesso.delete({
       where: {
         id: parseInt(processoId)
       }
@@ -3311,7 +3456,7 @@ const _processoId__delete$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.def
   default: _processoId__delete
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$e = new PrismaClient();
+const prisma$d = new PrismaClient();
 const _processoId__put$2 = defineEventHandler(async (event) => {
   try {
     const opId = getRouterParam(event, "id");
@@ -3323,7 +3468,7 @@ const _processoId__put$2 = defineEventHandler(async (event) => {
         statusMessage: "IDs n\xE3o informados"
       });
     }
-    const existingProcesso = await prisma$e.oPProcesso.findFirst({
+    const existingProcesso = await prisma$d.oPProcesso.findFirst({
       where: {
         id: parseInt(processoId),
         opId: parseInt(opId)
@@ -3335,7 +3480,7 @@ const _processoId__put$2 = defineEventHandler(async (event) => {
         statusMessage: "Processo n\xE3o encontrado"
       });
     }
-    const processo = await prisma$e.oPProcesso.update({
+    const processo = await prisma$d.oPProcesso.update({
       where: {
         id: parseInt(processoId)
       },
@@ -3359,7 +3504,7 @@ const _processoId__put$2 = defineEventHandler(async (event) => {
         }
       }
     });
-    await prisma$e.processoHistorico.create({
+    await prisma$d.processoHistorico.create({
       data: {
         processoId: processo.id,
         usuarioId: 1,
@@ -3383,7 +3528,7 @@ const _processoId__put$3 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.define
   default: _processoId__put$2
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$d = new PrismaClient();
+const prisma$c = new PrismaClient();
 const actions_post = defineEventHandler(async (event) => {
   try {
     const opId = getRouterParam(event, "id");
@@ -3395,7 +3540,7 @@ const actions_post = defineEventHandler(async (event) => {
         statusMessage: "Dados incompletos"
       });
     }
-    const existingProcesso = await prisma$d.oPProcesso.findFirst({
+    const existingProcesso = await prisma$c.oPProcesso.findFirst({
       where: {
         id: parseInt(processoId),
         opId: parseInt(opId)
@@ -3450,7 +3595,7 @@ const actions_post = defineEventHandler(async (event) => {
           statusMessage: "A\xE7\xE3o n\xE3o reconhecida"
         });
     }
-    const processo = await prisma$d.oPProcesso.update({
+    const processo = await prisma$c.oPProcesso.update({
       where: {
         id: parseInt(processoId)
       },
@@ -3465,7 +3610,7 @@ const actions_post = defineEventHandler(async (event) => {
         }
       }
     });
-    await prisma$d.processoHistorico.create({
+    await prisma$c.processoHistorico.create({
       data: {
         processoId: processo.id,
         usuarioId: 1,
@@ -3489,7 +3634,7 @@ const actions_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProp
   default: actions_post
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$c = new PrismaClient();
+const prisma$b = new PrismaClient();
 const index_get$a = defineEventHandler(async (event) => {
   try {
     const opId = getRouterParam(event, "id");
@@ -3499,7 +3644,7 @@ const index_get$a = defineEventHandler(async (event) => {
         message: "ID da OP n\xE3o informado"
       });
     }
-    const op = await prisma$c.oP.findUnique({
+    const op = await prisma$b.oP.findUnique({
       where: {
         id: parseInt(opId)
       },
@@ -28020,6 +28165,7 @@ const import_post = defineEventHandler(async (event) => {
         const descricao = String(row.Descricao || row.descricao || row.DESCRICAO || "").trim();
         const quantidade = parseInt(row.Quantidade || row.quantidade || row.QUANTIDADE || "1");
         const material = String(row.Material || row.material || row.MATERIAL || "").trim();
+        const subcategoria = String(row.Subcategoria || row.subcategoria || row.SUBCATEGORIA || "").trim();
         const rawCategoria = String(row.Categoria || row.categoria || row.CATEGORIA || "FABRICADO").trim().toUpperCase();
         const categoria = rawCategoria === "COMPRADO" ? "COMPRADO" : "FABRICADO";
         if (!codigo || !descricao) {
@@ -28039,7 +28185,8 @@ const import_post = defineEventHandler(async (event) => {
             descricao,
             quantidade,
             material,
-            categoria
+            categoria,
+            subcategoria
           },
           create: {
             opId: parseInt(opId),
@@ -28048,6 +28195,7 @@ const import_post = defineEventHandler(async (event) => {
             quantidade,
             material,
             categoria,
+            subcategoria,
             status: itemEstoque ? "EM_ESTOQUE" : "NAO_INICIADA"
           }
         });
@@ -28165,6 +28313,7 @@ const index_post$4 = defineEventHandler(async (event) => {
         quantidade: body.quantidade || 1,
         material: body.material,
         categoria: body.categoria || "FABRICADO",
+        subcategoria: body.subcategoria,
         statusSuprimento: body.statusSuprimento || "NAO_SOLICITADO",
         valorUnitario: body.valorUnitario ? parseFloat(body.valorUnitario) : null,
         fornecedorId: body.fornecedorId ? parseInt(body.fornecedorId) : null,
@@ -28399,7 +28548,7 @@ const _processoId__put$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.define
   default: _processoId__put
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$b = new PrismaClient();
+const prisma$a = new PrismaClient();
 const concluir_post = defineEventHandler(async (event) => {
   try {
     const opId = getRouterParam(event, "id");
@@ -28410,7 +28559,7 @@ const concluir_post = defineEventHandler(async (event) => {
         statusMessage: "IDs inv\xE1lidos"
       });
     }
-    const existingProcesso = await prisma$b.oPProcesso.findFirst({
+    const existingProcesso = await prisma$a.oPProcesso.findFirst({
       where: {
         id: parseInt(processoId),
         opId: parseInt(opId)
@@ -28422,7 +28571,7 @@ const concluir_post = defineEventHandler(async (event) => {
         statusMessage: "Processo n\xE3o encontrado"
       });
     }
-    const processo = await prisma$b.oPProcesso.update({
+    const processo = await prisma$a.oPProcesso.update({
       where: {
         id: parseInt(processoId)
       },
@@ -28432,16 +28581,16 @@ const concluir_post = defineEventHandler(async (event) => {
         dataFim: /* @__PURE__ */ new Date()
       }
     });
-    const processosOP = await prisma$b.oPProcesso.findMany({
+    const processosOP = await prisma$a.oPProcesso.findMany({
       where: { opId: parseInt(opId) },
       select: { progresso: true }
     });
     const progressoMedio = processosOP.length > 0 ? Math.round(processosOP.reduce((sum, p) => sum + p.progresso, 0) / processosOP.length) : 0;
-    await prisma$b.oP.update({
+    await prisma$a.oP.update({
       where: { id: parseInt(opId) },
       data: { progresso: progressoMedio }
     });
-    await prisma$b.processoHistorico.create({
+    await prisma$a.processoHistorico.create({
       data: {
         processoId: processo.id,
         usuarioId: 1,
@@ -28465,7 +28614,7 @@ const concluir_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePro
   default: concluir_post
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$a = new PrismaClient();
+const prisma$9 = new PrismaClient();
 const index_delete = defineEventHandler(async (event) => {
   try {
     const opId = getRouterParam(event, "id");
@@ -28477,7 +28626,7 @@ const index_delete = defineEventHandler(async (event) => {
         message: "ID da OP ou ID do processo n\xE3o informado"
       });
     }
-    const processoExistente = await prisma$a.oPProcesso.findFirst({
+    const processoExistente = await prisma$9.oPProcesso.findFirst({
       where: {
         id: parseInt(processoId),
         opId: parseInt(opId)
@@ -28493,13 +28642,13 @@ const index_delete = defineEventHandler(async (event) => {
       });
     }
     if (processoExistente.historico.length > 0) {
-      await prisma$a.processoHistorico.deleteMany({
+      await prisma$9.processoHistorico.deleteMany({
         where: {
           processoId: parseInt(processoId)
         }
       });
     }
-    await prisma$a.oPProcesso.delete({
+    await prisma$9.oPProcesso.delete({
       where: {
         id: parseInt(processoId)
       }
@@ -28520,65 +28669,8 @@ const index_delete$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProp
   default: index_delete
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$9 = new PrismaClient();
-const iniciar_post = defineEventHandler(async (event) => {
-  try {
-    const opId = getRouterParam(event, "id");
-    const processoId = getRouterParam(event, "processoId");
-    if (!opId || !processoId) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: "IDs inv\xE1lidos"
-      });
-    }
-    const existingProcesso = await prisma$9.oPProcesso.findFirst({
-      where: {
-        id: parseInt(processoId),
-        opId: parseInt(opId)
-      }
-    });
-    if (!existingProcesso) {
-      throw createError({
-        statusCode: 404,
-        statusMessage: "Processo n\xE3o encontrado"
-      });
-    }
-    const processo = await prisma$9.oPProcesso.update({
-      where: {
-        id: parseInt(processoId)
-      },
-      data: {
-        status: "EM_ANDAMENTO",
-        dataInicio: /* @__PURE__ */ new Date(),
-        progresso: existingProcesso.progresso > 0 ? existingProcesso.progresso : 10
-      }
-    });
-    await prisma$9.processoHistorico.create({
-      data: {
-        processoId: processo.id,
-        usuarioId: 1,
-        // TODO: Pegar do usuário logado
-        acao: "Processo iniciado",
-        detalhes: `Processo "${existingProcesso.nome}" iniciado`
-      }
-    });
-    return { success: true, processo };
-  } catch (error) {
-    console.error("Erro ao iniciar processo:", error);
-    throw createError({
-      statusCode: error.statusCode || 500,
-      statusMessage: error.message || "Erro ao iniciar processo"
-    });
-  }
-});
-
-const iniciar_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
-  __proto__: null,
-  default: iniciar_post
-}, Symbol.toStringTag, { value: 'Module' }));
-
 const prisma$8 = new PrismaClient();
-const pausar_post = defineEventHandler(async (event) => {
+const iniciar_post = defineEventHandler(async (event) => {
   try {
     const opId = getRouterParam(event, "id");
     const processoId = getRouterParam(event, "processoId");
@@ -28605,10 +28697,67 @@ const pausar_post = defineEventHandler(async (event) => {
         id: parseInt(processoId)
       },
       data: {
-        status: "AGUARDANDO"
+        status: "EM_ANDAMENTO",
+        dataInicio: /* @__PURE__ */ new Date(),
+        progresso: existingProcesso.progresso > 0 ? existingProcesso.progresso : 10
       }
     });
     await prisma$8.processoHistorico.create({
+      data: {
+        processoId: processo.id,
+        usuarioId: 1,
+        // TODO: Pegar do usuário logado
+        acao: "Processo iniciado",
+        detalhes: `Processo "${existingProcesso.nome}" iniciado`
+      }
+    });
+    return { success: true, processo };
+  } catch (error) {
+    console.error("Erro ao iniciar processo:", error);
+    throw createError({
+      statusCode: error.statusCode || 500,
+      statusMessage: error.message || "Erro ao iniciar processo"
+    });
+  }
+});
+
+const iniciar_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: iniciar_post
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const prisma$7 = new PrismaClient();
+const pausar_post = defineEventHandler(async (event) => {
+  try {
+    const opId = getRouterParam(event, "id");
+    const processoId = getRouterParam(event, "processoId");
+    if (!opId || !processoId) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: "IDs inv\xE1lidos"
+      });
+    }
+    const existingProcesso = await prisma$7.oPProcesso.findFirst({
+      where: {
+        id: parseInt(processoId),
+        opId: parseInt(opId)
+      }
+    });
+    if (!existingProcesso) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: "Processo n\xE3o encontrado"
+      });
+    }
+    const processo = await prisma$7.oPProcesso.update({
+      where: {
+        id: parseInt(processoId)
+      },
+      data: {
+        status: "AGUARDANDO"
+      }
+    });
+    await prisma$7.processoHistorico.create({
       data: {
         processoId: processo.id,
         usuarioId: 1,
@@ -28632,7 +28781,7 @@ const pausar_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePrope
   default: pausar_post
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$7 = new PrismaClient();
+const prisma$6 = new PrismaClient();
 const index_get$6 = defineEventHandler(async (event) => {
   try {
     const opId = getRouterParam(event, "id");
@@ -28643,7 +28792,7 @@ const index_get$6 = defineEventHandler(async (event) => {
         message: "ID da OP n\xE3o informado"
       });
     }
-    const processos = await prisma$7.oPProcesso.findMany({
+    const processos = await prisma$6.oPProcesso.findMany({
       where: {
         opId: parseInt(opId)
       },
@@ -28888,114 +29037,60 @@ const template_post = defineEventHandler(async (event) => {
   try {
     const opId = getRouterParam(event, "id");
     const body = await readBody(event);
-    console.log("\u{1F3AF} Aplicando template - OP ID:", opId);
-    console.log("\u{1F3AF} Template selecionado:", body.templateName);
-    if (!opId) {
-      throw createError({
-        statusCode: 400,
-        message: "ID da OP n\xE3o informado"
-      });
-    }
-    if (!body.templateName) {
-      throw createError({
-        statusCode: 400,
-        message: "Nome do template n\xE3o informado"
-      });
-    }
     const prisma = event.context.prisma;
-    if (!prisma) {
-      throw createError({
-        statusCode: 500,
-        message: "Prisma n\xE3o configurado no contexto"
-      });
+    console.log("\u{1F3AF} Aplicando template - OP ID:", opId);
+    console.log("\u{1F3AF} Template ID:", body.templateId);
+    if (!opId || !body.templateId) {
+      throw createError({ statusCode: 400, message: "Dados incompletos" });
     }
-    console.log("\u2705 Prisma encontrado no contexto");
-    const templates = {
-      PADRAO_MAQUINA: [
-        { nome: "Lan\xE7amento da OP no Sistema", descricao: "Registro inicial da Ordem de Produ\xE7\xE3o no sistema", sequencia: 1, prazoEstimado: 1, status: "NAO_INICIADO", progresso: 0 },
-        { nome: "Cria\xE7\xE3o da Pasta do Projeto", descricao: "Cria\xE7\xE3o da estrutura de pastas para documenta\xE7\xE3o do projeto", sequencia: 2, prazoEstimado: 1, status: "NAO_INICIADO", progresso: 0 },
-        { nome: "In\xEDcio do Projeto Mec\xE2nico", descricao: "In\xEDcio do desenvolvimento do projeto 3D no SolidWorks", sequencia: 3, prazoEstimado: 15, status: "NAO_INICIADO", progresso: 0 },
-        { nome: "Detalhamento das Pe\xE7as", descricao: "Cria\xE7\xE3o dos desenhos t\xE9cnicos e detalhamento de todas as pe\xE7as", sequencia: 4, prazoEstimado: 10, status: "NAO_INICIADO", progresso: 0 },
-        { nome: "Gera\xE7\xE3o da Lista de Pe\xE7as (BOM)", descricao: "Exporta\xE7\xE3o da planilha BOM do SolidWorks", sequencia: 5, prazoEstimado: 2, status: "NAO_INICIADO", progresso: 0 },
-        { nome: "Importa\xE7\xE3o da Lista de Pe\xE7as", descricao: "Upload e importa\xE7\xE3o da planilha BOM no sistema", sequencia: 6, prazoEstimado: 1, status: "NAO_INICIADO", progresso: 0 },
-        { nome: "Cria\xE7\xE3o de Roteiros de Fabrica\xE7\xE3o", descricao: "Cria\xE7\xE3o dos roteiros de pintura, zincagem e calibra\xE7\xE3o", sequencia: 7, prazoEstimado: 3, status: "NAO_INICIADO", progresso: 0 },
-        { nome: "Solicita\xE7\xE3o de Or\xE7amentos", descricao: "Envio de e-mails para cota\xE7\xE3o de pe\xE7as e servi\xE7os", sequencia: 8, prazoEstimado: 5, status: "NAO_INICIADO", progresso: 0 },
-        { nome: "Solicita\xE7\xE3o de Compras", descricao: "Emiss\xE3o de ordens de compra baseadas nos or\xE7amentos aprovados", sequencia: 9, prazoEstimado: 2, status: "NAO_INICIADO", progresso: 0 },
-        { nome: "Recebimento de Materiais", descricao: "Controle de recebimento e inspe\xE7\xE3o de materiais comprados", sequencia: 10, prazoEstimado: 10, status: "NAO_INICIADO", progresso: 0 },
-        { nome: "Montagem do Equipamento", descricao: "Montagem mec\xE2nica completa do equipamento", sequencia: 11, prazoEstimado: 15, status: "NAO_INICIADO", progresso: 0 },
-        { nome: "Projeto El\xE9trico e CLP", descricao: "Desenvolvimento da parte el\xE9trica e programa\xE7\xE3o do CLP/IHM", sequencia: 12, prazoEstimado: 10, status: "NAO_INICIADO", progresso: 0 },
-        { nome: "Testes do Equipamento", descricao: "Testes funcionais e de qualidade do equipamento montado", sequencia: 13, prazoEstimado: 5, status: "NAO_INICIADO", progresso: 0 },
-        { nome: "Documenta\xE7\xE3o T\xE9cnica", descricao: "Elabora\xE7\xE3o de manual t\xE9cnico, fotos e v\xEDdeos", sequencia: 14, prazoEstimado: 5, status: "NAO_INICIADO", progresso: 0 },
-        { nome: "Embalagem e Expedi\xE7\xE3o", descricao: "Prepara\xE7\xE3o para envio e expedi\xE7\xE3o ao cliente", sequencia: 15, prazoEstimado: 2, status: "NAO_INICIADO", progresso: 0 }
-      ],
-      SIMPLES: [
-        { nome: "Lan\xE7amento da OP", descricao: "Registro inicial da OP", sequencia: 1, prazoEstimado: 1, status: "NAO_INICIADO", progresso: 0 },
-        { nome: "Projeto Mec\xE2nico", descricao: "Desenvolvimento do projeto 3D", sequencia: 2, prazoEstimado: 10, status: "NAO_INICIADO", progresso: 0 },
-        { nome: "Lista de Pe\xE7as", descricao: "Gera\xE7\xE3o e importa\xE7\xE3o do BOM", sequencia: 3, prazoEstimado: 2, status: "NAO_INICIADO", progresso: 0 },
-        { nome: "Compras", descricao: "Solicita\xE7\xE3o e acompanhamento de compras", sequencia: 4, prazoEstimado: 7, status: "NAO_INICIADO", progresso: 0 },
-        { nome: "Montagem", descricao: "Montagem do equipamento", sequencia: 5, prazoEstimado: 10, status: "NAO_INICIADO", progresso: 0 },
-        { nome: "Testes e Entrega", descricao: "Testes finais e expedi\xE7\xE3o", sequencia: 6, prazoEstimado: 3, status: "NAO_INICIADO", progresso: 0 }
-      ]
-    };
-    const templateProcesses = templates[body.templateName] || templates.PADRAO_MAQUINA;
-    if (!templateProcesses) {
-      throw createError({
-        statusCode: 400,
-        message: "Template n\xE3o encontrado"
-      });
+    const opExistente = await prisma.oP.findUnique({ where: { id: parseInt(opId) } });
+    if (!opExistente) {
+      throw createError({ statusCode: 404, message: "OP n\xE3o encontrada" });
     }
-    const opExistente = await prisma.oP.findUnique({
-      where: {
-        id: parseInt(opId)
+    const template = await prisma.configTemplateOP.findUnique({
+      where: { id: parseInt(body.templateId) },
+      include: {
+        processos: {
+          include: { processo: true },
+          orderBy: { sequencia: "asc" }
+        }
       }
     });
-    if (!opExistente) {
-      throw createError({
-        statusCode: 404,
-        message: "OP n\xE3o encontrada"
-      });
+    if (!template) {
+      throw createError({ statusCode: 404, message: "Template n\xE3o encontrado" });
     }
-    console.log("\u2705 OP encontrada:", opExistente.numeroOP);
     const processosExistentes = await prisma.oPProcesso.findMany({
       where: { opId: parseInt(opId) },
       select: { sequencia: true }
     });
-    const sequenciasExistentes = processosExistentes.map((p) => p.sequencia);
-    const maiorSequencia = sequenciasExistentes.length > 0 ? Math.max(...sequenciasExistentes) : 0;
-    console.log(`\u{1F4CA} Processos existentes: ${processosExistentes.length}, Maior sequ\xEAncia: ${maiorSequencia}`);
+    const maiorSequencia = processosExistentes.length > 0 ? Math.max(...processosExistentes.map((p) => p.sequencia)) : 0;
     let dataInicioAtual = new Date(opExistente.dataInicio || opExistente.dataPedido || /* @__PURE__ */ new Date());
     dataInicioAtual.setHours(0, 0, 0, 0);
     const processosCriados = [];
-    for (const [index, processo] of templateProcesses.entries()) {
-      try {
-        const dataInicioPrevista = new Date(dataInicioAtual);
-        const dataTerminoPrevista = new Date(dataInicioPrevista);
-        if (processo.prazoEstimado && processo.prazoEstimado > 0) {
-          dataTerminoPrevista.setDate(dataTerminoPrevista.getDate() + processo.prazoEstimado - 1);
+    for (const [index, item] of template.processos.entries()) {
+      const pData = item.processo;
+      const prazo = pData.prazoEstimadoPadrao || 1;
+      const dataInicioPrevista = new Date(dataInicioAtual);
+      const dataTerminoPrevista = new Date(dataInicioPrevista);
+      dataTerminoPrevista.setDate(dataTerminoPrevista.getDate() + prazo - 1);
+      dataTerminoPrevista.setHours(0, 0, 0, 0);
+      const novoProcesso = await prisma.oPProcesso.create({
+        data: {
+          opId: parseInt(opId),
+          nome: pData.nome,
+          descricao: pData.descricao,
+          sequencia: maiorSequencia + index + 1,
+          status: "PENDENTE",
+          progresso: 0,
+          prazoEstimado: prazo,
+          dataInicioPrevista,
+          dataTerminoPrevista
         }
-        dataTerminoPrevista.setHours(0, 0, 0, 0);
-        const novoProcesso = await prisma.oPProcesso.create({
-          data: {
-            opId: parseInt(opId),
-            nome: processo.nome,
-            descricao: processo.descricao,
-            sequencia: maiorSequencia + index + 1,
-            status: processo.status,
-            progresso: processo.progresso,
-            prazoEstimado: processo.prazoEstimado,
-            dataInicioPrevista,
-            dataTerminoPrevista,
-            dataPrevista: null
-          }
-        });
-        processosCriados.push(novoProcesso);
-        dataInicioAtual = new Date(dataTerminoPrevista);
-        dataInicioAtual.setDate(dataInicioAtual.getDate() + 1);
-        dataInicioAtual.setHours(0, 0, 0, 0);
-        console.log(`\u2705 Processo criado: ${processo.nome} (ID: ${novoProcesso.id}) - Datas: ${dataInicioPrevista.toISOString().split("T")[0]} a ${dataTerminoPrevista.toISOString().split("T")[0]}`);
-      } catch (processError) {
-        console.error(`\u274C Erro ao criar processo ${processo.nome}:`, processError);
-      }
+      });
+      processosCriados.push(novoProcesso);
+      dataInicioAtual = new Date(dataTerminoPrevista);
+      dataInicioAtual.setDate(dataInicioAtual.getDate() + 1);
+      dataInicioAtual.setHours(0, 0, 0, 0);
     }
     const todosProcessos = await prisma.oPProcesso.findMany({
       where: { opId: parseInt(opId) },
@@ -29006,13 +29101,7 @@ const template_post = defineEventHandler(async (event) => {
       where: { id: parseInt(opId) },
       data: { progresso: progressoMedio }
     });
-    console.log(`\u{1F389} Template aplicado: ${processosCriados.length} processos criados`);
-    return {
-      success: true,
-      processos: processosCriados,
-      totalCriados: processosCriados.length,
-      message: `Template aplicado com sucesso! ${processosCriados.length} processos criados.`
-    };
+    return { success: true, processos: processosCriados };
   } catch (error) {
     console.error("\u274C Erro ao aplicar template:", error);
     throw createError({
@@ -29027,7 +29116,7 @@ const template_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePro
   default: template_post
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$6 = new PrismaClient();
+const prisma$5 = new PrismaClient();
 const index_get$4 = defineEventHandler(async (event) => {
   try {
     const query = getQuery$1(event);
@@ -29058,7 +29147,7 @@ const index_get$4 = defineEventHandler(async (event) => {
         { descricaoMaquina: { contains: String(search), mode: "insensitive" } }
       ];
     }
-    const ops = await prisma$6.oP.findMany({
+    const ops = await prisma$5.oP.findMany({
       where,
       include: {
         criadoPor: {
@@ -29095,8 +29184,8 @@ const index_get$5 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePropert
   default: index_get$4
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const prisma$5 = new PrismaClient();
 const index_post = defineEventHandler(async (event) => {
+  const prisma = event.context.prisma;
   try {
     const body = await readBody(event);
     if (!body.numeroOP || !body.descricaoMaquina || !body.cliente) {
@@ -29105,7 +29194,7 @@ const index_post = defineEventHandler(async (event) => {
         message: "N\xFAmero da OP, descri\xE7\xE3o e cliente s\xE3o obrigat\xF3rios"
       });
     }
-    const existingOP = await prisma$5.oP.findFirst({
+    const existingOP = await prisma.oP.findFirst({
       where: {
         numeroOP: body.numeroOP
       }
@@ -29116,7 +29205,7 @@ const index_post = defineEventHandler(async (event) => {
         message: "J\xE1 existe uma OP com este n\xFAmero"
       });
     }
-    const primeiroUsuario = await prisma$5.user.findFirst({
+    const primeiroUsuario = await prisma.user.findFirst({
       select: { id: true }
     });
     if (!primeiroUsuario) {
@@ -29125,33 +29214,44 @@ const index_post = defineEventHandler(async (event) => {
         message: "Nenhum usu\xE1rio encontrado no sistema"
       });
     }
-    const op = await prisma$5.oP.create({
-      data: {
-        numeroOP: body.numeroOP,
-        codigoMaquina: body.codigoMaquina,
-        descricaoMaquina: body.descricaoMaquina,
-        dataPedido: body.dataPedido ? new Date(body.dataPedido) : null,
-        dataEntrega: body.dataEntrega ? new Date(body.dataEntrega) : null,
-        cliente: body.cliente,
-        cnpjCliente: body.cnpjCliente,
-        enderecoCliente: body.enderecoCliente,
-        observacoes: body.observacoes,
-        status: body.status || "ABERTA",
-        progresso: body.progresso || 0,
-        criadoPorId: primeiroUsuario.id
-        // ✅ Usar usuário válido
-      },
-      include: {
-        criadoPor: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
+    const op = await prisma.$transaction(async (tx) => {
+      const newOp = await tx.oP.create({
+        data: {
+          numeroOP: body.numeroOP,
+          codigoMaquina: body.codigoMaquina,
+          descricaoMaquina: body.descricaoMaquina,
+          dataPedido: body.dataPedido ? new Date(body.dataPedido) : /* @__PURE__ */ new Date(),
+          dataEntrega: body.dataEntrega ? new Date(body.dataEntrega) : /* @__PURE__ */ new Date(),
+          cliente: body.cliente,
+          cnpjCliente: body.cnpjCliente,
+          enderecoCliente: body.enderecoCliente,
+          observacoes: body.observacoes,
+          status: body.status || "ABERTA",
+          progresso: body.progresso ? parseInt(body.progresso) : 0,
+          criadoPorId: primeiroUsuario.id
+        },
+        include: {
+          criadoPor: { select: { id: true, name: true, email: true } }
+        }
+      });
+      if (body.templateId) {
+        const template = await tx.configTemplateOP.findUnique({
+          where: { id: parseInt(body.templateId) },
+          include: { processos: { include: { processo: true }, orderBy: { sequencia: "asc" } } }
+        });
+        if (template && template.processos.length > 0) {
+          await tx.oPProcesso.createMany({
+            data: template.processos.map((tp) => ({
+              opId: newOp.id,
+              nome: tp.processo.nome,
+              status: "PENDENTE"
+            }))
+          });
         }
       }
+      return newOp;
     });
-    await prisma$5.oPHistorico.create({
+    await prisma.oPHistorico.create({
       data: {
         opId: op.id,
         usuarioId: primeiroUsuario.id,
@@ -29468,6 +29568,7 @@ const _id__patch = defineEventHandler(async (event) => {
         material: body.material,
         status: body.status,
         categoria: body.categoria,
+        subcategoria: body.subcategoria,
         statusSuprimento: body.statusSuprimento,
         valorUnitario: body.valorUnitario ? parseFloat(body.valorUnitario) : void 0,
         fornecedorId: body.fornecedorId ? parseInt(body.fornecedorId) : void 0

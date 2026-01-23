@@ -381,6 +381,20 @@
               </v-col>
 
               <v-col cols="12" sm="6">
+                <v-select
+                  v-model="formOP.templateId"
+                  label="Template de Processos (Básico)"
+                  :items="templates"
+                  item-title="nome"
+                  item-value="id"
+                  variant="outlined"
+                  clearable
+                  hint="Preenche os processos iniciais da OP automaticamente"
+                  persistent-hint
+                />
+              </v-col>
+
+              <v-col cols="12" sm="6">
                 <v-text-field
                   v-model="formOP.progresso"
                   label="Progresso (%)"
@@ -438,6 +452,7 @@
 <script setup>
 // Estado
 const ops = ref([])
+const templates = ref([])
 const loading = ref(false)
 const saving = ref(false)
 const deleting = ref(false)
@@ -489,7 +504,8 @@ const formOP = ref({
   enderecoCliente: '',
   observacoes: '',
   status: 'ABERTA',
-  progresso: 0
+  progresso: 0,
+  templateId: null
 })
 
 // Route
@@ -506,7 +522,16 @@ onMounted(() => {
   if (route.query.atrasada) filters.value.atrasada = route.query.atrasada
   
   loadOPs()
+  loadTemplates()
 })
+
+const loadTemplates = async () => {
+  try {
+    templates.value = await $fetch('/api/configuracoes/templates-op')
+  } catch (error) {
+    console.error('Erro ao carregar templates')
+  }
+}
 
 // Watch para mudanças na query
 watch(() => route.query, (newQuery) => {
@@ -602,7 +627,8 @@ const openCreateDialog = () => {
     enderecoCliente: '',
     observacoes: '',
     status: 'ABERTA',
-    progresso: 0
+    progresso: 0,
+    templateId: null
   }
   showOPDialog.value = true
 }
@@ -681,8 +707,8 @@ const saveOP = async () => {
           enderecoCliente: formOP.value.enderecoCliente,
           observacoes: formOP.value.observacoes,
           status: formOP.value.status,
-          progresso: formOP.value.progresso
-          // id: formOP.value.id // ⚠️ REMOVER esta linha se existir
+          progresso: formOP.value.progresso,
+          templateId: formOP.value.templateId
         }
       })
       
