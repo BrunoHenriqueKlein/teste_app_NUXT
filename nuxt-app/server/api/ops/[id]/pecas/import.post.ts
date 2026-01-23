@@ -50,6 +50,7 @@ export default defineEventHandler(async (event) => {
                 const descricao = String(row.Descricao || row.descricao || row.DESCRICAO || '').trim()
                 const quantidade = parseInt(row.Quantidade || row.quantidade || row.QUANTIDADE || '1')
                 const material = String(row.Material || row.material || row.MATERIAL || '').trim()
+                const subcategoria = String(row.Subcategoria || row.subcategoria || row.SUBCATEGORIA || '').trim()
                 const rawCategoria = String(row.Categoria || row.categoria || row.CATEGORIA || 'FABRICADO').trim().toUpperCase()
                 const categoria = rawCategoria === 'COMPRADO' ? 'COMPRADO' : 'FABRICADO'
 
@@ -74,7 +75,8 @@ export default defineEventHandler(async (event) => {
                         descricao,
                         quantidade,
                         material,
-                        categoria
+                        categoria,
+                        subcategoria
                     },
                     create: {
                         opId: parseInt(opId),
@@ -83,6 +85,7 @@ export default defineEventHandler(async (event) => {
                         quantidade,
                         material,
                         categoria,
+                        subcategoria,
                         status: itemEstoque ? 'EM_ESTOQUE' : 'NAO_INICIADA'
                     }
                 })

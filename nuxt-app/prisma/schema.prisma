@@ -206,6 +206,7 @@ model Peca {
   quantidade       Int              @default(1)
   material         String?
   categoria        PecaCategoria    @default(FABRICADO)
+  subcategoria     String?
   statusSuprimento SuprimentoStatus @default(NAO_SOLICITADO)
   valorUnitario    Float?           @map("valor_unitario")
   fornecedorId     Int?             @map("fornecedor_id")

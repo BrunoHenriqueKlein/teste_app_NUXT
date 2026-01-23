@@ -156,12 +156,14 @@
           
           <v-select
             v-model="dialogDemanda.data.fornecedorId"
-            :items="fornecedores"
+            :items="filteredFornecedoresDemandas"
             item-title="nome"
             item-value="id"
             label="Fornecedor Vencedor"
             variant="outlined"
             clearable
+            :hint="dialogDemanda.data.subcategoria ? `Filtrando por: ${dialogDemanda.data.subcategoria}` : ''"
+            persistent-hint
           ></v-select>
 
           <v-text-field
@@ -208,7 +210,23 @@ const dialog = ref({
 
 const dialogDemanda = ref({
   show: false,
-  data: { id: null, codigo: '', valorUnitario: 0, fornecedorId: null, statusSuprimento: '' }
+  data: { 
+    id: null, 
+    codigo: '', 
+    subcategoria: '',
+    valorUnitario: 0, 
+    fornecedorId: null, 
+    statusSuprimento: '' 
+  }
+})
+
+const filteredFornecedoresDemandas = computed(() => {
+  if (!dialogDemanda.value.data.subcategoria) return fornecedores.value
+  
+  const sub = dialogDemanda.value.data.subcategoria.toLowerCase()
+  return fornecedores.value.filter(f => 
+    f.categorias && f.categorias.some(c => c.toLowerCase() === sub)
+  )
 })
 
 const snackbar = ref({ show: false, text: '', color: 'success' })
@@ -305,6 +323,7 @@ const editDemanda = (item) => {
     data: { 
       id: item.id, 
       codigo: item.codigo, 
+      subcategoria: item.subcategoria || '',
       valorUnitario: item.valorUnitario || 0, 
       fornecedorId: item.fornecedorId, 
       statusSuprimento: item.statusSuprimento 

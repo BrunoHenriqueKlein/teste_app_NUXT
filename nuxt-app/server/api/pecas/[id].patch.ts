@@ -23,6 +23,7 @@ export default defineEventHandler(async (event) => {
                 material: body.material,
                 status: body.status,
                 categoria: body.categoria,
+                subcategoria: body.subcategoria,
                 statusSuprimento: body.statusSuprimento,
                 valorUnitario: body.valorUnitario ? parseFloat(body.valorUnitario) : undefined,
                 fornecedorId: body.fornecedorId ? parseInt(body.fornecedorId) : undefined

@@ -305,10 +305,23 @@
             </v-col>
           </v-row>
           <v-row>
+            <v-col cols="12">
+              <v-combobox
+                v-model="dialogPeca.data.subcategoria"
+                :items="['Usinagem', 'Pneumática', 'Elétrica', 'Hardware', 'Pintura', 'Caldeiraria']"
+                label="Subcategoria (Filtro de Fornecedor)"
+                variant="outlined"
+                density="compact"
+                hint="Digite ou selecione uma subcategoria para filtrar os fornecedores"
+                persistent-hint
+              ></v-combobox>
+            </v-col>
+          </v-row>
+          <v-row>
             <v-col cols="8">
               <v-select
                 v-model="dialogPeca.data.fornecedorId"
-                :items="fornecedores"
+                :items="filteredFornecedores"
                 item-title="nome"
                 item-value="id"
                 label="Fornecedor"
@@ -462,10 +475,20 @@ const dialogPeca = ref({
     quantidade: 1, 
     material: '',
     categoria: 'FABRICADO',
+    subcategoria: '',
     statusSuprimento: 'NAO_SOLICITADO',
     valorUnitario: null,
     fornecedorId: null
   }
+})
+
+const filteredFornecedores = computed(() => {
+  if (!dialogPeca.value.data.subcategoria) return fornecedores.value
+  
+  const sub = dialogPeca.value.data.subcategoria.toLowerCase()
+  return fornecedores.value.filter(f => 
+    f.categorias && f.categorias.some(c => c.toLowerCase() === sub)
+  )
 })
 
 const savingPeca = ref(false)
