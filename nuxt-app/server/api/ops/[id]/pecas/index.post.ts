@@ -42,6 +42,10 @@ export default defineEventHandler(async (event) => {
                 descricao: body.descricao,
                 quantidade: body.quantidade || 1,
                 material: body.material,
+                categoria: body.categoria || 'FABRICADO',
+                statusSuprimento: body.statusSuprimento || 'NAO_SOLICITADO',
+                valorUnitario: body.valorUnitario ? parseFloat(body.valorUnitario) : null,
+                fornecedorId: body.fornecedorId ? parseInt(body.fornecedorId) : null,
                 status: estoqueItem ? 'EM_ESTOQUE' : 'NAO_INICIADA'
             }
         })

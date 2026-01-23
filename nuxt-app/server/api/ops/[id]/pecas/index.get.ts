@@ -17,6 +17,7 @@ export default defineEventHandler(async (event) => {
             include: {
                 processos: true,
                 anexos: true,
+                fornecedor: true,
                 _count: {
                     select: { processos: true }
                 }

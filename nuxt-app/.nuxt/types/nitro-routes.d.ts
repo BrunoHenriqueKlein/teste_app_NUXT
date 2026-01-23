@@ -30,6 +30,9 @@ declare module "nitropack/types" {
     '/api/clean/processos': {
       'delete': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/clean/processos.delete').default>>>>
     }
+    '/api/compras/demandas': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/compras/demandas.get').default>>>>
+    }
     '/api/compras': {
       'default': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/compras/index').default>>>>
     }

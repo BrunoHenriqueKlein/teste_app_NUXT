@@ -21,7 +21,11 @@ export default defineEventHandler(async (event) => {
                 descricao: body.descricao,
                 quantidade: (body.quantidade !== undefined && body.quantidade !== null) ? parseInt(body.quantidade) : undefined,
                 material: body.material,
-                status: body.status
+                status: body.status,
+                categoria: body.categoria,
+                statusSuprimento: body.statusSuprimento,
+                valorUnitario: body.valorUnitario ? parseFloat(body.valorUnitario) : undefined,
+                fornecedorId: body.fornecedorId ? parseInt(body.fornecedorId) : undefined
             }
         })
         console.log(`✅ Peça ${id} atualizada com sucesso`)

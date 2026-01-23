@@ -199,18 +199,23 @@ model ProcessoHistorico {
 }
 
 model Peca {
-  id         Int            @id @default(autoincrement())
-  opId       Int
-  codigo     String
-  descricao  String
-  quantidade Int            @default(1)
-  material   String?
-  anexos     PecaAnexo[]
-  arquivoBOM String?
-  status     PecaStatus     @default(NAO_INICIADA)
-  compras    CompraItem[]
-  op         OP             @relation(fields: [opId], references: [id])
-  processos  ProcessoPeca[]
+  id               Int              @id @default(autoincrement())
+  opId             Int
+  codigo           String
+  descricao        String
+  quantidade       Int              @default(1)
+  material         String?
+  categoria        PecaCategoria    @default(FABRICADO)
+  statusSuprimento SuprimentoStatus @default(NAO_SOLICITADO)
+  valorUnitario    Float?           @map("valor_unitario")
+  fornecedorId     Int?             @map("fornecedor_id")
+  anexos           PecaAnexo[]
+  arquivoBOM       String?
+  status           PecaStatus       @default(NAO_INICIADA)
+  compras          CompraItem[]
+  op               OP               @relation(fields: [opId], references: [id])
+  processos        ProcessoPeca[]
+  fornecedor       Fornecedor?      @relation(fields: [fornecedorId], references: [id])
 
   @@unique([opId, codigo])
   @@map("pecas")
@@ -271,6 +276,7 @@ model Fornecedor {
   endereco      String?
   ordensServico OrdemServico[]
   processos     ProcessoPeca[]
+  pecas         Peca[]
 
   @@map("fornecedores")
 }
@@ -359,4 +365,16 @@ model Arquivo {
   usuario   User     @relation("Arquivo_Usuario", fields: [usuarioId], references: [id])
 
   @@map("arquivos")
+}
+
+enum PecaCategoria {
+  COMPRADO
+  FABRICADO
+}
+
+enum SuprimentoStatus {
+  NAO_SOLICITADO
+  EM_ORCAMENTO
+  COMPRADO
+  RECEBIDO
 }

@@ -50,6 +50,8 @@ export default defineEventHandler(async (event) => {
                 const descricao = String(row.Descricao || row.descricao || row.DESCRICAO || '').trim()
                 const quantidade = parseInt(row.Quantidade || row.quantidade || row.QUANTIDADE || '1')
                 const material = String(row.Material || row.material || row.MATERIAL || '').trim()
+                const rawCategoria = String(row.Categoria || row.categoria || row.CATEGORIA || 'FABRICADO').trim().toUpperCase()
+                const categoria = rawCategoria === 'COMPRADO' ? 'COMPRADO' : 'FABRICADO'
 
                 if (!codigo || !descricao) {
                     continue // Pula linhas vazias ou inválidas
@@ -71,7 +73,8 @@ export default defineEventHandler(async (event) => {
                     update: {
                         descricao,
                         quantidade,
-                        material
+                        material,
+                        categoria
                     },
                     create: {
                         opId: parseInt(opId),
@@ -79,6 +82,7 @@ export default defineEventHandler(async (event) => {
                         descricao,
                         quantidade,
                         material,
+                        categoria,
                         status: itemEstoque ? 'EM_ESTOQUE' : 'NAO_INICIADA'
                     }
                 })

@@ -98,6 +98,28 @@
           </v-chip>
         </template>
 
+        <template v-slot:item.categoria="{ item }">
+          <v-chip
+            :color="item.categoria === 'COMPRADO' ? 'blue' : 'orange'"
+            size="x-small"
+            variant="tonal"
+            class="text-uppercase"
+          >
+            {{ item.categoria }}
+          </v-chip>
+        </template>
+
+        <template v-slot:item.statusSuprimento="{ item }">
+          <v-chip
+            :color="getSuprimentoColor(item.statusSuprimento)"
+            size="x-small"
+            variant="flat"
+            class="text-uppercase"
+          >
+            {{ item.statusSuprimento.replace('_', ' ') }}
+          </v-chip>
+        </template>
+
         <template v-slot:item.estoque="{ item }">
           <div class="d-flex align-center gap-2">
             <v-tooltip v-if="item.temNoEstoque" :text="`Disponível: ${item.saldoEstoque} no estoque`">
@@ -156,7 +178,59 @@
         </template>
 
         <template v-slot:item.acoes="{ item }">
-          <div class="d-flex gap-1">
+          <div class="d-flex gap-1 align-center">
+            <!-- Botão de Desenho/Anexos (Consolidador) -->
+            <v-menu location="bottom end">
+              <template v-slot:activator="{ props }">
+                <v-btn
+                  icon="mdi-file-document-outline"
+                  variant="text"
+                  size="small"
+                  :color="item.anexos?.length ? 'info' : 'grey'"
+                  v-bind="props"
+                  title="Desenhos e Anexos"
+                >
+                  <v-badge
+                    v-if="item.anexos?.length"
+                    color="info"
+                    :content="item.anexos.length"
+                    dot
+                    floating
+                  >
+                    <v-icon icon="mdi-file-document-outline"></v-icon>
+                  </v-badge>
+                </v-btn>
+              </template>
+              <v-list density="compact" width="200">
+                <v-list-item v-if="!item.anexos?.length" title="Sem anexos"></v-list-item>
+                <v-list-item
+                  v-for="anexo in item.anexos"
+                  :key="anexo.id"
+                  @click="viewDrawing(anexo.url)"
+                >
+                  <template v-slot:prepend>
+                    <v-icon size="small">mdi-file-pdf-box</v-icon>
+                  </template>
+                  <v-list-item-title>{{ truncateName(anexo.nome) }}</v-list-item-title>
+                  <template v-slot:append>
+                    <v-btn
+                      icon="mdi-delete"
+                      variant="text"
+                      size="x-small"
+                      color="error"
+                      @click.stop="deleteAttachment(anexo.id)"
+                    ></v-btn>
+                  </template>
+                </v-list-item>
+                <v-divider v-if="item.anexos?.length"></v-divider>
+                <v-list-item
+                  prepend-icon="mdi-plus"
+                  title="Adicionar Anexo"
+                  @click="triggerDrawingUpload(item)"
+                ></v-list-item>
+              </v-list>
+            </v-menu>
+
             <v-btn
               icon="mdi-format-list-bulleted-type"
               variant="text"
@@ -204,10 +278,54 @@
           <v-text-field v-model="dialogPeca.data.descricao" label="Descrição" variant="outlined"></v-text-field>
           <v-row>
             <v-col cols="6">
-              <v-text-field v-model.number="dialogPeca.data.quantidade" label="Quantidade" type="number" variant="outlined"></v-text-field>
+              <v-text-field v-model.number="dialogPeca.data.quantidade" label="Quantidade" type="number" variant="outlined" density="compact"></v-text-field>
             </v-col>
             <v-col cols="6">
-              <v-text-field v-model="dialogPeca.data.material" label="Material" variant="outlined"></v-text-field>
+              <v-text-field v-model="dialogPeca.data.material" label="Material" variant="outlined" density="compact"></v-text-field>
+            </v-col>
+          </v-row>
+          <v-row>
+            <v-col cols="6">
+              <v-select
+                v-model="dialogPeca.data.categoria"
+                :items="['FABRICADO', 'COMPRADO']"
+                label="Categoria"
+                variant="outlined"
+                density="compact"
+              ></v-select>
+            </v-col>
+            <v-col cols="6">
+              <v-select
+                v-model="dialogPeca.data.statusSuprimento"
+                :items="['NAO_SOLICITADO', 'EM_ORCAMENTO', 'COMPRADO', 'RECEBIDO']"
+                label="Status Suprimento"
+                variant="outlined"
+                density="compact"
+              ></v-select>
+            </v-col>
+          </v-row>
+          <v-row>
+            <v-col cols="8">
+              <v-select
+                v-model="dialogPeca.data.fornecedorId"
+                :items="fornecedores"
+                item-title="nome"
+                item-value="id"
+                label="Fornecedor"
+                variant="outlined"
+                density="compact"
+                clearable
+              ></v-select>
+            </v-col>
+            <v-col cols="4">
+              <v-text-field
+                v-model.number="dialogPeca.data.valorUnitario"
+                label="Vlr. Unit."
+                type="number"
+                prefix="R$"
+                variant="outlined"
+                density="compact"
+              ></v-text-field>
             </v-col>
           </v-row>
         </v-card-text>
@@ -337,7 +455,17 @@ const dialogProcessos = ref({
 const dialogPeca = ref({
   show: false,
   isEdit: false,
-  data: { id: null, codigo: '', descricao: '', quantidade: 1, material: '' }
+  data: { 
+    id: null, 
+    codigo: '', 
+    descricao: '', 
+    quantidade: 1, 
+    material: '',
+    categoria: 'FABRICADO',
+    statusSuprimento: 'NAO_SOLICITADO',
+    valorUnitario: null,
+    fornecedorId: null
+  }
 })
 
 const savingPeca = ref(false)
@@ -358,9 +486,10 @@ const breadcrumbs = [
 const headers = [
   { title: 'Código', key: 'codigo', sortable: true },
   { title: 'Descrição', key: 'descricao', sortable: true },
+  { title: 'Categoria', key: 'categoria', align: 'center' },
+  { title: 'Suprimento', key: 'statusSuprimento', align: 'center' },
   { title: 'Qtd', key: 'quantidade', align: 'end' },
   { title: 'Material', key: 'material' },
-  { title: 'Desenho', key: 'desenho', align: 'center', sortable: false },
   { title: 'Status', key: 'status', align: 'center' },
   { title: 'Ações', key: 'acoes', align: 'center', sortable: false }
 ]
@@ -389,7 +518,17 @@ const openAddPecaDialog = () => {
   dialogPeca.value = {
     show: true,
     isEdit: false,
-    data: { id: null, codigo: '', descricao: '', quantidade: 1, material: '' }
+    data: { 
+      id: null, 
+      codigo: '', 
+      descricao: '', 
+      quantidade: 1, 
+      material: '',
+      categoria: 'FABRICADO',
+      statusSuprimento: 'NAO_SOLICITADO',
+      valorUnitario: null,
+      fornecedorId: null
+    }
   }
 }
 
@@ -516,6 +655,16 @@ const getStatusColor = (status) => {
     CANCELADA: 'red',
     CONCLUIDA: 'success',
     EM_ESTOQUE: 'green-darken-2'
+  }
+  return colors[status] || 'grey'
+}
+
+const getSuprimentoColor = (status) => {
+  const colors = {
+    NAO_SOLICITADO: 'grey-darken-1',
+    EM_ORCAMENTO: 'orange-darken-1',
+    COMPRADO: 'blue-darken-2',
+    RECEBIDO: 'success'
   }
   return colors[status] || 'grey'
 }

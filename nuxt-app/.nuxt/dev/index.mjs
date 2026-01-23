@@ -1893,6 +1893,7 @@ const _lazy_MyKlQu = () => Promise.resolve().then(function () { return login_pos
 const _lazy_wD64rD = () => Promise.resolve().then(function () { return register_post$1; });
 const _lazy_2vhMo2 = () => Promise.resolve().then(function () { return resetPassword_post$1; });
 const _lazy_FQxnpl = () => Promise.resolve().then(function () { return processos_delete$1; });
+const _lazy_LhAVqT = () => Promise.resolve().then(function () { return demandas_get$1; });
 const _lazy_EvnYc0 = () => Promise.resolve().then(function () { return index$3; });
 const _lazy_LHV_bL = () => Promise.resolve().then(function () { return stats_get$1; });
 const _lazy_OX3cOn = () => Promise.resolve().then(function () { return _id__delete$7; });
@@ -1947,6 +1948,7 @@ const handlers = [
   { route: '/api/auth/register', handler: _lazy_wD64rD, lazy: true, middleware: false, method: "post" },
   { route: '/api/auth/reset-password', handler: _lazy_2vhMo2, lazy: true, middleware: false, method: "post" },
   { route: '/api/clean/processos', handler: _lazy_FQxnpl, lazy: true, middleware: false, method: "delete" },
+  { route: '/api/compras/demandas', handler: _lazy_LhAVqT, lazy: true, middleware: false, method: "get" },
   { route: '/api/compras', handler: _lazy_EvnYc0, lazy: true, middleware: false, method: undefined },
   { route: '/api/dashboard/stats', handler: _lazy_LHV_bL, lazy: true, middleware: false, method: "get" },
   { route: '/api/estoque/:id', handler: _lazy_OX3cOn, lazy: true, middleware: false, method: "delete" },
@@ -2809,6 +2811,50 @@ const processos_delete = defineEventHandler(async (event) => {
 const processos_delete$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
   __proto__: null,
   default: processos_delete
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const demandas_get = defineEventHandler(async (event) => {
+  const prisma = event.context.prisma;
+  const query = getQuery$1(event);
+  try {
+    const where = {
+      categoria: "COMPRADO"
+    };
+    if (query.status) where.statusSuprimento = query.status;
+    const demandas = await prisma.peca.findMany({
+      where,
+      include: {
+        op: {
+          select: {
+            numeroOP: true,
+            cliente: true
+          }
+        },
+        fornecedor: {
+          select: {
+            nome: true
+          }
+        }
+      },
+      orderBy: {
+        op: {
+          numeroOP: "desc"
+        }
+      }
+    });
+    return demandas;
+  } catch (error) {
+    console.error("\u274C Erro ao buscar demandas de compra:", error);
+    throw createError({
+      statusCode: 500,
+      message: "Erro ao buscar demandas de compra: " + error.message
+    });
+  }
+});
+
+const demandas_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: demandas_get
 }, Symbol.toStringTag, { value: 'Module' }));
 
 const index$2 = defineEventHandler(async (event) => {
@@ -27974,6 +28020,8 @@ const import_post = defineEventHandler(async (event) => {
         const descricao = String(row.Descricao || row.descricao || row.DESCRICAO || "").trim();
         const quantidade = parseInt(row.Quantidade || row.quantidade || row.QUANTIDADE || "1");
         const material = String(row.Material || row.material || row.MATERIAL || "").trim();
+        const rawCategoria = String(row.Categoria || row.categoria || row.CATEGORIA || "FABRICADO").trim().toUpperCase();
+        const categoria = rawCategoria === "COMPRADO" ? "COMPRADO" : "FABRICADO";
         if (!codigo || !descricao) {
           continue;
         }
@@ -27990,7 +28038,8 @@ const import_post = defineEventHandler(async (event) => {
           update: {
             descricao,
             quantidade,
-            material
+            material,
+            categoria
           },
           create: {
             opId: parseInt(opId),
@@ -27998,6 +28047,7 @@ const import_post = defineEventHandler(async (event) => {
             descricao,
             quantidade,
             material,
+            categoria,
             status: itemEstoque ? "EM_ESTOQUE" : "NAO_INICIADA"
           }
         });
@@ -28045,6 +28095,7 @@ const index_get$8 = defineEventHandler(async (event) => {
       include: {
         processos: true,
         anexos: true,
+        fornecedor: true,
         _count: {
           select: { processos: true }
         }
@@ -28113,6 +28164,10 @@ const index_post$4 = defineEventHandler(async (event) => {
         descricao: body.descricao,
         quantidade: body.quantidade || 1,
         material: body.material,
+        categoria: body.categoria || "FABRICADO",
+        statusSuprimento: body.statusSuprimento || "NAO_SOLICITADO",
+        valorUnitario: body.valorUnitario ? parseFloat(body.valorUnitario) : null,
+        fornecedorId: body.fornecedorId ? parseInt(body.fornecedorId) : null,
         status: estoqueItem ? "EM_ESTOQUE" : "NAO_INICIADA"
       }
     });
@@ -29411,7 +29466,11 @@ const _id__patch = defineEventHandler(async (event) => {
         descricao: body.descricao,
         quantidade: body.quantidade !== void 0 && body.quantidade !== null ? parseInt(body.quantidade) : void 0,
         material: body.material,
-        status: body.status
+        status: body.status,
+        categoria: body.categoria,
+        statusSuprimento: body.statusSuprimento,
+        valorUnitario: body.valorUnitario ? parseFloat(body.valorUnitario) : void 0,
+        fornecedorId: body.fornecedorId ? parseInt(body.fornecedorId) : void 0
       }
     });
     console.log(`\u2705 Pe\xE7a ${id} atualizada com sucesso`);
