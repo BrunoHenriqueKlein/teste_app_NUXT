@@ -508,6 +508,9 @@ const formOP = ref({
   templateId: null
 })
 
+const { authHeaders } = useAuth()
+const router = useRouter()
+
 // Route
 const route = useRoute()
 
@@ -527,7 +530,9 @@ onMounted(() => {
 
 const loadTemplates = async () => {
   try {
-    templates.value = await $fetch('/api/configuracoes/templates-op')
+    templates.value = await $fetch('/api/configuracoes/templates-op', {
+      headers: authHeaders.value
+    })
   } catch (error) {
     console.error('Erro ao carregar templates')
   }
@@ -556,7 +561,8 @@ const loadOPs = async () => {
         atrasada: filters.value.atrasada,
         dataInicio: filters.value.dataInicio,
         dataFim: filters.value.dataFim
-      }
+      },
+      headers: authHeaders.value
     })
     ops.value = Array.isArray(data) ? data : []
     

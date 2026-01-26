@@ -93,39 +93,79 @@
           <v-card-item>
             <template v-slot:overline>
               <div class="d-flex justify-space-between align-center">
-                <span>OP: {{ task.op.numeroOP }}</span>
+                <span class="font-weight-bold primary--text">OP: {{ task.op.numeroOP }}</span>
                 <v-chip size="x-small" :color="getStatusColor(task.status)" variant="flat">
                   {{ task.status }}
                 </v-chip>
               </div>
             </template>
-            <v-card-title class="text-h6 font-weight-bold">{{ task.nome }}</v-card-title>
-            <v-card-subtitle>{{ task.op.cliente }} - {{ task.op.descricaoMaquina }}</v-card-subtitle>
+            <v-card-title class="text-h6 font-weight-bold pb-0">{{ task.nome }}</v-card-title>
+            <v-card-subtitle class="mt-1">
+              <v-chip size="x-small" color="secondary" variant="outlined" class="mr-1">{{ task.op.codigoMaquina }}</v-chip>
+              {{ task.op.descricaoMaquina }}
+            </v-card-subtitle>
+            <v-card-subtitle class="text-caption">{{ task.op.cliente }}</v-card-subtitle>
           </v-card-item>
 
-          <v-card-text class="pt-0">
-            <div class="text-body-2 mb-2 text-truncate" style="max-height: 40px">
-              {{ task.descricao || 'Sem descrição' }}
+          <v-card-text class="pt-2">
+            <div class="text-body-2 mb-4 text-medium-emphasis">
+              {{ task.descricao || 'Sem descrição detalhada' }}
             </div>
             
-            <div class="mb-1 d-flex justify-space-between text-caption">
-              <span>Progresso</span>
-              <span>{{ task.progresso }}%</span>
-            </div>
-            <v-progress-linear
-              v-model="task.progresso"
-              color="primary"
-              height="8"
-              rounded
-              class="mb-4"
-            />
+            <v-row dense class="mb-2">
+              <v-col cols="6">
+                <div class="text-caption text-grey">Início Previsto</div>
+                <div class="text-body-2 font-weight-medium">
+                  <v-icon size="14" color="grey">mdi-calendar-start</v-icon>
+                  {{ formatDate(task.dataInicioPrevista) }}
+                </div>
+              </v-col>
+              <v-col cols="6">
+                <div class="text-caption text-grey">Início Real</div>
+                <div class="text-body-2 font-weight-medium" :class="{ 'text-primary': task.dataInicio }">
+                  <v-icon size="14" :color="task.dataInicio ? 'primary' : 'grey'">mdi-calendar-check</v-icon>
+                  {{ formatDate(task.dataInicio) }}
+                </div>
+              </v-col>
+            </v-row>
 
-            <div class="d-flex align-center text-caption text-medium-emphasis mb-1">
+            <v-divider class="mb-3" />
+
+            <div class="mb-1 d-flex justify-space-between align-center">
+              <span class="text-caption font-weight-bold">Progresso</span>
+              <v-chip size="x-small" color="primary" variant="tonal">{{ task.progresso }}%</v-chip>
+            </div>
+            
+            <div class="d-flex align-center">
+              <v-slider
+                v-model="task.progresso"
+                color="primary"
+                density="compact"
+                hide-details
+                :step="5"
+                min="0"
+                max="100"
+                class="flex-grow-1"
+                @update:model-value="task.hasChanged = true"
+              />
+              <v-btn
+                v-if="task.hasChanged"
+                icon="mdi-content-save"
+                size="x-small"
+                color="success"
+                variant="flat"
+                class="ml-2"
+                @click="saveProgress(task)"
+                :loading="task.updating"
+              />
+            </div>
+
+            <div class="d-flex align-center text-caption text-error mt-4 font-weight-medium">
               <v-icon size="16" class="mr-1">mdi-calendar-clock</v-icon>
-              Prazo: {{ formatDate(task.dataTerminoPrevista) }}
+              Prazo Final: {{ formatDate(task.dataTerminoPrevista) }}
             </div>
 
-            <div v-if="showGlobal" class="d-flex align-center text-caption text-medium-emphasis">
+            <div v-if="showGlobal" class="d-flex align-center text-caption text-medium-emphasis mt-1">
               <v-icon size="16" class="mr-1">mdi-account-outline</v-icon>
               Responsável: {{ task.responsavel?.name || 'Não atribuído' }}
             </div>
@@ -153,6 +193,7 @@
               prepend-icon="mdi-check-bold"
               @click="openCompleteDialog(task)"
               :loading="task.updating"
+              :disabled="task.progresso < 100 && !task.hasChanged"
             >
               Concluir Tarefa
             </v-btn>
@@ -188,7 +229,7 @@
 </template>
 
 <script setup>
-const { user } = useAuth()
+const { user, authHeaders } = useAuth()
 const loading = ref(true)
 const tasks = ref([])
 const search = ref('')
@@ -206,9 +247,10 @@ const fetchTasks = async () => {
   loading.value = true
   try {
     const data = await $fetch('/api/user/tasks', {
-      params: { global: showGlobal.value }
+      params: { global: showGlobal.value },
+      headers: authHeaders.value
     })
-    tasks.value = data.map(t => ({ ...t, updating: false }))
+    tasks.value = data.map(t => ({ ...t, updating: false, hasChanged: false }))
   } catch (error) {
     console.error('Erro ao buscar tarefas:', error)
   } finally {
@@ -221,13 +263,46 @@ const filteredTasks = computed(() => {
     const matchesSearch = !search.value || 
       task.nome.toLowerCase().includes(search.value.toLowerCase()) ||
       task.op.numeroOP.toLowerCase().includes(search.value.toLowerCase()) ||
-      task.op.cliente.toLowerCase().includes(search.value.toLowerCase())
+      task.op.cliente.toLowerCase().includes(search.value.toLowerCase()) ||
+      task.op.codigoMaquina.toLowerCase().includes(search.value.toLowerCase())
     
-    const matchesStatus = statusFilter.value === 'Todos' || task.status === statusFilter.value
+    // Filtro de status: Se 'Todos' estiver selecionado, oculta os 'CONCLUIDO'
+    // Se um status específico for selecionado, mostra apenas aquele
+    let matchesStatus = false
+    if (statusFilter.value === 'Todos') {
+      matchesStatus = task.status !== 'CONCLUIDO'
+    } else {
+      matchesStatus = task.status === statusFilter.value
+    }
     
     return matchesSearch && matchesStatus
   })
 })
+
+const saveProgress = async (task) => {
+  task.updating = true
+  try {
+    await $fetch(`/api/ops/${task.opId}/processos/${task.id}`, {
+      method: 'PUT',
+      body: { 
+        progresso: task.progresso,
+        // Ao mudar o progresso para 100, concluímos a tarefa automaticamente?
+        // Vamos deixar o usuário concluir explicitamente no botão
+      },
+      headers: authHeaders.value
+    })
+    task.hasChanged = false
+    
+    // Se chegou a 100, avisar que pode concluir
+    if (task.progresso === 100) {
+      alert('Progresso atingiu 100%! Você já pode concluir a tarefa.')
+    }
+  } catch (error) {
+    console.error('Erro ao salvar progresso:', error)
+  } finally {
+    task.updating = false
+  }
+}
 
 const getStatusColor = (status) => {
   const colors = {
@@ -255,7 +330,8 @@ const updateStatus = async (task, newStatus) => {
       body: { 
         status: newStatus,
         progresso: newStatus === 'CONCLUIDO' ? 100 : task.progresso
-      }
+      },
+      headers: authHeaders.value
     })
     task.status = newStatus
     if (newStatus === 'CONCLUIDO') task.progresso = 100

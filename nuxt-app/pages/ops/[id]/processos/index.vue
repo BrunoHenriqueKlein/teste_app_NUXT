@@ -297,16 +297,6 @@
                           Iniciar
                         </v-btn>
                         
-                        <v-btn 
-                          size="small" 
-                          variant="outlined" 
-                          color="orange"
-                          @click="pausarProcesso(processo)"
-                          v-if="processo.status === 'EM_ANDAMENTO'"
-                          prepend-icon="mdi-pause"
-                        >
-                          Pausar
-                        </v-btn>
                         
                         <v-btn 
                           size="small" 
@@ -597,6 +587,7 @@ const useProcessosTemplates = () => {
 const { getTemplate, getTemplateNames } = useProcessosTemplates()
 
 // Estado
+const { authHeaders } = useAuth()
 const route = useRoute()
 const op = ref(null)
 const processos = ref([])
@@ -744,7 +735,9 @@ onMounted(async () => {
 // Carregar OP
 const loadOP = async () => {
   try {
-    const data = await $fetch(`/api/ops/${route.params.id}`)
+    const data = await $fetch(`/api/ops/${route.params.id}`, {
+      headers: authHeaders.value
+    })
     op.value = data
     
     // ✅ DEFINIR DATA DE INÍCIO DA OP
@@ -775,9 +768,9 @@ const loadProcessos = async () => {
   try {
     console.log('📡 Carregando processos e configurações...')
     const [data, tps, pads] = await Promise.all([
-      $fetch(`/api/ops/${route.params.id}/processos`),
-      $fetch('/api/configuracoes/templates-op'),
-      $fetch('/api/configuracoes/processos-padrao')
+      $fetch(`/api/ops/${route.params.id}/processos`, { headers: authHeaders.value }),
+      $fetch('/api/configuracoes/templates-op', { headers: authHeaders.value }),
+      $fetch('/api/configuracoes/processos-padrao', { headers: authHeaders.value })
     ])
     processos.value = Array.isArray(data) ? data : []
     templatesDB.value = tps
@@ -792,7 +785,9 @@ const loadProcessos = async () => {
 // Carregar usuários
 const loadUsuarios = async () => {
   try {
-    const data = await $fetch('/api/user')
+    const data = await $fetch('/api/user', {
+      headers: authHeaders.value
+    })
     usuarios.value = Array.isArray(data) ? data : []
   } catch (error) {
     console.error('Erro ao carregar usuários:', error)
@@ -848,7 +843,8 @@ const aplicarTemplate = async () => {
       method: 'POST',
       body: {
         templateId: selectedTemplate.value
-      }
+      },
+      headers: authHeaders.value
     })
     
     await loadProcessos()
@@ -1017,7 +1013,8 @@ const salvarProcesso = async () => {
     if (editingProcesso.value) {
       const data = await $fetch(`/api/ops/${route.params.id}/processos/${editingProcesso.value.id}`, {
         method: 'PUT',
-        body: dadosEnvio
+        body: dadosEnvio,
+        headers: authHeaders.value
       })
       
       const index = processos.value.findIndex(p => p.id === editingProcesso.value.id)
@@ -1027,7 +1024,8 @@ const salvarProcesso = async () => {
     } else {
       const data = await $fetch(`/api/ops/${route.params.id}/processos`, {
         method: 'POST',
-        body: dadosEnvio
+        body: dadosEnvio,
+        headers: authHeaders.value
       })
       
       processos.value.push(data.processo)
@@ -1087,7 +1085,8 @@ const recalcularDatasCascata = async () => {
             body: {
               dataInicioPrevista: processo.dataInicioPrevista,
               dataTerminoPrevista: processo.dataTerminoPrevista
-            }
+            },
+            headers: authHeaders.value
           })
         }
       }
@@ -1122,22 +1121,6 @@ const iniciarProcesso = async (processo) => {
   }
 }
 
-const pausarProcesso = async (processo) => {
-  try {
-    const response = await $fetch(`/api/ops/${route.params.id}/processos/${processo.id}/pausar`, {
-      method: 'POST'
-    })
-    
-    if (response && response.processo) {
-      Object.assign(processo, response.processo)
-    }
-    
-    await loadProcessos()
-  } catch (error) {
-    console.error('Erro ao pausar processo:', error)
-    alert('Erro ao pausar processo: ' + (error.data?.message || error.message))
-  }
-}
 
 const concluirProcesso = async (processo) => {
   try {

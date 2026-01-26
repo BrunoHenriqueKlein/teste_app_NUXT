@@ -168,6 +168,7 @@
 </template>
 
 <script setup>
+const { authHeaders } = useAuth()
 const tab = ref('categorias')
 const loading = ref(false)
 const saving = ref(false)
@@ -212,11 +213,11 @@ const loadData = async () => {
   loading.value = true
   try {
     const [cat, pop, ppec, temp, userList] = await Promise.all([
-      $fetch('/api/configuracoes/categorias-fornecedor'),
-      $fetch('/api/configuracoes/processos-padrao'),
-      $fetch('/api/configuracoes/processos-peca'),
-      $fetch('/api/configuracoes/templates-op'),
-      $fetch('/api/admin/users')
+      $fetch('/api/configuracoes/categorias-fornecedor', { headers: authHeaders.value }),
+      $fetch('/api/configuracoes/processos-padrao', { headers: authHeaders.value }),
+      $fetch('/api/configuracoes/processos-peca', { headers: authHeaders.value }),
+      $fetch('/api/configuracoes/templates-op', { headers: authHeaders.value }),
+      $fetch('/api/admin/users', { headers: authHeaders.value })
     ])
     categorias.value = cat
     processosOp.value = pop
@@ -287,7 +288,8 @@ const saveSimple = async () => {
         descricao: dialog.value.descricao,
         prazoEstimadoPadrao: dialog.value.prazoEstimadoPadrao,
         responsavelId: dialog.value.responsavelId
-      }
+      },
+      headers: authHeaders.value
     })
     showSnackbar(dialog.value.id ? 'Atualizado com sucesso!' : 'Salvo com sucesso!')
     dialog.value.show = false
@@ -309,7 +311,8 @@ const saveTemplate = async () => {
         id: dialogTemplate.value.id,
         nome: dialogTemplate.value.nome,
         processos: dialogTemplate.value.selecionados 
-      }
+      },
+      headers: authHeaders.value
     })
     showSnackbar(dialogTemplate.value.id ? 'Template atualizado!' : 'Template criado!')
     dialogTemplate.value.show = false
@@ -334,7 +337,8 @@ const deleteItem = async (type, item) => {
     }
     await $fetch(`/api/configuracoes/${endpoints[type]}`, {
       method: 'DELETE',
-      body: { id: item.id }
+      body: { id: item.id },
+      headers: authHeaders.value
     })
     showSnackbar('Excluído com sucesso!')
     await loadData()

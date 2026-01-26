@@ -21,6 +21,13 @@ export const useAuth = () => {
 
     const isLoggedIn = computed(() => !!token.value)
     const isAdmin = computed(() => user.value?.role === 'ADMIN')
+    const authHeaders = computed(() => ({
+        Authorization: token.value ? `Bearer ${token.value}` : ''
+    }))
+
+    const userName = computed(() => user.value?.name || '')
+    const userRole = computed(() => user.value?.role || '')
+    const userDepartment = computed(() => user.value?.department || '')
 
     const login = async (credentials) => {
         loading.value = true
@@ -105,6 +112,11 @@ export const useAuth = () => {
 
     const hasPermission = (moduleName, permissionType = 'canView') => {
         if (isAdmin.value) return true
+
+        // Módulos universais são acessíveis a todos
+        const universalModules = ['Dashboard', 'Tarefas']
+        if (universalModules.includes(moduleName) && permissionType === 'canView') return true
+
         if (!user.value || !user.value.userModules) return false
 
         const module = user.value.userModules.find(m => m.module.nome === moduleName)
@@ -118,6 +130,10 @@ export const useAuth = () => {
         error,
         isLoggedIn,
         isAdmin,
+        authHeaders,
+        userName,
+        userRole,
+        userDepartment,
         init,
         login,
         logout,

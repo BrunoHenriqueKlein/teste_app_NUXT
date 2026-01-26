@@ -169,8 +169,8 @@ import logosimples from '@/assets/imagens/logo-someh-fundo-escuro-simples.png'
 
 // Navegação base
 const navigation = [
-  { title: 'Dashboard', icon: 'mdi-view-dashboard', route: '/', moduleName: 'Dashboard' },
-  { title: 'Tarefas', icon: 'mdi-clipboard-check-multiple', route: '/tarefas', moduleName: 'Tarefas' },
+  { title: 'Dashboard', icon: 'mdi-view-dashboard', route: '/', moduleName: 'Dashboard', isUniversal: true },
+  { title: 'Tarefas', icon: 'mdi-clipboard-check-multiple', route: '/tarefas', moduleName: 'Tarefas', isUniversal: true },
   { title: 'Ordens de Produção', icon: 'mdi-clipboard-list', route: '/ops', moduleName: 'Ordens de Produção' },
   { title: 'Processos', icon: 'mdi-cog', route: '/processos', moduleName: 'Processos' },
   { title: 'Peças (BOM)', icon: 'mdi-cogs', route: '/pecas', moduleName: 'Peças' },
@@ -204,8 +204,8 @@ const updateTime = () => {
 
 // Computed Properties
 const filteredNavigation = computed(() => {
-  // Filtrar módulos normais por permissão canView
-  const filtered = navigation.filter(item => hasPermission(item.moduleName, 'canView'))
+  // Filtrar módulos normais por permissão canView OU se for universal
+  const filtered = navigation.filter(item => item.isUniversal || hasPermission(item.moduleName, 'canView'))
   
   // Adicionar itens de admin se for ADMIN
   if (isAdmin.value) {

@@ -32,6 +32,7 @@ export default defineEventHandler(async (event) => {
                         id: true,
                         numeroOP: true,
                         cliente: true,
+                        codigoMaquina: true,
                         descricaoMaquina: true
                     }
                 },

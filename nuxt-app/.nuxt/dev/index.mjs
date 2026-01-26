@@ -1,5 +1,5 @@
 import process from 'node:process';globalThis._importMeta_={url:import.meta.url,env:process.env};import { tmpdir } from 'node:os';
-import { defineEventHandler, handleCacheHeaders, splitCookiesString, createEvent, fetchWithEvent, isEvent, eventHandler, setHeaders, sendRedirect, proxyRequest, getRequestHeader, setResponseHeaders, setResponseStatus, send, getRequestHeaders, setResponseHeader, appendResponseHeader, getRequestURL, getResponseHeader, removeResponseHeader, createError, getQuery as getQuery$1, readBody, createApp, createRouter as createRouter$1, toNodeListener, lazyEventHandler, getResponseStatus, getRouterParam, readMultipartFormData, getResponseStatusText } from 'file:///app/node_modules/h3/dist/index.mjs';
+import { defineEventHandler, handleCacheHeaders, splitCookiesString, createEvent, fetchWithEvent, isEvent, eventHandler, setHeaders, sendRedirect, proxyRequest, getRequestHeader, setResponseHeaders, setResponseStatus, send, getRequestHeaders, setResponseHeader, appendResponseHeader, getRequestURL, getResponseHeader, removeResponseHeader, createError, getHeader, getQuery as getQuery$1, readBody, createApp, createRouter as createRouter$1, toNodeListener, lazyEventHandler, getResponseStatus, getRouterParam, readMultipartFormData, getResponseStatusText } from 'file:///app/node_modules/h3/dist/index.mjs';
 import { Server } from 'node:http';
 import path, { resolve, dirname, join } from 'node:path';
 import nodeCrypto from 'node:crypto';
@@ -1563,6 +1563,24 @@ const _oStzCE = eventHandler((event) => {
   return readAsset(id);
 });
 
+const jwtSecret$1 = process.env.JWT_SECRET || "your-secret-key-change-in-production";
+const _0FD7Gp = defineEventHandler(async (event) => {
+  const authHeader = getHeader(event, "Authorization");
+  if (event.path.startsWith("/api/auth/")) {
+    return;
+  }
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    const token = authHeader.split(" ")[1];
+    try {
+      const decoded = jwt.verify(token, jwtSecret$1);
+      event.context.user = decoded;
+      console.log("\u{1F510} Usu\xE1rio autenticado via middleware:", decoded.email);
+    } catch (error) {
+      console.error("\u274C Erro na verifica\xE7\xE3o do JWT no middleware:", error);
+    }
+  }
+});
+
 const VueResolver = (_, value) => {
   return isRef(value) ? toValue(value) : value;
 };
@@ -1943,6 +1961,7 @@ const _lazy_0XwxzV = () => Promise.resolve().then(function () { return renderer$
 
 const handlers = [
   { route: '', handler: _oStzCE, lazy: false, middleware: true, method: undefined },
+  { route: '', handler: _0FD7Gp, lazy: false, middleware: true, method: undefined },
   { route: '/api/admin/setup-tasks', handler: _lazy_1Z3ty_, lazy: true, middleware: false, method: "get" },
   { route: '/api/admin/users/list', handler: _lazy_vyMpl_, lazy: true, middleware: false, method: "get" },
   { route: '/api/admin/users/permissions', handler: _lazy_iYNlsX, lazy: true, middleware: false, method: "post" },
@@ -30032,6 +30051,7 @@ const tasks_get = defineEventHandler(async (event) => {
             id: true,
             numeroOP: true,
             cliente: true,
+            codigoMaquina: true,
             descricaoMaquina: true
           }
         },

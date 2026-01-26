@@ -7,7 +7,7 @@
             <v-card-text class="text-center text-white">
               <h1 class="text-h5 font-weight-bold mb-1">Dashboard de Produção</h1>
               <p class="text-subtitle-2 font-weight-regular">
-                Olá, {{ userName }}! Aqui está o resumo das ordens de produção.
+                Olá, {{ userNameDisplay }}! Aqui está o resumo das ordens de produção.
               </p>
             </v-card-text>
           </v-card>
@@ -201,35 +201,18 @@
 </template>
 
 <script setup>
-
+const { userName, authHeaders } = useAuth()
 // Adicione estas computed properties no seu script
 import { computed } from 'vue'
 
-// Dados do usuário
-const user = ref({})
-
-// Carregar dados do usuário
-onMounted(() => {
-  loadUserData()
-})
-
-const loadUserData = () => {
-  try {
-    const userData = localStorage.getItem('user')
-    if (userData) {
-      user.value = JSON.parse(userData)
-    }
-  } catch (error) {
-    console.error('Erro ao carregar dados do usuário:', error)
-  }
-}
-
-const userName = computed(() => {
-  return user.value?.name?.split(' ')[0] || 'Usuário'
+const userNameDisplay = computed(() => {
+  return userName.value ? userName.value.split(' ')[0] : 'Usuário'
 })
 
 // Carregar estatísticas reais
-const { data: dashboardStats, refresh: refreshStats } = await useFetch('/api/dashboard/stats')
+const { data: dashboardStats, refresh: refreshStats } = await useFetch('/api/dashboard/stats', {
+  headers: authHeaders.value
+})
 
 const stats = computed(() => [
   { 
@@ -296,17 +279,17 @@ const quickActions = [
 
 // Carregar dados do dashboard
 onMounted(async () => {
-  await Promise.all([
-    loadDashboardData(),
-    refreshStats()
-  ])
+  await loadDashboardData()
+  await refreshStats()
 })
 
 const loadDashboardData = async () => {
   loading.value = true
   try {
     // Carregar OPs recentes
-    const opsData = await $fetch('/api/ops/recent')
+    const opsData = await $fetch('/api/ops/recent', {
+      headers: authHeaders.value
+    })
     recentOps.value = Array.isArray(opsData) ? opsData : []
     
   } catch (error) {
