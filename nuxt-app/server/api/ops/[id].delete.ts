@@ -5,41 +5,42 @@ const prisma = new PrismaClient()
 export default defineEventHandler(async (event) => {
   try {
     const id = getRouterParam(event, 'id')
-    
+
+    const user = event.context.user
+    if (!user || (user as any).role !== 'ADMIN') {
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Apenas administradores podem excluir Ordens de Produção'
+      })
+    }
+
     if (!id) {
       throw createError({
         statusCode: 400,
         statusMessage: 'ID da OP não informado'
       })
     }
-    
+
     // Verificar se OP existe
     const existingOP = await prisma.oP.findUnique({
       where: { id: parseInt(id) }
     })
-    
+
     if (!existingOP) {
       throw createError({
         statusCode: 404,
         statusMessage: 'OP não encontrada'
       })
     }
-    
+
     // Deletar OP (em produção, considerar soft delete)
     await prisma.oP.delete({
       where: { id: parseInt(id) }
     })
-    
-    // Criar histórico
-    await prisma.oPHistorico.create({
-      data: {
-        opId: parseInt(id),
-        usuarioId: 1, // Em produção, pegar do usuário logado
-        acao: 'OP excluída',
-        detalhes: `Ordem de produção ${existingOP.numeroOP} excluída`
-      }
-    })
-    
+
+    // Histórico de exclusão não pode ser criado pois a OP deixa de existir
+    // e o delete cascade limparia o registro de qualquer forma.
+
     return { success: true, message: 'OP excluída com sucesso' }
   } catch (error: any) {
     console.error('Erro ao excluir OP:', error)

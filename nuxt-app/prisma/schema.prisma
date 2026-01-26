@@ -184,7 +184,7 @@ model OPProcesso {
   dataFim             DateTime?           @map("data_fim")
   responsavelId       Int?                @map("responsavel_id")
   vinculoStatusOP     OPStatus?           @map("vinculo_status_op")
-  op                  OP                  @relation(fields: [opId], references: [id])
+  op                  OP                  @relation(fields: [opId], references: [id], onDelete: Cascade)
   responsavel         User?               @relation("Processo_Responsavel", fields: [responsavelId], references: [id])
   historico           ProcessoHistorico[]
 
@@ -198,7 +198,7 @@ model ProcessoHistorico {
   acao       String
   detalhes   String?
   createdAt  DateTime   @default(now())
-  processo   OPProcesso @relation(fields: [processoId], references: [id])
+  processo   OPProcesso @relation(fields: [processoId], references: [id], onDelete: Cascade)
   usuario    User       @relation("ProcessoHistorico_Usuario", fields: [usuarioId], references: [id])
 
   @@map("processo_historico")
@@ -220,7 +220,7 @@ model Peca {
   arquivoBOM       String?
   status           PecaStatus       @default(NAO_INICIADA)
   compras          CompraItem[]
-  op               OP               @relation(fields: [opId], references: [id])
+  op               OP               @relation(fields: [opId], references: [id], onDelete: Cascade)
   processos        ProcessoPeca[]
   fornecedor       Fornecedor?      @relation(fields: [fornecedorId], references: [id])
 
@@ -264,7 +264,7 @@ model OrdemServico {
   dataEmissao     DateTime       @default(now()) @map("data_emissao")
   inicioPrevisto  DateTime?      @map("inicio_previsto")
   terminoPrevisto DateTime?      @map("termino_previsto")
-  op              OP             @relation(fields: [opId], references: [id])
+  op              OP             @relation(fields: [opId], references: [id], onDelete: Cascade)
   fornecedor      Fornecedor?    @relation(fields: [fornecedorId], references: [id])
   itens           ProcessoPeca[]
 
@@ -312,7 +312,7 @@ model EstoqueMovimentacao {
   usuarioId  Int
   createdAt  DateTime         @default(now())
   estoque    Estoque          @relation(fields: [estoqueId], references: [id])
-  op         OP?              @relation(fields: [opId], references: [id])
+  op         OP?              @relation(fields: [opId], references: [id], onDelete: Cascade)
   usuario    User             @relation("EstoqueMovimentacao_Usuario", fields: [usuarioId], references: [id])
 
   @@map("estoque_movimentacoes")
@@ -328,7 +328,7 @@ model Compra {
   dataSolicitacao     DateTime     @default(now())
   dataEntregaPrevista DateTime?
   itens               CompraItem[]
-  op                  OP           @relation(fields: [opId], references: [id])
+  op                  OP           @relation(fields: [opId], references: [id], onDelete: Cascade)
 
   @@map("compras")
 }
@@ -353,7 +353,7 @@ model OPHistorico {
   acao      String
   detalhes  String?
   createdAt DateTime @default(now())
-  op        OP       @relation(fields: [opId], references: [id])
+  op        OP       @relation(fields: [opId], references: [id], onDelete: Cascade)
   usuario   User     @relation("OPHistorico_Usuario", fields: [usuarioId], references: [id])
 
   @@map("op_historico")
@@ -368,7 +368,7 @@ model Arquivo {
   tamanho   Int
   usuarioId Int
   createdAt DateTime @default(now())
-  op        OP?      @relation(fields: [opId], references: [id])
+  op        OP?      @relation(fields: [opId], references: [id], onDelete: Cascade)
   usuario   User     @relation("Arquivo_Usuario", fields: [usuarioId], references: [id])
 
   @@map("arquivos")

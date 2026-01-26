@@ -3387,6 +3387,13 @@ const prisma$g = new PrismaClient();
 const _id__delete$4 = defineEventHandler(async (event) => {
   try {
     const id = getRouterParam(event, "id");
+    const user = event.context.user;
+    if (!user || user.role !== "ADMIN") {
+      throw createError({
+        statusCode: 403,
+        statusMessage: "Apenas administradores podem excluir Ordens de Produ\xE7\xE3o"
+      });
+    }
     if (!id) {
       throw createError({
         statusCode: 400,
@@ -3404,15 +3411,6 @@ const _id__delete$4 = defineEventHandler(async (event) => {
     }
     await prisma$g.oP.delete({
       where: { id: parseInt(id) }
-    });
-    await prisma$g.oPHistorico.create({
-      data: {
-        opId: parseInt(id),
-        usuarioId: 1,
-        // Em produção, pegar do usuário logado
-        acao: "OP exclu\xEDda",
-        detalhes: `Ordem de produ\xE7\xE3o ${existingOP.numeroOP} exclu\xEDda`
-      }
     });
     return { success: true, message: "OP exclu\xEDda com sucesso" };
   } catch (error) {
