@@ -1,13 +1,23 @@
 <template>
   <v-app>
     <v-main>
-      <v-container fluid class="fill-height pa-0 d-flex align-center justify-center login-container">
+      <v-container fluid class="fill-height pa-0 d-flex align-center justify-center bg-background position-relative">
+        <!-- Botão de Alternar Tema (Login) -->
+        <div class="position-absolute" style="top: 20px; right: 20px;">
+          <v-btn
+            icon="mdi-theme-light-dark"
+            variant="tonal"
+            color="primary"
+            @click="toggleTheme"
+            title="Alternar Tema"
+          ></v-btn>
+        </div>
         <v-row no-gutters class="fill-height">
           <v-col cols="12" class="d-flex align-center justify-center">
             <v-card variant="flat" class="pa-8 mx-auto custom-card glass-effect" max-width="450" width="100%">
               <v-card-text class="text-center pa-0">
                 <v-img
-                  :src="logo"
+                  :src="currentLogo"
                   alt="Logo SOMEH"
                   :width="250"
                   :height="120"
@@ -270,9 +280,25 @@ definePageMeta({
   layout: false
 })
 
-// Importar a logo
-import logo from '@/assets/imagens/logo-someh-fundo-claro.png'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import { useTheme } from 'vuetify'
+
+// Importar as logos (Depende do fundo na tela de login)
+import logoParaFundoClaro from '@/assets/imagens/logo-someh-fundo-claro.png'
+import logoParaFundoEscuro from '@/assets/imagens/logo-someh-fundo-escuro.png'
+
+const theme = useTheme()
+const themeCookie = useCookie('theme')
+
+const currentLogo = computed(() => {
+  return theme.global.current.value.dark ? logoParaFundoEscuro : logoParaFundoClaro
+})
+
+const toggleTheme = () => {
+  const newTheme = theme.global.current.value.dark ? 'light' : 'dark'
+  theme.global.name.value = newTheme
+  themeCookie.value = newTheme
+}
 
 const { login: authLogin, register: authRegister, loading: authLoading, error: authError } = useAuth()
 
@@ -437,9 +463,6 @@ const requestPasswordReset = async () => {
 </script>
 
 <style scoped>
-.login-container {
-  background: linear-gradient(135deg, #1867C0, #5CBBF6) !important;
-}
 
 .fill-height {
   height: 100vh;
@@ -451,9 +474,9 @@ const requestPasswordReset = async () => {
 
 /* Melhorando o efeito glass */
 .glass-effect {
-  background: rgba(255, 255, 255, 0.95) !important;
+  background: rgba(var(--v-theme-surface), 0.8) !important;
   backdrop-filter: blur(20px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.1) !important;
 }
 
 .custom-card {

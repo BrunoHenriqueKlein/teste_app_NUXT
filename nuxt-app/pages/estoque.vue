@@ -1,15 +1,12 @@
 <template>
   <div class="pa-4">
-    <!-- Header -->
-    <v-card color="success" variant="flat" class="mb-4">
-      <v-card-text class="d-flex justify-space-between align-center text-white">
-        <div>
-          <h1 class="text-h4 font-weight-bold">
-            <v-icon icon="mdi-warehouse" class="mr-2"></v-icon>
-            Gestão de Estoque
-          </h1>
-          <p class="text-body-1 mt-1">Controle de saldo, materiais e categorias</p>
-        </div>
+    <!-- Header Standard -->
+    <PageHeader 
+      title="Gestão de Estoque" 
+      subtitle="Controle de saldo, materiais e categorias"
+      icon="mdi-warehouse"
+    >
+      <template #actions>
         <v-btn
           color="white"
           variant="outlined"
@@ -18,8 +15,8 @@
         >
           Novo Item
         </v-btn>
-      </v-card-text>
-    </v-card>
+      </template>
+    </PageHeader>
 
     <!-- Resumo -->
     <v-row class="mb-4">
@@ -125,7 +122,7 @@
         <v-card-actions>
           <v-spacer></v-spacer>
           <v-btn variant="text" @click="dialog.show = false">Cancelar</v-btn>
-          <v-btn color="success" variant="flat" @click="saveItem" :loading="saving">Salvar</v-btn>
+          <v-btn color="primary" variant="flat" @click="saveItem" :loading="saving">Salvar</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

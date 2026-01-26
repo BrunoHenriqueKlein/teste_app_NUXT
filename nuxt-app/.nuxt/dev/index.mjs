@@ -3153,22 +3153,15 @@ const stats_get = defineEventHandler(async (event) => {
     const opsAbertas = await prisma$i.oP.count({
       where: { status: "AGUARDANDO" }
     });
-    const opsProducao = await prisma$i.oP.count({
-      where: {
-        status: {
-          in: ["EM_PROJETO", "EM_FABRICACAO", "EM_MONTAGEM"]
-        }
-      }
+    const todasOps = await prisma$i.oP.findMany({
+      select: { status: true, dataEntrega: true }
     });
-    const opsConcluidas = await prisma$i.oP.count({
-      where: { status: "ENTREGUE" }
-    });
-    const opsAtrasadas = await prisma$i.oP.count({
-      where: {
-        dataEntrega: { lt: /* @__PURE__ */ new Date() },
-        status: { not: "ENTREGUE" }
-      }
-    });
+    const opsProducao = todasOps.filter((op) => op.status.startsWith("EM_")).length;
+    const opsConcluidas = todasOps.filter((op) => op.status === "CONCLUIDA").length;
+    const agora = /* @__PURE__ */ new Date();
+    const opsAtrasadas = todasOps.filter(
+      (op) => op.status !== "CONCLUIDA" && op.status !== "CANCELADA" && op.dataEntrega && new Date(op.dataEntrega) < agora
+    ).length;
     const user = event.context.user;
     let minhasTarefas = 0;
     if (user) {
@@ -3184,7 +3177,8 @@ const stats_get = defineEventHandler(async (event) => {
       opsProducao,
       opsConcluidas,
       opsAtrasadas,
-      minhasTarefas
+      minhasTarefas,
+      total: todasOps.length
     };
   } catch (error) {
     console.error("Erro ao carregar estat\xEDsticas:", error);

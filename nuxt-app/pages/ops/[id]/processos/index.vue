@@ -8,65 +8,37 @@
     </div>
 
     <div v-else>
-    <!-- Header -->
-    <v-row class="mb-4">
-      <v-col cols="12">
-        <v-card color="primary" variant="flat" class="pa-4">
-          <v-card-text class="d-flex justify-space-between align-center text-white">
-            <div>
-              <div class="d-flex align-center mb-2">
-                <v-btn 
-                  icon 
-                  variant="text" 
-                  color="white" 
-                  class="mr-2"
-                  @click="$router.push('/ops')"
-                >
-                  <v-icon>mdi-arrow-left</v-icon>
-                </v-btn>
-                <v-btn 
-                  icon 
-                  variant="text" 
-                  color="white" 
-                  class="mr-2"
-                  @click="$router.push(`/ops/${$route.params.id}`)"
-                  title="Ver Dashboard"
-                >
-                  <v-icon>mdi-chart-timeline</v-icon>
-                </v-btn>
-                <h1 class="text-h4 font-weight-bold">Processos da OP</h1>
-              </div>
-              <p class="text-body-1">
-                {{ op?.numeroOP || 'Carregando...' }} - {{ op?.descricaoMaquina || 'Carregando...' }}
-              </p>
-              <p class="text-caption">
-                Cliente: {{ op?.cliente || 'Carregando...' }} | 
-                Entrega: {{ formatDate(op?.dataEntrega) }} | 
-                Início OP: <strong>{{ formatDate(dataInicioOP) }}</strong>
-              </p>
-            </div>
-            <div class="d-flex gap-2">
-              <v-btn 
-                color="white" 
-                variant="outlined" 
-                prepend-icon="mdi-plus"
-                @click="openCreateProcessoDialog"
-              >
-                Novo Processo
-              </v-btn>
-              <v-btn 
-                color="white" 
-                variant="outlined" 
-                prepend-icon="mdi-playlist-plus"
-                @click="showTemplateDialog = true"
-              >
-                Usar Template
-              </v-btn>
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
+    <!-- Header Standard -->
+    <PageHeader 
+      title="Processos da OP" 
+      :subtitle="`${op?.numeroOP || ''} - ${op?.descricaoMaquina || ''} | Cliente: ${op?.cliente || ''}`"
+      icon="mdi-cog"
+    >
+      <template #actions>
+        <v-btn icon color="white" variant="text" @click="$router.push('/ops')" title="Voltar para Lista">
+          <v-icon>mdi-arrow-left</v-icon>
+        </v-btn>
+        <v-btn icon color="white" variant="text" @click="$router.push(`/ops/${$route.params.id}`)" title="Ver Gantt">
+          <v-icon>mdi-chart-timeline</v-icon>
+        </v-btn>
+        <v-btn 
+          color="white" 
+          variant="outlined" 
+          prepend-icon="mdi-plus"
+          @click="openCreateProcessoDialog"
+        >
+          Novo Processo
+        </v-btn>
+        <v-btn 
+          color="white" 
+          variant="outlined" 
+          prepend-icon="mdi-playlist-plus"
+          @click="showTemplateDialog = true"
+        >
+          Aplicar Template
+        </v-btn>
+      </template>
+    </PageHeader>
 
     <!-- Conteúdo principal apenas se tiver processos -->
     <div v-if="processos.length > 0">

@@ -1,32 +1,22 @@
 <template>
   <div class="w-100">
-    <!-- Debug -->
-    <v-alert v-if="debugInfo" type="info" class="mb-4">
-      {{ debugInfo }}
-    </v-alert>
-
-    <!-- Header -->
-    <v-row class="mb-4">
-      <v-col cols="12">
-        <v-card color="primary" variant="flat" class="pa-4">
-          <v-card-text class="d-flex justify-space-between align-center text-white">
-            <div>
-              <h1 class="text-h4 font-weight-bold">Ordens de Produção</h1>
-              <p class="text-body-1 mt-2">Rota atual: {{ $route.fullPath }}</p>
-            </div>
-            <v-btn 
-              color="white" 
-              variant="outlined" 
-              size="large"
-              prepend-icon="mdi-plus"
-              @click="openCreateDialog"
-            >
-              Nova OP
-            </v-btn>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
+    <!-- Header Standard -->
+    <PageHeader 
+      title="Ordens de Produção" 
+      subtitle="Gestão e monitoramento de Ordens de Produção"
+      icon="mdi-clipboard-list"
+    >
+      <template #actions>
+        <v-btn 
+          color="white" 
+          variant="outlined" 
+          prepend-icon="mdi-plus"
+          @click="openCreateDialog"
+        >
+          Nova OP
+        </v-btn>
+      </template>
+    </PageHeader>
 
     <!-- Filtros -->
     <v-row class="mb-4">
@@ -451,7 +441,6 @@ const showDeleteDialog = ref(false)
 const editingOP = ref(null)
 const opToDelete = ref(null)
 const error = ref('')
-const debugInfo = ref('')
 const form = ref(null)
 
 // Filtros
@@ -507,7 +496,6 @@ const route = useRoute()
 
 // Carregar dados
 onMounted(() => {
-  debugInfo.value = `Página carregada. Rota: ${route.fullPath}`
   console.log('🔍 Página OPs montada', route.query)
   
   // Inicializar filtros da query

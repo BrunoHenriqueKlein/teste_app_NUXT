@@ -1,15 +1,12 @@
 <template>
   <div class="pa-4">
-    <!-- Header -->
-    <v-card color="indigo" variant="flat" class="mb-4">
-      <v-card-text class="d-flex justify-space-between align-center text-white">
-        <div>
-          <h1 class="text-h4 font-weight-bold">
-            <v-icon icon="mdi-cart" class="mr-2"></v-icon>
-            Gestão de Compras
-          </h1>
-          <p class="text-body-1 mt-1">Requisições, cotações e ordens de compra</p>
-        </div>
+    <!-- Header Standard -->
+    <PageHeader 
+      title="Gestão de Compras" 
+      subtitle="Requisições, cotações e ordens de compra"
+      icon="mdi-cart"
+    >
+      <template #actions>
         <v-btn
           color="white"
           variant="outlined"
@@ -18,11 +15,11 @@
         >
           Nova Requisição
         </v-btn>
-      </v-card-text>
-    </v-card>
+      </template>
+    </PageHeader>
 
     <!-- Tabs de Navegação -->
-    <v-tabs v-model="tab" color="indigo" class="mb-4">
+    <v-tabs v-model="tab" color="primary" class="mb-4">
       <v-tab value="demandas">Demandas da BOM</v-tab>
       <v-tab value="ordens">Ordens de Compra</v-tab>
     </v-tabs>
@@ -142,7 +139,7 @@
         <v-card-actions>
           <v-spacer></v-spacer>
           <v-btn variant="text" @click="dialog.show = false">Cancelar</v-btn>
-          <v-btn color="indigo" variant="flat" :loading="saving" @click="saveCompra">Solicitar Compra</v-btn>
+          <v-btn color="primary" variant="flat" :loading="saving" @click="saveCompra">Solicitar Compra</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

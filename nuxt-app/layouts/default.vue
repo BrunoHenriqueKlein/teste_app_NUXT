@@ -7,7 +7,7 @@
           <v-img
             :width="100"
             :height="30"
-            :src="logosimples"
+            :src="currentLogo"
             alt="Logo SOMEH"
             class="mr-3"
             contain
@@ -129,8 +129,8 @@
       </div>
     </v-navigation-drawer>
 
-    <v-main class="bg-grey-lighten-3">
-      <v-container fluid class="pt-1 px-3 pa-md-4 fill-height align-start">
+    <v-main class="bg-background">
+      <v-container fluid class="pt-1 px-3 pa-md-4 align-start">
         <v-breadcrumbs :items="breadcrumbs" class="pa-0 mb-1 text-caption">
           <template v-slot:divider>
             <v-icon>mdi-chevron-right</v-icon>
@@ -155,17 +155,23 @@
 </template>
 
 <script setup>
+import { useTheme } from 'vuetify'
+
 const { user, userName, userRole, userDepartment, logout, hasPermission, isAdmin } = useAuth()
 const router = useRouter()
 const route = useRoute()
+const theme = useTheme()
 
 // Estado
 const showLogoutConfirm = ref(false)
 const logoutTimer = ref(null)
+const themeCookie = useCookie('theme')
 const currentTime = ref('')
 
-// Importar logo
-import logosimples from '@/assets/imagens/logo-someh-fundo-escuro-simples.png'
+// Importar logo (Mesma para fundo escuro e azul escuro)
+import logoSomeh from '@/assets/imagens/logo-someh-fundo-escuro-simples.png'
+
+const currentLogo = computed(() => logoSomeh)
 
 // Navegação base
 const navigation = [
@@ -261,15 +267,16 @@ const confirmLogout = () => {
   logout()
 }
 
+const toggleTheme = () => {
+  theme.global.name.value = theme.global.current.value.dark ? 'light' : 'dark'
+}
+
 const navigateToPage = (path) => {
   router.push(path)
 }
 </script>
 
 <style scoped>
-.v-app-bar {
-  background: linear-gradient(135deg, #1867C0, #5CBBF6) !important;
-}
 
 .v-list-item:hover {
   box-shadow: 0 4px 20px rgba(0,0,0,0.15) !important;
@@ -278,8 +285,9 @@ const navigateToPage = (path) => {
 }
 
 .v-list-item--active {
-  background: linear-gradient(135deg, #1867C0, #5CBBF6) !important;
-  color: white !important;
+  background-color: rgb(var(--v-theme-primary)) !important;
+  color: rgb(var(--v-theme-on-primary)) !important;
+  opacity: 1 !important;
 }
 
 .v-list-item--active .v-icon {

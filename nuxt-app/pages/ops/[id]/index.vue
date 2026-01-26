@@ -1,28 +1,22 @@
 <template>
   <div class="w-100 gantt-page-container">
-    <!-- Header Específico do Dashboard (Web) - Apenas na Tela -->
-    <v-row class="no-print">
-      <v-col cols="12">
-        <v-card color="primary">
-          <v-card-title class="text-white">
-            <v-btn icon dark @click="$router.push('/ops')" class="mr-2">
-              <v-icon>mdi-arrow-left</v-icon>
-            </v-btn>
-            📊 Gráfico de Gantt - OP: {{ opData?.numeroOP }}
-          </v-card-title>
-          <v-card-text class="text-white">
-            {{ opData?.descricaoMaquina }} - Cliente: {{ opData?.cliente }}
-            <div v-if="opData?.dataEntrega" class="text-caption">
-              Entrega: {{ formatDate(opData.dataEntrega) }}
-            </div>
-            <div class="text-caption">
-              Início OP: <strong>{{ formatDate(dataInicioOP) }}</strong> | 
-              Término Previsto: <strong>{{ formatDate(dataTerminoPrevista) }}</strong>
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
+    <!-- Header Standard -->
+    <PageHeader 
+      :title="`📊 Gráfico de Gantt - OP: ${opData?.numeroOP}`"
+      :subtitle="`${opData?.descricaoMaquina} - Cliente: ${opData?.cliente}`"
+      icon="mdi-chart-timeline"
+    >
+      <template #actions>
+        <v-btn
+          color="white"
+          variant="outlined"
+          prepend-icon="mdi-arrow-left"
+          @click="navigateTo('/ops')"
+        >
+          Voltar para Lista
+        </v-btn>
+      </template>
+    </PageHeader>
 
     <!-- Conteúdo ESPECÍFICO do Dashboard -->
     <v-row class="mt-4 no-print">

@@ -1,18 +1,13 @@
 <template>
   <div class="pa-4">
-    <v-card color="teal-darken-3" variant="flat" class="mb-4">
-      <v-card-text class="d-flex justify-space-between align-center text-white">
-        <div>
-          <h1 class="text-h4 font-weight-bold">
-            <v-icon icon="mdi-cog" class="mr-2"></v-icon>
-            Configurações do Sistema
-          </h1>
-          <p class="text-body-1 mt-1">Padronize categorias, processos e templates para evitar erros.</p>
-        </div>
-      </v-card-text>
-    </v-card>
+    <!-- Header Standard -->
+    <PageHeader 
+      title="Configurações do Sistema" 
+      subtitle="Padronize categorias, processos e templates para evitar erros."
+      icon="mdi-cog"
+    />
 
-    <v-tabs v-model="tab" color="teal-darken-3" class="mb-4">
+    <v-tabs v-model="tab" color="primary" class="mb-4">
       <v-tab value="categorias">Categorias Fornecedor</v-tab>
       <v-tab value="processos-op">Processos da OP</v-tab>
       <v-tab value="templates">Templates de OP</v-tab>

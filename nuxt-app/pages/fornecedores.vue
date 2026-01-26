@@ -1,15 +1,12 @@
 <template>
   <div class="pa-4">
-    <!-- Header -->
-    <v-card color="teal-darken-1" variant="flat" class="mb-4">
-      <v-card-text class="d-flex justify-space-between align-center text-white">
-        <div>
-          <h1 class="text-h4 font-weight-bold">
-            <v-icon icon="mdi-account-group" class="mr-2"></v-icon>
-            Gestão de Fornecedores
-          </h1>
-          <p class="text-body-1 mt-1">Cadastro e controle de parceiros e serviços externos</p>
-        </div>
+    <!-- Header Standard -->
+    <PageHeader 
+      title="Gestão de Fornecedores" 
+      subtitle="Cadastro e controle de parceiros e serviços externos"
+      icon="mdi-account-group"
+    >
+      <template #actions>
         <v-btn
           color="white"
           variant="outlined"
@@ -18,8 +15,8 @@
         >
           Novo Fornecedor
         </v-btn>
-      </v-card-text>
-    </v-card>
+      </template>
+    </PageHeader>
 
     <!-- Filtro e Busca -->
     <v-card variant="outlined" class="mb-4">

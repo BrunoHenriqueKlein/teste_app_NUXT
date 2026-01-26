@@ -1,18 +1,22 @@
 <template>
   <div class="w-100">
-    <v-row class="mb-4">
-      <v-col cols="12">
-        <v-card color="primary" variant="flat" class="pa-4">
-          <v-card-text class="d-flex justify-space-between align-center text-white">
-            <div>
-              <h1 class="text-h4 font-weight-bold">Gestão de Usuários</h1>
-              <p class="text-subtitle-1">Controle de acessos, permissões e perfis da equipe</p>
-            </div>
-            <v-icon size="64" color="white" class="opacity-50">mdi-account-group</v-icon>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
+    <!-- Header Standard -->
+    <PageHeader
+      title="Gestão de Usuários"
+      subtitle="Controle de acesso e permissões do sistema"
+      icon="mdi-account-group"
+    >
+      <template #actions>
+        <v-btn
+          color="white"
+          variant="outlined"
+          prepend-icon="mdi-plus"
+          @click="openAddDialog"
+        >
+          Novo Usuário
+        </v-btn>
+      </template>
+    </PageHeader>
 
     <v-card class="elevation-1">
       <v-toolbar flat color="white">

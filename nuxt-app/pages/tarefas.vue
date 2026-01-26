@@ -1,21 +1,11 @@
 <template>
   <div class="w-100">
-    <!-- Header -->
-    <v-row class="mb-4">
-      <v-col cols="12">
-        <v-card color="primary" variant="flat" class="pa-4">
-          <v-card-text class="d-flex justify-space-between align-center text-white">
-            <div>
-              <h1 class="text-h4 font-weight-bold">{{ showGlobal ? 'Todas as Tarefas' : 'Minhas Tarefas' }}</h1>
-              <p class="text-subtitle-1">
-                {{ showGlobal ? 'Visualize e monitore todos os processos da empresa' : 'Gerencie seus processos e acompanhe seu progresso' }}
-              </p>
-            </div>
-            <v-icon size="64" color="white" class="opacity-50">mdi-clipboard-check-multiple</v-icon>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
+    <!-- Header Standard -->
+    <PageHeader 
+      :title="showGlobal ? 'Todas as Tarefas' : 'Minhas Tarefas'" 
+      :subtitle="showGlobal ? 'Visualize e monitore todos os processos da empresa' : 'Gerencie seus processos e acompanhe seu progresso'"
+      icon="mdi-clipboard-check-multiple"
+    />
 
     <!-- Filtros e Busca -->
     <v-row class="mb-4">

@@ -3,35 +3,29 @@
     <!-- Breadcrumbs -->
     <v-breadcrumbs :items="breadcrumbs" class="px-0 pt-0"></v-breadcrumbs>
 
-    <!-- Header -->
-    <v-card color="primary" variant="flat" class="mb-4">
-      <v-card-text class="d-flex justify-space-between align-center text-white">
-        <div>
-          <h1 class="text-h4 font-weight-bold">
-            <v-icon icon="mdi-cogs" class="mr-2"></v-icon>
-            Lista de Peças (BOM)
-          </h1>
-          <p class="text-body-1 mt-1">Gestão de engenharia e materiais da OP</p>
-        </div>
-        <div class="d-flex gap-2">
+    <!-- Header Standard -->
+    <PageHeader 
+      title="Lista de Peças (BOM)" 
+      subtitle="Gestão de engenharia e materiais da OP"
+      icon="mdi-cogs"
+    >
+      <template #actions>
           <v-btn
             color="white"
             variant="flat"
             prepend-icon="mdi-factory"
             @click="generateOS"
             :loading="loadingOS"
-            class="mr-2"
           >
-            Gerar Ordens (PCP)
+            Gerar PCP
           </v-btn>
           <v-btn
             color="white"
             variant="tonal"
             prepend-icon="mdi-plus"
             @click="openAddPecaDialog"
-            class="mr-2"
           >
-            Adicionar Peça
+            Peça
           </v-btn>
           <v-btn
             color="white"
@@ -40,7 +34,7 @@
             @click="triggerImport"
             :loading="loadingImport"
           >
-            Importar BOM (SolidWorks)
+            Importar
           </v-btn>
           <input
             type="file"
@@ -49,9 +43,8 @@
             accept=".xlsx, .xls"
             @change="handleFileUpload"
           />
-        </div>
-      </v-card-text>
-    </v-card>
+      </template>
+    </PageHeader>
 
     <!-- Resumo do Estoque -->
     <v-row class="mb-4">

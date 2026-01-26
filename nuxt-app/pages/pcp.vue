@@ -1,17 +1,11 @@
 <template>
   <div class="pa-4">
-    <!-- Header -->
-    <v-card color="secondary" variant="flat" class="mb-4">
-      <v-card-text class="d-flex justify-space-between align-center text-white">
-        <div>
-          <h1 class="text-h4 font-weight-bold">
-            <v-icon icon="mdi-factory" class="mr-2"></v-icon>
-            Painel PCP / PPCP
-          </h1>
-          <p class="text-body-1 mt-1">Geração e controle de Ordens de Serviço (OS)</p>
-        </div>
-      </v-card-text>
-    </v-card>
+    <!-- Header Standard -->
+    <PageHeader 
+      title="Painel PCP / PPCP" 
+      subtitle="Geração e controle de Ordens de Serviço (OS)"
+      icon="mdi-factory"
+    />
 
     <!-- Filtros -->
     <v-card variant="outlined" class="mb-4">

@@ -1,15 +1,13 @@
 <template>
   <div class="w-100">
+    <PageHeader 
+      title="Meu Perfil" 
+      subtitle="Gerencie suas informações pessoais e segurança"
+      icon="mdi-account-circle"
+    />
     <v-row justify="center">
       <v-col cols="12" md="8" lg="6">
-        <v-card class="elevation-2 rounded-lg">
-          <v-card-title class="text-h5 pa-6 d-flex align-center">
-            <v-icon large color="primary" class="mr-3">mdi-account-circle</v-icon>
-            Meu Perfil
-          </v-card-title>
-          
-          <v-divider></v-divider>
-          
+        <v-card class="elevation-2 rounded-lg mt-4">
           <v-card-text class="pa-6">
             <v-form @submit.prevent="handleUpdateProfile">
               <!-- Informações Básicas -->
