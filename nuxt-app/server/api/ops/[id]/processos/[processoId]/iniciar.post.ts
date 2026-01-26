@@ -1,3 +1,4 @@
+import { defineEventHandler, createError, getRouterParam } from 'h3'
 import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
@@ -30,22 +31,40 @@ export default defineEventHandler(async (event) => {
         }
 
         // Atualizar processo
+        const now = new Date()
         const processo = await prisma.oPProcesso.update({
             where: {
                 id: parseInt(processoId)
             },
             data: {
                 status: 'EM_ANDAMENTO',
-                dataInicio: new Date(),
+                dataInicio: now,
                 progresso: existingProcesso.progresso > 0 ? existingProcesso.progresso : 10
             }
         })
 
-        // Atualizar status da OP se houver vínculo
+        // Atualizar OP (Status e Data de Início se for a primeira)
+        const updateOPData: any = {}
+
+        // Se houver vínculo de status
         if (existingProcesso.vinculoStatusOP) {
+            updateOPData.status = existingProcesso.vinculoStatusOP
+        }
+
+        // Se a OP ainda não tem data de início, definir como AGORA
+        const op = await prisma.oP.findUnique({
+            where: { id: parseInt(opId) },
+            select: { dataInicio: true }
+        })
+
+        if (op && !op.dataInicio) {
+            updateOPData.dataInicio = now
+        }
+
+        if (Object.keys(updateOPData).length > 0) {
             await prisma.oP.update({
                 where: { id: parseInt(opId) },
-                data: { status: existingProcesso.vinculoStatusOP }
+                data: updateOPData
             })
         }
 

@@ -1,3 +1,5 @@
+import { defineEventHandler, createError, getRouterParam, readBody } from 'h3'
+
 export default defineEventHandler(async (event) => {
   try {
     const opId = getRouterParam(event, 'id')
@@ -53,10 +55,10 @@ export default defineEventHandler(async (event) => {
 
     // ✅ PREPARAR DADOS PARA ATUALIZAÇÃO
     const updateData: any = {
-      nome: body.nome?.trim() || existingProcesso.nome,
-      descricao: body.descricao?.trim() || null,
-      status: body.status || existingProcesso.status,
-      responsavelId: body.responsavelId ? parseInt(body.responsavelId) : null,
+      nome: body.nome?.trim() !== undefined ? body.nome.trim() : existingProcesso.nome,
+      descricao: body.descricao !== undefined ? (body.descricao?.trim() || null) : existingProcesso.descricao,
+      status: body.status !== undefined ? body.status : existingProcesso.status,
+      responsavelId: body.responsavelId !== undefined ? (body.responsavelId ? parseInt(body.responsavelId) : null) : existingProcesso.responsavelId,
       vinculoStatusOP: body.vinculoStatusOP !== undefined ? body.vinculoStatusOP : existingProcesso.vinculoStatusOP
     }
 

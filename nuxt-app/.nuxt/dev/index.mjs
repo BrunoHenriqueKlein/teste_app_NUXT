@@ -28465,10 +28465,10 @@ const _processoId__put = defineEventHandler(async (event) => {
       }
     }
     const updateData = {
-      nome: ((_a = body.nome) == null ? void 0 : _a.trim()) || existingProcesso.nome,
-      descricao: ((_b = body.descricao) == null ? void 0 : _b.trim()) || null,
-      status: body.status || existingProcesso.status,
-      responsavelId: body.responsavelId ? parseInt(body.responsavelId) : null,
+      nome: ((_a = body.nome) == null ? void 0 : _a.trim()) !== void 0 ? body.nome.trim() : existingProcesso.nome,
+      descricao: body.descricao !== void 0 ? ((_b = body.descricao) == null ? void 0 : _b.trim()) || null : existingProcesso.descricao,
+      status: body.status !== void 0 ? body.status : existingProcesso.status,
+      responsavelId: body.responsavelId !== void 0 ? body.responsavelId ? parseInt(body.responsavelId) : null : existingProcesso.responsavelId,
       vinculoStatusOP: body.vinculoStatusOP !== void 0 ? body.vinculoStatusOP : existingProcesso.vinculoStatusOP
     };
     if (body.sequencia !== void 0) {
@@ -28780,20 +28780,32 @@ const iniciar_post = defineEventHandler(async (event) => {
         statusMessage: "Processo n\xE3o encontrado"
       });
     }
+    const now = /* @__PURE__ */ new Date();
     const processo = await prisma$8.oPProcesso.update({
       where: {
         id: parseInt(processoId)
       },
       data: {
         status: "EM_ANDAMENTO",
-        dataInicio: /* @__PURE__ */ new Date(),
+        dataInicio: now,
         progresso: existingProcesso.progresso > 0 ? existingProcesso.progresso : 10
       }
     });
+    const updateOPData = {};
     if (existingProcesso.vinculoStatusOP) {
+      updateOPData.status = existingProcesso.vinculoStatusOP;
+    }
+    const op = await prisma$8.oP.findUnique({
+      where: { id: parseInt(opId) },
+      select: { dataInicio: true }
+    });
+    if (op && !op.dataInicio) {
+      updateOPData.dataInicio = now;
+    }
+    if (Object.keys(updateOPData).length > 0) {
       await prisma$8.oP.update({
         where: { id: parseInt(opId) },
-        data: { status: existingProcesso.vinculoStatusOP }
+        data: updateOPData
       });
     }
     await prisma$8.processoHistorico.create({

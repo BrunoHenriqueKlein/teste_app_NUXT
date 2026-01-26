@@ -371,7 +371,7 @@
                 />
               </v-col>
               
-              <v-col cols="12" sm="6">
+              <v-col cols="12" sm="6" v-if="editingOP">
                 <v-select
                   v-model="formOP.status"
                   label="Status"
@@ -380,7 +380,7 @@
                 />
               </v-col>
 
-              <v-col cols="12" sm="6">
+              <v-col cols="12" sm="6" v-if="!editingOP">
                 <v-select
                   v-model="formOP.templateId"
                   label="Template de Processos (Básico)"
@@ -394,16 +394,6 @@
                 />
               </v-col>
 
-              <v-col cols="12" sm="6">
-                <v-text-field
-                  v-model="formOP.progresso"
-                  label="Progresso (%)"
-                  type="number"
-                  variant="outlined"
-                  min="0"
-                  max="100"
-                />
-              </v-col>
               
               <v-col cols="12">
                 <v-textarea

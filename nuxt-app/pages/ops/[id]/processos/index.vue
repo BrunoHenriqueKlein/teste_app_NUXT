@@ -605,6 +605,7 @@ const op = ref(null)
 const processos = ref([])
 const templatesDB = ref([])
 const padronizados = ref([])
+const processosPadraoFull = ref([])
 const loading = ref(true)
 const salvando = ref(false)
 const showProcessoDialog = ref(false)
@@ -647,6 +648,21 @@ const statusOptions = [
   { title: 'Bloqueado', value: 'BLOQUEADO' },
   { title: 'Cancelado', value: 'CANCELADO' }
 ]
+
+// ✅ AUTO-PREENCHER CAMPOS AO SELECIONAR PROCESSO PADRONIZADO
+watch(() => formProcesso.value.nome, (newNome) => {
+  if (!newNome || editingProcesso.value) return
+
+  const padrao = processosPadraoFull.value.find(p => p.nome === newNome)
+  if (padrao) {
+    console.log('✨ Aplicando configurações automáticas do processo padronizado:', newNome)
+    
+    if (padrao.descricao) formProcesso.value.descricao = padrao.descricao
+    if (padrao.prazoEstimadoPadrao) formProcesso.value.prazoEstimado = padrao.prazoEstimadoPadrao
+    if (padrao.responsavelId) formProcesso.value.responsavelId = padrao.responsavelId
+    if (padrao.vinculoStatusOP) formProcesso.value.vinculoStatusOP = padrao.vinculoStatusOP
+  }
+})
 
 // Computed
 const templateOptions = computed(() => {
@@ -794,7 +810,8 @@ const loadProcessos = async () => {
     ])
     processos.value = Array.isArray(data) ? data : []
     templatesDB.value = tps
-    padronizados.value = pads.map(p => p.nome)
+    processosPadraoFull.value = Array.isArray(pads) ? pads : []
+    padronizados.value = processosPadraoFull.value.map(p => p.nome)
     console.log('✅ Dados carregados')
   } catch (error) {
     console.error('❌ Erro ao carregar dados:', error)
