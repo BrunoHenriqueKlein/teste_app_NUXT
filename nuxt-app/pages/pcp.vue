@@ -32,7 +32,7 @@
           <v-col cols="12" sm="4" md="3">
             <v-select
               v-model="filters.status"
-              :items="['NAO_INICIADO', 'EM_PRODUCAO', 'CONCLUIDA', 'INTERROMPIDA']"
+              :items="['NAO_INICIADO', 'EM_PRODUCAO', 'CONCLUIDA']"
               label="Status"
               variant="outlined"
               density="comfortable"
@@ -362,8 +362,7 @@ const getStatusColor = (status) => {
   const colors = {
     NAO_INICIADO: 'grey',
     EM_PRODUCAO: 'blue',
-    CONCLUIDA: 'success',
-    INTERROMPIDA: 'orange'
+    CONCLUIDA: 'success'
   }
   return colors[status] || 'grey'
 }

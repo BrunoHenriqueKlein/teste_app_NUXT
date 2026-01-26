@@ -377,7 +377,7 @@
                 <v-col cols="3">
                   <v-select
                     v-model="proc.status"
-                    :items="['NAO_INICIADO', 'EM_PRODUCAO', 'CONCLUIDA', 'INTERROMPIDA']"
+                    :items="['NAO_INICIADO', 'EM_PRODUCAO', 'CONCLUIDA']"
                     label="Status"
                     variant="outlined"
                     density="compact"
@@ -690,7 +690,6 @@ const getStatusColor = (status) => {
   const colors = {
     NAO_INICIADA: 'grey',
     EM_PRODUCAO: 'blue',
-    INTERROMPIDA: 'orange',
     CANCELADA: 'red',
     CONCLUIDA: 'success',
     EM_ESTOQUE: 'green-darken-2'
