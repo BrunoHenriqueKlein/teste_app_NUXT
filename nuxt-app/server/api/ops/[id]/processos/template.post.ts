@@ -66,7 +66,8 @@ export default defineEventHandler(async (event) => {
           prazoEstimado: prazo,
           dataInicioPrevista: dataInicioPrevista,
           dataTerminoPrevista: dataTerminoPrevista,
-          responsavelId: pData.responsavelId // ✅ Copiar responsável padrão
+          responsavelId: pData.responsavelId, // ✅ Copiar responsável padrão
+          vinculoStatusOP: pData.vinculoStatusOP // ✅ Copiar vínculo de status
         }
       })
       processosCriados.push(novoProcesso)

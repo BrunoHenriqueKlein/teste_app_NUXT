@@ -53,7 +53,10 @@ export default defineEventHandler(async (event) => {
 
         await prisma.oP.update({
             where: { id: parseInt(opId) },
-            data: { progresso: progressoMedio }
+            data: {
+                progresso: progressoMedio,
+                status: progressoMedio === 100 ? 'CONCLUIDA' : undefined
+            }
         })
 
         // Criar histórico

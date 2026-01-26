@@ -156,7 +156,7 @@
                         variant="flat" 
                         size="small"
                       >
-                        {{ op?.status || 'ABERTA' }}
+                        {{ op?.status || 'AGUARDANDO' }}
                       </v-chip>
                       
                       <v-btn 
@@ -216,25 +216,25 @@ const { data: dashboardStats, refresh: refreshStats } = await useFetch('/api/das
 
 const stats = computed(() => [
   { 
-    title: 'OPs Abertas', 
+    title: 'Aguardando', 
     value: dashboardStats.value?.opsAbertas || 0, 
-    icon: 'mdi-clipboard-text-outline', 
-    color: 'blue',
-    action: () => navigateTo('/ops?status=ABERTA')
+    icon: 'mdi-clock-outline', 
+    color: 'grey',
+    action: () => navigateTo('/ops?status=AGUARDANDO')
   },
   { 
     title: 'Em Produção', 
     value: dashboardStats.value?.opsProducao || 0, 
     icon: 'mdi-cog', 
-    color: 'orange',
+    color: 'blue-lighten-1',
     action: () => navigateTo('/ops?status=EM_FABRICACAO')
   },
   { 
     title: 'Concluídas', 
     value: dashboardStats.value?.opsConcluidas || 0, 
     icon: 'mdi-check-circle', 
-    color: 'green',
-    action: () => navigateTo('/ops?status=ENTREGUE')
+    color: 'green-darken-3',
+    action: () => navigateTo('/ops?status=CONCLUIDA')
   },
   { 
     title: 'Atrasadas', 
@@ -302,15 +302,22 @@ const loadDashboardData = async () => {
 
 // Utilitários
 const getStatusColor = (status) => {
-  const statusSafe = status || 'ABERTA'
+  const statusSafe = status || 'AGUARDANDO'
   const statusColors = {
-    'ABERTA': 'blue',
-    'EM_PROJETO': 'orange',
+    'AGUARDANDO': 'grey',
+    'EM_ENGENHARIA': 'blue-lighten-1',
+    'EM_COMPRAS': 'amber-darken-2',
     'EM_FABRICACAO': 'green',
+    'EM_AUTOMACAO': 'indigo',
+    'EM_PROJETO_ELETRICO': 'orange',
+    'EM_CALIBRACAO': 'teal',
     'EM_MONTAGEM': 'purple',
-    'EM_TESTES': 'cyan',
-    'ENTREGUE': 'green',
-    'CANCELADA': 'red'
+    'EM_TESTES': 'cyan-darken-2',
+    'EM_DOCUMENTACAO': 'brown',
+    'EM_EXPEDICAO': 'deep-orange',
+    'AGUARDANDO_ENTREGA': 'cyan',
+    'CANCELADA': 'red',
+    'CONCLUIDA': 'green-darken-3'
   }
   return statusColors[statusSafe] || 'grey'
 }

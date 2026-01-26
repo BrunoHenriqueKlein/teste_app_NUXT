@@ -113,7 +113,7 @@ async function main() {
         dataPedido: new Date('2024-03-10'),
         dataEntrega: new Date('2024-08-20'),
         cliente: 'Logística Rápida Ltda',
-        status: OPStatus.ABERTA,
+        status: OPStatus.AGUARDANDO,
         progresso: 10,
         criadoPorId: adminUser.id,
       }

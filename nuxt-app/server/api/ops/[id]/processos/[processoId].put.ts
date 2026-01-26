@@ -56,7 +56,8 @@ export default defineEventHandler(async (event) => {
       nome: body.nome?.trim() || existingProcesso.nome,
       descricao: body.descricao?.trim() || null,
       status: body.status || existingProcesso.status,
-      responsavelId: body.responsavelId ? parseInt(body.responsavelId) : null
+      responsavelId: body.responsavelId ? parseInt(body.responsavelId) : null,
+      vinculoStatusOP: body.vinculoStatusOP !== undefined ? body.vinculoStatusOP : existingProcesso.vinculoStatusOP
     }
 
     // ✅ TRATAMENTO DE NÚMEROS

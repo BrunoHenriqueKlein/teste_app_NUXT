@@ -41,6 +41,14 @@ export default defineEventHandler(async (event) => {
             }
         })
 
+        // Atualizar status da OP se houver vínculo
+        if (existingProcesso.vinculoStatusOP) {
+            await prisma.oP.update({
+                where: { id: parseInt(opId) },
+                data: { status: existingProcesso.vinculoStatusOP }
+            })
+        }
+
         // Criar histórico
         await prisma.processoHistorico.create({
             data: {

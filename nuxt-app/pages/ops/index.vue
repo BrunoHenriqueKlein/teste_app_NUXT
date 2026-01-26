@@ -487,10 +487,11 @@ const debouncedLoadOPs = () => {
 
 // Opções
 const statusOptions = [
-  'ABERTA', 'EM_PROJETO', 'AGUARDANDO_COMPRAS', 'EM_FABRICACAO',
-  'EM_MONTAGEM', 'EM_TESTES', 'AGUARDANDO_DOCUMENTACAO', 
-  'PRONTA_EXPEDICAO', 'ENTREGUE', 'CANCELADA'
-].map(status => ({ title: status, value: status }))
+  'AGUARDANDO', 'EM_ENGENHARIA', 'EM_COMPRAS', 'EM_FABRICACAO', 
+  'EM_AUTOMACAO', 'EM_PROJETO_ELETRICO', 'EM_CALIBRACAO', 
+  'EM_MONTAGEM', 'EM_TESTES', 'EM_DOCUMENTACAO', 'EM_EXPEDICAO', 
+  'AGUARDANDO_ENTREGA', 'CANCELADA', 'CONCLUIDA'
+].map(status => ({ title: status.replace(/_/g, ' '), value: status }))
 
 // Formulário
 const formOP = ref({
@@ -503,7 +504,7 @@ const formOP = ref({
   cnpjCliente: '',
   enderecoCliente: '',
   observacoes: '',
-  status: 'ABERTA',
+  status: 'AGUARDANDO',
   progresso: 0,
   templateId: null
 })
@@ -579,26 +580,40 @@ const loadOPs = async () => {
 // Utilitários
 const getStatusColor = (status) => {
   const statusColors = {
-    'ABERTA': 'blue',
-    'EM_PROJETO': 'orange',
+    'AGUARDANDO': 'grey',
+    'EM_ENGENHARIA': 'blue-lighten-1',
+    'EM_COMPRAS': 'amber-darken-2',
     'EM_FABRICACAO': 'green',
+    'EM_AUTOMACAO': 'indigo',
+    'EM_PROJETO_ELETRICO': 'orange',
+    'EM_CALIBRACAO': 'teal',
     'EM_MONTAGEM': 'purple',
-    'EM_TESTES': 'cyan',
-    'ENTREGUE': 'green',
-    'CANCELADA': 'red'
+    'EM_TESTES': 'cyan-darken-2',
+    'EM_DOCUMENTACAO': 'brown',
+    'EM_EXPEDICAO': 'deep-orange',
+    'AGUARDANDO_ENTREGA': 'cyan',
+    'CANCELADA': 'red',
+    'CONCLUIDA': 'green-darken-3'
   }
   return statusColors[status] || 'grey'
 }
 
 const getStatusIcon = (status) => {
   const statusIcons = {
-    'ABERTA': 'mdi-clock-outline',
-    'EM_PROJETO': 'mdi-pencil-ruler',
-    'EM_FABRICACAO': 'mdi-cog',
+    'AGUARDANDO': 'mdi-clock-outline',
+    'EM_ENGENHARIA': 'mdi-engine',
+    'EM_COMPRAS': 'mdi-cart',
+    'EM_FABRICACAO': 'mdi-factory',
+    'EM_AUTOMACAO': 'mdi-robot',
+    'EM_PROJETO_ELETRICO': 'mdi-flash',
+    'EM_CALIBRACAO': 'mdi-scale',
     'EM_MONTAGEM': 'mdi-wrench',
     'EM_TESTES': 'mdi-flask',
-    'ENTREGUE': 'mdi-check',
-    'CANCELADA': 'mdi-close'
+    'EM_DOCUMENTACAO': 'mdi-file-document',
+    'EM_EXPEDICAO': 'mdi-truck-delivery',
+    'AGUARDANDO_ENTREGA': 'mdi-home-clock',
+    'CANCELADA': 'mdi-close',
+    'CONCLUIDA': 'mdi-check-all'
   }
   return statusIcons[status] || 'mdi-help'
 }
@@ -632,7 +647,7 @@ const openCreateDialog = () => {
     cnpjCliente: '',
     enderecoCliente: '',
     observacoes: '',
-    status: 'ABERTA',
+    status: 'AGUARDANDO',
     progresso: 0,
     templateId: null
   }

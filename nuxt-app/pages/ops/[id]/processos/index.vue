@@ -472,6 +472,18 @@
                   max="100"
                 />
               </v-col>
+
+              <v-col cols="12">
+                <v-select
+                  v-model="formProcesso.vinculoStatusOP"
+                  label="Vínculo com Status da OP"
+                  :items="statusOPList"
+                  variant="outlined"
+                  clearable
+                  hint="A OP mudará para este status automaticamente ao iniciar este processo"
+                  persistent-hint
+                />
+              </v-col>
             </v-row>
           </v-form>
         </v-card-text>
@@ -598,6 +610,13 @@ const salvando = ref(false)
 const showProcessoDialog = ref(false)
 const showTemplateDialog = ref(false)
 const aplicandoTemplate = ref(false)
+
+const statusOPList = [
+  'AGUARDANDO', 'EM_ENGENHARIA', 'EM_COMPRAS', 'EM_FABRICACAO', 
+  'EM_AUTOMACAO', 'EM_PROJETO_ELETRICO', 'EM_CALIBRACAO', 
+  'EM_MONTAGEM', 'EM_TESTES', 'EM_DOCUMENTACAO', 'EM_EXPEDICAO', 
+  'AGUARDANDO_ENTREGA', 'CANCELADA', 'CONCLUIDA'
+]
 const editingProcesso = ref(null)
 const usuarios = ref([])
 const selectedTemplate = ref(null)
@@ -615,7 +634,8 @@ const formProcesso = ref({
   status: 'NAO_INICIADO',
   progresso: 0,
   prazoEstimado: null,
-  responsavelId: null
+  responsavelId: null,
+  vinculoStatusOP: null
 })
 
 // Opções
@@ -918,7 +938,8 @@ const openCreateProcessoDialog = () => {
     status: 'NAO_INICIADO',
     progresso: 0,
     prazoEstimado: null,
-    responsavelId: null
+    responsavelId: null,
+    vinculoStatusOP: null
   }
   showProcessoDialog.value = true
 }
@@ -927,7 +948,8 @@ const editarProcesso = (processo) => {
   editingProcesso.value = processo
   formProcesso.value = { 
     ...processo,
-    responsavelId: processo.responsavel?.id || processo.responsavelId
+    responsavelId: processo.responsavel?.id || processo.responsavelId,
+    vinculoStatusOP: processo.vinculoStatusOP || null
   }
   
   showProcessoDialog.value = true

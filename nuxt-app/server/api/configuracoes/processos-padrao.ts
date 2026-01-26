@@ -18,7 +18,8 @@ export default defineEventHandler(async (event) => {
                 nome: body.nome,
                 descricao: body.descricao,
                 prazoEstimadoPadrao: body.prazoEstimadoPadrao ? parseInt(body.prazoEstimadoPadrao) : null,
-                responsavelId: body.responsavelId ? parseInt(body.responsavelId) : null
+                responsavelId: body.responsavelId ? parseInt(body.responsavelId) : null,
+                vinculoStatusOP: body.vinculoStatusOP || null
             },
             include: { responsavel: { select: { id: true, name: true } } }
         })
@@ -32,7 +33,8 @@ export default defineEventHandler(async (event) => {
                 nome: body.nome,
                 descricao: body.descricao,
                 prazoEstimadoPadrao: body.prazoEstimadoPadrao ? parseInt(body.prazoEstimadoPadrao) : null,
-                responsavelId: body.responsavelId ? parseInt(body.responsavelId) : null
+                responsavelId: body.responsavelId ? parseInt(body.responsavelId) : null,
+                vinculoStatusOP: body.vinculoStatusOP || null
             },
             include: { responsavel: { select: { id: true, name: true } } }
         })

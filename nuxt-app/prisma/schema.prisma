@@ -33,16 +33,20 @@ enum UserDepartment {
 }
 
 enum OPStatus {
-  ABERTA
-  EM_PROJETO
-  AGUARDANDO_COMPRAS
+  AGUARDANDO
+  EM_ENGENHARIA
+  EM_COMPRAS
   EM_FABRICACAO
+  EM_AUTOMACAO
+  EM_PROJETO_ELETRICO
+  EM_CALIBRACAO
   EM_MONTAGEM
   EM_TESTES
-  AGUARDANDO_DOCUMENTACAO
-  PRONTA_EXPEDICAO
-  ENTREGUE
+  EM_DOCUMENTACAO
+  EM_EXPEDICAO
+  AGUARDANDO_ENTREGA
   CANCELADA
+  CONCLUIDA
 }
 
 enum ProcessoStatus {
@@ -144,7 +148,7 @@ model OP {
   dataCriacao      DateTime              @default(now())
   dataInicio       DateTime?
   dataFinalizacao  DateTime?
-  status           OPStatus              @default(ABERTA)
+  status           OPStatus              @default(AGUARDANDO)
   progresso        Int                   @default(0)
   cliente          String
   cnpjCliente      String?
@@ -179,6 +183,7 @@ model OPProcesso {
   dataInicio          DateTime?           @map("data_inicio")
   dataFim             DateTime?           @map("data_fim")
   responsavelId       Int?                @map("responsavel_id")
+  vinculoStatusOP     OPStatus?           @map("vinculo_status_op")
   op                  OP                  @relation(fields: [opId], references: [id])
   responsavel         User?               @relation("Processo_Responsavel", fields: [responsavelId], references: [id])
   historico           ProcessoHistorico[]
@@ -396,6 +401,7 @@ model ConfigProcessoPadrao {
   descricao           String?
   prazoEstimadoPadrao Int?                   @map("prazo_estimado_padrao")
   responsavelId       Int?                   @map("responsavel_id")
+  vinculoStatusOP     OPStatus?              @map("vinculo_status_op")
   responsavel         User?                  @relation(fields: [responsavelId], references: [id])
   itens               ConfigTemplateOPItem[]
 

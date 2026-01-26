@@ -5,7 +5,7 @@ const prisma = new PrismaClient()
 export default defineEventHandler(async (event) => {
   try {
     const opsAbertas = await prisma.oP.count({
-      where: { status: 'ABERTA' }
+      where: { status: 'AGUARDANDO' }
     })
 
     const opsProducao = await prisma.oP.count({

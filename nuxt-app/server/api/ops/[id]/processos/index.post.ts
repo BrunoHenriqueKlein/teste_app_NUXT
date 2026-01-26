@@ -2,9 +2,9 @@ export default defineEventHandler(async (event) => {
   try {
     const opId = getRouterParam(event, 'id')
     const body = await readBody(event)
-    
+
     console.log('🆕 DEBUG - Criando processo:', { opId, body })
-    
+
     if (!opId) {
       throw createError({
         statusCode: 400,
@@ -30,23 +30,23 @@ export default defineEventHandler(async (event) => {
 
     // ✅ VALIDAÇÃO MELHORADA
     const errors = []
-    
+
     if (!body.nome || body.nome.trim() === '') {
       errors.push('Nome é obrigatório')
     }
-    
+
     if (!body.sequencia) {
       errors.push('Sequência é obrigatória')
     } else if (isNaN(parseInt(body.sequencia)) || parseInt(body.sequencia) <= 0) {
       errors.push('Sequência deve ser um número positivo')
     }
-    
+
     if (!body.prazoEstimado) {
       errors.push('Prazo estimado é obrigatório')
     } else if (isNaN(parseInt(body.prazoEstimado)) || parseInt(body.prazoEstimado) <= 0) {
       errors.push('Prazo estimado deve ser um número positivo')
     }
-    
+
     if (errors.length > 0) {
       throw createError({
         statusCode: 400,
@@ -76,20 +76,20 @@ export default defineEventHandler(async (event) => {
       if (!dateValue || dateValue === '' || dateValue === null) {
         return null
       }
-      
+
       try {
         let dateStr = dateValue
         if (typeof dateStr === 'string' && !dateStr.includes('T')) {
           dateStr = dateStr + 'T00:00:00.000Z'
         }
         const date = new Date(dateStr)
-        
+
         // Verificar se a data é válida
         if (isNaN(date.getTime())) {
           console.warn(`⚠️ Data inválida: ${dateValue}`)
           return null
         }
-        
+
         return date
       } catch (error) {
         console.warn(`⚠️ Erro ao converter data: ${dateValue}`, error)
@@ -107,7 +107,7 @@ export default defineEventHandler(async (event) => {
     // ✅ CÁLCULO AUTOMÁTICO DE DATAS SE NÃO FORNECIDAS
     let dataInicioCalculada = dataInicioPrevista
     let dataTerminoCalculada = dataTerminoPrevista
-    
+
     // Se não tem dataInicioPrevista, tentar calcular
     if (!dataInicioCalculada) {
       if (dataPrevista) {
@@ -118,7 +118,7 @@ export default defineEventHandler(async (event) => {
         dataInicioCalculada = opExistente.dataInicio || null
       }
     }
-    
+
     // Se tem dataInicioPrevista mas não tem dataTerminoPrevista, calcular baseado no prazo
     if (dataInicioCalculada && !dataTerminoCalculada && body.prazoEstimado) {
       const prazo = parseInt(body.prazoEstimado)
@@ -138,19 +138,20 @@ export default defineEventHandler(async (event) => {
       status: body.status || 'NAO_INICIADO',
       progresso: parseInt(body.progresso) || 0,
       prazoEstimado: body.prazoEstimado ? parseInt(body.prazoEstimado) : null,
-      
+
       // ✅ DATAS PREVISTAS (CÁLCULO EM CASCATA)
       dataInicioPrevista: dataInicioCalculada,
       dataTerminoPrevista: dataTerminoCalculada,
-      
+
       // ✅ DATAS REAIS (se fornecidas)
       dataInicio: dataInicio,
       dataFim: dataFim,
-      
+
       // ✅ DATAS DE COMPATIBILIDADE (campo antigo)
       dataPrevista: dataPrevista || dataInicioCalculada,
-      
-      responsavelId: body.responsavelId ? parseInt(body.responsavelId) : null
+
+      responsavelId: body.responsavelId ? parseInt(body.responsavelId) : null,
+      vinculoStatusOP: body.vinculoStatusOP || null
     }
 
     console.log('📝 DEBUG - Dados do processo a ser criado:', {
@@ -188,7 +189,7 @@ export default defineEventHandler(async (event) => {
       select: { progresso: true }
     })
 
-    const progressoMedio = processosOP.length > 0 
+    const progressoMedio = processosOP.length > 0
       ? Math.round(processosOP.reduce((sum, p) => sum + p.progresso, 0) / processosOP.length)
       : 0
 
@@ -220,19 +221,19 @@ export default defineEventHandler(async (event) => {
       dataInicioPrevista: processo.dataInicioPrevista?.toISOString(),
       dataTerminoPrevista: processo.dataTerminoPrevista?.toISOString()
     })
-    
-    return { 
-      success: true, 
+
+    return {
+      success: true,
       processo,
       message: 'Processo criado com sucesso'
     }
-    
+
   } catch (error: any) {
     console.error('❌ Erro ao criar processo:', error)
-    
+
     let errorMessage = error.message || 'Erro ao criar processo'
     let statusCode = error.statusCode || 500
-    
+
     // ✅ TRATAMENTO DE ERROS ESPECÍFICOS DO PRISMA
     if (error.code === 'P2002') {
       if (error.meta?.target?.includes('sequencia')) {
@@ -248,7 +249,7 @@ export default defineEventHandler(async (event) => {
       errorMessage = 'Registro relacionado não encontrado'
       statusCode = 404
     }
-    
+
     throw createError({
       statusCode: statusCode,
       message: errorMessage

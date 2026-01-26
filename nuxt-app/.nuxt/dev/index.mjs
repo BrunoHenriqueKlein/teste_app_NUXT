@@ -2999,7 +2999,8 @@ const processosPadrao = defineEventHandler(async (event) => {
         nome: body.nome,
         descricao: body.descricao,
         prazoEstimadoPadrao: body.prazoEstimadoPadrao ? parseInt(body.prazoEstimadoPadrao) : null,
-        responsavelId: body.responsavelId ? parseInt(body.responsavelId) : null
+        responsavelId: body.responsavelId ? parseInt(body.responsavelId) : null,
+        vinculoStatusOP: body.vinculoStatusOP || null
       },
       include: { responsavel: { select: { id: true, name: true } } }
     });
@@ -3012,7 +3013,8 @@ const processosPadrao = defineEventHandler(async (event) => {
         nome: body.nome,
         descricao: body.descricao,
         prazoEstimadoPadrao: body.prazoEstimadoPadrao ? parseInt(body.prazoEstimadoPadrao) : null,
-        responsavelId: body.responsavelId ? parseInt(body.responsavelId) : null
+        responsavelId: body.responsavelId ? parseInt(body.responsavelId) : null,
+        vinculoStatusOP: body.vinculoStatusOP || null
       },
       include: { responsavel: { select: { id: true, name: true } } }
     });
@@ -3149,7 +3151,7 @@ const prisma$i = new PrismaClient();
 const stats_get = defineEventHandler(async (event) => {
   try {
     const opsAbertas = await prisma$i.oP.count({
-      where: { status: "ABERTA" }
+      where: { status: "AGUARDANDO" }
     });
     const opsProducao = await prisma$i.oP.count({
       where: {
@@ -28468,7 +28470,8 @@ const _processoId__put = defineEventHandler(async (event) => {
       nome: ((_a = body.nome) == null ? void 0 : _a.trim()) || existingProcesso.nome,
       descricao: ((_b = body.descricao) == null ? void 0 : _b.trim()) || null,
       status: body.status || existingProcesso.status,
-      responsavelId: body.responsavelId ? parseInt(body.responsavelId) : null
+      responsavelId: body.responsavelId ? parseInt(body.responsavelId) : null,
+      vinculoStatusOP: body.vinculoStatusOP !== void 0 ? body.vinculoStatusOP : existingProcesso.vinculoStatusOP
     };
     if (body.sequencia !== void 0) {
       updateData.sequencia = parseInt(body.sequencia);
@@ -28672,7 +28675,10 @@ const concluir_post = defineEventHandler(async (event) => {
     const progressoMedio = processosOP.length > 0 ? Math.round(processosOP.reduce((sum, p) => sum + p.progresso, 0) / processosOP.length) : 0;
     await prisma$a.oP.update({
       where: { id: parseInt(opId) },
-      data: { progresso: progressoMedio }
+      data: {
+        progresso: progressoMedio,
+        status: progressoMedio === 100 ? "CONCLUIDA" : void 0
+      }
     });
     await prisma$a.processoHistorico.create({
       data: {
@@ -28786,6 +28792,12 @@ const iniciar_post = defineEventHandler(async (event) => {
         progresso: existingProcesso.progresso > 0 ? existingProcesso.progresso : 10
       }
     });
+    if (existingProcesso.vinculoStatusOP) {
+      await prisma$8.oP.update({
+        where: { id: parseInt(opId) },
+        data: { status: existingProcesso.vinculoStatusOP }
+      });
+    }
     await prisma$8.processoHistorico.create({
       data: {
         processoId: processo.id,
@@ -29024,7 +29036,8 @@ const index_post$2 = defineEventHandler(async (event) => {
       dataFim,
       // ✅ DATAS DE COMPATIBILIDADE (campo antigo)
       dataPrevista: dataPrevista || dataInicioCalculada,
-      responsavelId: body.responsavelId ? parseInt(body.responsavelId) : null
+      responsavelId: body.responsavelId ? parseInt(body.responsavelId) : null,
+      vinculoStatusOP: body.vinculoStatusOP || null
     };
     console.log("\u{1F4DD} DEBUG - Dados do processo a ser criado:", {
       ...processoData,
@@ -29169,8 +29182,10 @@ const template_post = defineEventHandler(async (event) => {
           prazoEstimado: prazo,
           dataInicioPrevista,
           dataTerminoPrevista,
-          responsavelId: pData.responsavelId
+          responsavelId: pData.responsavelId,
           // ✅ Copiar responsável padrão
+          vinculoStatusOP: pData.vinculoStatusOP
+          // ✅ Copiar vínculo de status
         }
       });
       processosCriados.push(novoProcesso);
@@ -29312,7 +29327,7 @@ const index_post = defineEventHandler(async (event) => {
           cnpjCliente: body.cnpjCliente,
           enderecoCliente: body.enderecoCliente,
           observacoes: body.observacoes,
-          status: body.status || "ABERTA",
+          status: body.status || "AGUARDANDO",
           progresso: body.progresso ? parseInt(body.progresso) : 0,
           criadoPorId: primeiroUsuario.id
         },

@@ -52,7 +52,7 @@ export default defineEventHandler(async (event) => {
           cnpjCliente: body.cnpjCliente,
           enderecoCliente: body.enderecoCliente,
           observacoes: body.observacoes,
-          status: body.status || 'ABERTA',
+          status: body.status || 'AGUARDANDO',
           progresso: (body.progresso ? parseInt(body.progresso) : 0) as number,
           criadoPorId: primeiroUsuario.id
         },

@@ -116,6 +116,16 @@
             variant="outlined"
             clearable
           ></v-autocomplete>
+          <v-select
+            v-if="dialog.type === 'processo-op'"
+            v-model="dialog.vinculoStatusOP"
+            :items="statusOPList"
+            label="Vínculo com Status da OP"
+            variant="outlined"
+            clearable
+            hint="A OP mudará para este status automaticamente ao iniciar este processo"
+            persistent-hint
+          ></v-select>
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
@@ -183,6 +193,13 @@ const dialog = ref({ show: false, type: '', title: '', nome: '' })
 const dialogTemplate = ref({ show: false, nome: '', selecionados: [] })
 const snackbar = ref({ show: false, text: '', color: 'success' })
 
+const statusOPList = [
+  'AGUARDANDO', 'EM_ENGENHARIA', 'EM_COMPRAS', 'EM_FABRICACAO', 
+  'EM_AUTOMACAO', 'EM_PROJETO_ELETRICO', 'EM_CALIBRACAO', 
+  'EM_MONTAGEM', 'EM_TESTES', 'EM_DOCUMENTACAO', 'EM_EXPEDICAO', 
+  'AGUARDANDO_ENTREGA', 'CANCELADA', 'CONCLUIDA'
+]
+
 const headersSimple = [
   { title: 'Nome', key: 'nome', sortable: true },
   { title: 'Descrição', key: 'descricao', sortable: true },
@@ -194,6 +211,7 @@ const headersProcessoOp = [
   { title: 'Descrição', key: 'descricao', sortable: true },
   { title: 'Prazo Padrão', key: 'prazoEstimadoPadrao', sortable: true },
   { title: 'Responsável', key: 'responsavel.name', sortable: true },
+  { title: 'Status OP', key: 'vinculoStatusOP', sortable: true },
   { title: 'Ações', key: 'acoes', align: 'end', sortable: false }
 ]
 
@@ -217,7 +235,7 @@ const loadData = async () => {
       $fetch('/api/configuracoes/processos-padrao', { headers: authHeaders.value }),
       $fetch('/api/configuracoes/processos-peca', { headers: authHeaders.value }),
       $fetch('/api/configuracoes/templates-op', { headers: authHeaders.value }),
-      $fetch('/api/admin/users', { headers: authHeaders.value })
+      $fetch('/api/user', { headers: authHeaders.value })
     ])
     categorias.value = cat
     processosOp.value = pop
@@ -233,11 +251,20 @@ const loadData = async () => {
 
 const openDialog = (type) => {
   const titles = {
-    'categoria': 'Categoria de Fornecedor',
     'processo-op': 'Processo Superior (OP)',
     'processo-peca': 'Processo de Peça'
   }
-  dialog.value = { show: true, type, title: titles[type], id: null, nome: '', descricao: '', prazoEstimadoPadrao: null, responsavelId: null }
+  dialog.value = { 
+    show: true, 
+    type, 
+    title: titles[type], 
+    id: null, 
+    nome: '', 
+    descricao: '', 
+    prazoEstimadoPadrao: null, 
+    responsavelId: null,
+    vinculoStatusOP: null 
+  }
 }
 
 const editItem = (type, item) => {
@@ -254,7 +281,8 @@ const editItem = (type, item) => {
     nome: item.nome, 
     descricao: item.descricao || '', 
     prazoEstimadoPadrao: item.prazoEstimadoPadrao || null,
-    responsavelId: item.responsavelId || null
+    responsavelId: item.responsavelId || null,
+    vinculoStatusOP: item.vinculoStatusOP || null
   }
 }
 
@@ -287,7 +315,8 @@ const saveSimple = async () => {
         nome: dialog.value.nome,
         descricao: dialog.value.descricao,
         prazoEstimadoPadrao: dialog.value.prazoEstimadoPadrao,
-        responsavelId: dialog.value.responsavelId
+        responsavelId: dialog.value.responsavelId,
+        vinculoStatusOP: dialog.value.vinculoStatusOP
       },
       headers: authHeaders.value
     })
