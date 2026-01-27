@@ -182,6 +182,34 @@ export default defineEventHandler(async (event) => {
       }
     })
 
+    // ✅ FALLBACK: ATUALIZAR STATUS E DATA DE INÍCIO DA OP SE NECESSÁRIO
+    // Isso garante que mesmo via PUT genérico, a OP seja iniciada corretamente
+    if (updateData.status === 'EM_ANDAMENTO') {
+      try {
+        const op = await prisma.oP.findUnique({
+          where: { id: parseInt(opId) },
+          select: { dataInicio: true }
+        })
+
+        if (op && !op.dataInicio) {
+          const updateOPData: any = { dataInicio: new Date() }
+
+          // Se o processo tem um vínculo de status, aplica na OP
+          if (existingProcesso.vinculoStatusOP) {
+            updateOPData.status = existingProcesso.vinculoStatusOP
+          }
+
+          await prisma.oP.update({
+            where: { id: parseInt(opId) },
+            data: updateOPData
+          })
+          console.log('🔄 OP vinculada atualizada (dataInicio) via fallback PUT')
+        }
+      } catch (opError) {
+        console.warn('⚠️ Erro ao atualizar OP via fallback:', opError)
+      }
+    }
+
     // ✅ ATUALIZAR PROGRESSO DA OP
     try {
       const processosOP = await prisma.oPProcesso.findMany({

@@ -315,18 +315,45 @@ const formatDate = (dateStr) => {
 const updateStatus = async (task, newStatus) => {
   task.updating = true
   try {
-    await $fetch(`/api/ops/${task.opId}/processos/${task.id}`, {
-      method: 'PUT',
-      body: { 
-        status: newStatus,
-        progresso: newStatus === 'CONCLUIDO' ? 100 : task.progresso
-      },
+    let url = `/api/ops/${task.opId}/processos/${task.id}`
+    let method = 'PUT'
+    let body = { 
+      status: newStatus,
+      progresso: newStatus === 'CONCLUIDO' ? 100 : task.progresso
+    }
+
+    // Se for iniciar ou concluir, usar endpoints especializados que tratam regras de negócio
+    if (newStatus === 'EM_ANDAMENTO') {
+      url += '/iniciar'
+      method = 'POST'
+      body = {}
+    } else if (newStatus === 'CONCLUIDO') {
+      url += '/concluir'
+      method = 'POST'
+      body = {}
+    }
+
+    const response = await $fetch(url, {
+      method,
+      body: Object.keys(body).length > 0 ? body : undefined,
       headers: authHeaders.value
     })
+
+    // Atualizar estado local
     task.status = newStatus
-    if (newStatus === 'CONCLUIDO') task.progresso = 100
+    if (newStatus === 'CONCLUIDO') {
+      task.progresso = 100
+    } else if (newStatus === 'EM_ANDAMENTO') {
+      // Se a resposta trouxer o progresso atualizado (ex: 10%), usa ele
+      if (response?.processo?.progresso) {
+        task.progresso = response.processo.progresso
+      } else if (task.progresso < 10) {
+        task.progresso = 10
+      }
+    }
   } catch (error) {
     console.error('Erro ao atualizar status:', error)
+    alert('Erro ao atualizar status: ' + (error.data?.message || error.message))
   } finally {
     task.updating = false
   }
