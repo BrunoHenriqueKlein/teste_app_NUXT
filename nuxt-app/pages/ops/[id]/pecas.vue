@@ -148,25 +148,49 @@
                 size="x-small"
                 color="info"
                 variant="tonal"
-                class="px-2"
-                closable
                 @click="viewDrawing(anexo.url)"
-                @click:close="deleteAttachment(anexo.id)"
                 :title="anexo.nome"
+                class="px-2"
+                style="max-width: 120px;"
               >
-                <v-icon start size="12">mdi-file-document-outline</v-icon>
-                {{ truncateName(anexo.nome) }}
+                <v-icon start size="12">mdi-file-pdf-box</v-icon>
+                <span class="text-truncate" style="font-size: 10px;">{{ truncateName(anexo.nome) }}</span>
               </v-chip>
             </div>
             
             <v-btn
               icon="mdi-plus-circle"
-              variant="text"
+              variant="tonal"
               size="small"
               color="primary"
-              title="Adicionar Anexo"
+              title="Anexar Desenho"
               @click="triggerDrawingUpload(item)"
-            ></v-btn>
+            >
+              <v-icon>mdi-plus-circle</v-icon>
+            </v-btn>
+          </div>
+        </template>
+
+        <template v-slot:item.processos="{ item }">
+          <div class="d-flex justify-center">
+            <v-btn
+              icon="mdi-format-list-bulleted-type"
+              variant="tonal"
+              size="small"
+              color="primary"
+              title="Gerenciar Processos"
+              @click="openProcessos(item)"
+            >
+              <v-badge
+                v-if="item._count?.processos"
+                color="error"
+                :content="item._count.processos"
+                floating
+              >
+                <v-icon icon="mdi-format-list-bulleted-type"></v-icon>
+              </v-badge>
+              <v-icon v-else icon="mdi-format-list-bulleted-type"></v-icon>
+            </v-btn>
           </div>
         </template>
 
@@ -224,23 +248,6 @@
               </v-list>
             </v-menu>
 
-            <v-btn
-              icon="mdi-format-list-bulleted-type"
-              variant="text"
-              size="small"
-              color="primary"
-              title="Gerenciar Processos"
-              @click="openProcessos(item)"
-            >
-              <v-badge
-                v-if="item._count?.processos"
-                color="error"
-                :content="item._count.processos"
-                floating
-              >
-                <v-icon icon="mdi-format-list-bulleted-type"></v-icon>
-              </v-badge>
-            </v-btn>
             <v-btn
               icon="mdi-pencil"
               variant="text"
@@ -506,6 +513,8 @@ const headers = [
   { title: 'Código', key: 'codigo', sortable: true },
   { title: 'Descrição', key: 'descricao', sortable: true },
   { title: 'Categoria', key: 'categoria', align: 'center' },
+  { title: 'Desenho', key: 'desenho', align: 'center', sortable: false },
+  { title: 'Processos', key: 'processos', align: 'center', sortable: false },
   { title: 'Suprimento', key: 'statusSuprimento', align: 'center' },
   { title: 'Qtd', key: 'quantidade', align: 'end' },
   { title: 'Material', key: 'material' },
@@ -672,6 +681,7 @@ const saveProcessos = async () => {
     showSnackbar('Processos salvos com sucesso!')
     dialogProcessos.value.show = false
     await loadPecas()
+    await generateOS()
   } catch (error) {
     showSnackbar('Erro ao salvar processos', 'error')
   } finally {

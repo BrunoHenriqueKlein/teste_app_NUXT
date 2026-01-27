@@ -9,6 +9,14 @@ node_modules/
 .nitro
 .cache
 dist
+**/node_modules/
+**/.nuxt/
+**/.output/
+**/.nitro/
+**/dist/
+
+# Uploads
+**/public/uploads/
 
 # Environment variables
 .env

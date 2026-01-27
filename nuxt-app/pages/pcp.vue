@@ -64,10 +64,14 @@
         </template>
 
         <template v-slot:item.op="{ item }">
-          <div>
-            <span class="text-primary font-weight-bold">#{{ item.op.numeroOP }}</span> - {{ item.op.cliente }}
+          <div class="d-flex flex-column">
+            <div>
+              <span class="text-primary font-weight-bold">#{{ item.op.numeroOP }}</span>
+              <span class="text-secondary font-weight-bold ml-2">[{{ item.op.codigoMaquina }}]</span>
+            </div>
+            <div class="font-weight-medium">{{ item.op.descricaoMaquina }}</div>
+            <div class="text-caption text-grey">Cliente: {{ item.op.cliente }}</div>
           </div>
-          <div class="text-caption text-grey">{{ item.op.descricaoMaquina }}</div>
         </template>
 
         <template v-slot:item.tipo="{ item }">
@@ -173,8 +177,13 @@
                 <div class="text-h6 text-secondary">{{ dialogOS.data?.tipo }}</div>
               </div>
               <div class="text-right">
-                <div>Data Emissão: {{ formatDate(dialogOS.data?.dataEmissao) }}</div>
-                <div v-if="dialogOS.data?.op">OP: #{{ dialogOS.data.op.numeroOP }} - {{ dialogOS.data.op.cliente }}</div>
+                <div class="font-weight-bold">
+                  OP: #{{ dialogOS.data?.op?.numeroOP }} 
+                  <span class="ml-1">[{{ dialogOS.data?.op?.codigoMaquina }}]</span>
+                </div>
+                <div class="text-h6">{{ dialogOS.data?.op?.descricaoMaquina }}</div>
+                <div class="text-caption text-grey">Cliente: {{ dialogOS.data?.op?.cliente }}</div>
+                <div class="text-caption mt-1">Data Emissão: {{ formatDate(dialogOS.data?.dataEmissao) }}</div>
               </div>
             </div>
             
@@ -276,7 +285,18 @@ const suggestedFornecedores = computed(() => {
   })
 })
 
-const tiposProcesso = ['USINAGEM', 'PINTURA', 'SOLDA', 'CALDEIRARIA', 'MONTAGEM']
+const tiposProcesso = ref(['USINAGEM', 'PINTURA', 'SOLDA', 'CALDEIRARIA', 'MONTAGEM'])
+
+const loadSettings = async () => {
+  try {
+    const ppec = await $fetch('/api/configuracoes/processos-peca')
+    if (ppec && ppec.length > 0) {
+      tiposProcesso.value = ppec.map(p => p.nome.toUpperCase())
+    }
+  } catch (error) {
+    console.error('Erro ao carregar configurações de processos', error)
+  }
+}
 
 const loadOrdens = async () => {
   loading.value = true
@@ -380,6 +400,7 @@ const showSnackbar = (text, color = 'success') => {
 onMounted(() => {
   loadOrdens()
   loadFornecedores()
+  loadSettings()
 })
 </script>
 

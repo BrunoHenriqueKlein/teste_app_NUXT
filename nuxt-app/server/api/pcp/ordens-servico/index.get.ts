@@ -29,7 +29,8 @@ export default defineEventHandler(async (event) => {
                     select: {
                         numeroOP: true,
                         cliente: true,
-                        descricaoMaquina: true
+                        descricaoMaquina: true,
+                        codigoMaquina: true
                     }
                 },
                 _count: {
