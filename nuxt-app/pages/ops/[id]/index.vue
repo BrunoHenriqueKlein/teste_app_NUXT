@@ -489,23 +489,19 @@ const processosOrdenados = computed(() => {
   for (let i = 0; i < processosCalculados.length; i++) {
     const processo = processosCalculados[i]
     
-    // Se não tiver data prevista no banco, calcula em cascata
-    if (!processo.dataInicioPrevista || !processo.dataTerminoPrevista) {
-      if (i === 0) {
-        processo.dataInicioPrevista = dataInicioOP.value
-      } else {
-        const processoAnterior = processosCalculados[i - 1]
-        const dataTerminoAnterior = new Date(processoAnterior.dataTerminoPrevista)
-        dataTerminoAnterior.setDate(dataTerminoAnterior.getDate() + 1)
-        processo.dataInicioPrevista = dataTerminoAnterior.toISOString().split('T')[0]
-        dataInicioAtual = new Date(processo.dataInicioPrevista)
-      }
-      
-      if (processo.prazoEstimado && processo.prazoEstimado > 0) {
-        const dataTermino = new Date(dataInicioAtual)
-        dataTermino.setDate(dataTermino.getDate() + processo.prazoEstimado - 1)
-        processo.dataTerminoPrevista = dataTermino.toISOString().split('T')[0]
-      }
+    // Calcular em cascata para garantir consistência com a página de processos
+    if (i === 0) {
+      processo.dataInicioPrevista = dataInicioOP.value
+    } else {
+      const processoAnterior = processosCalculados[i - 1]
+      processo.dataInicioPrevista = processoAnterior.dataTerminoPrevista || dataInicioOP.value
+      dataInicioAtual = new Date(processo.dataInicioPrevista)
+    }
+    
+    if (processo.prazoEstimado && processo.prazoEstimado > 0) {
+      const dataTermino = new Date(dataInicioAtual)
+      dataTermino.setDate(dataTermino.getDate() + processo.prazoEstimado - 1)
+      processo.dataTerminoPrevista = dataTermino.toISOString().split('T')[0]
     }
   }
   
@@ -568,7 +564,7 @@ const timelineDates = computed(() => {
   
   datesForStart.push(today)
   
-  processos.value.forEach(p => {
+  processosOrdenados.value.forEach(p => {
     const pStartPrev = parseDate(p.dataInicioPrevista)
     if (pStartPrev) datesForStart.push(pStartPrev)
     
@@ -590,7 +586,7 @@ const timelineDates = computed(() => {
   const opEntrega = parseDate(opData.value.dataEntrega)
   if (opEntrega) datesForEnd.push(opEntrega)
   
-  processos.value.forEach(p => {
+  processosOrdenados.value.forEach(p => {
     const pEndPrev = parseDate(p.dataTerminoPrevista)
     if (pEndPrev) datesForEnd.push(pEndPrev)
     

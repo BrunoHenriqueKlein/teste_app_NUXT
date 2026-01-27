@@ -73,7 +73,6 @@ export default defineEventHandler(async (event) => {
       processosCriados.push(novoProcesso)
 
       dataInicioAtual = new Date(dataTerminoPrevista)
-      dataInicioAtual.setDate(dataInicioAtual.getDate() + 1)
       dataInicioAtual.setHours(0, 0, 0, 0)
     }
 

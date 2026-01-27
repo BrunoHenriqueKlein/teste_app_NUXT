@@ -657,11 +657,10 @@ const processosComDatasCalculadas = computed(() => {
       // Primeiro processo: inicia na data da OP
       processo.dataInicioPrevista = dataInicioOP.value
     } else {
-      // Processos subsequentes: iniciam no dia seguinte ao término do anterior
+      // Processos subsequentes: iniciam no mesmo dia do término do anterior
       const processoAnterior = processosCalculados[i - 1]
-      const dataTerminoAnterior = new Date(processoAnterior.dataTerminoPrevista)
-      dataTerminoAnterior.setDate(dataTerminoAnterior.getDate() + 1)
-      processo.dataInicioPrevista = dataTerminoAnterior.toISOString().split('T')[0]
+      const dataTerminoAnteriorStr = processoAnterior.dataTerminoPrevista
+      processo.dataInicioPrevista = dataTerminoAnteriorStr
       dataInicioAtual = new Date(processo.dataInicioPrevista)
     }
     
@@ -815,9 +814,7 @@ const calcularDataInicioDisplay = () => {
   // Para novos processos, calcular baseado no último processo
   const ultimoProcesso = processosComDatasCalculadas.value[processosComDatasCalculadas.value.length - 1]
   if (ultimoProcesso && ultimoProcesso.dataTerminoPrevista) {
-    const dataInicio = new Date(ultimoProcesso.dataTerminoPrevista)
-    dataInicio.setDate(dataInicio.getDate() + 1)
-    return formatDate(dataInicio.toISOString().split('T')[0])
+    return formatDate(ultimoProcesso.dataTerminoPrevista)
   }
   
   return 'A calcular...'
@@ -985,9 +982,7 @@ const salvarProcesso = async () => {
         // Se a sequência for maior que todos, pega o último processo
         if (novaSequencia > processosOrdenados[processosOrdenados.length - 1].sequencia) {
           const ultimoProcesso = processosOrdenados[processosOrdenados.length - 1]
-          const dataInicioDate = new Date(ultimoProcesso.dataTerminoPrevista || dataInicioOP.value)
-          dataInicioDate.setDate(dataInicioDate.getDate() + 1)
-          dataInicioCalculada = dataInicioDate.toISOString().split('T')[0]
+          dataInicioCalculada = ultimoProcesso.dataTerminoPrevista || dataInicioOP.value
         } else {
           // Encontrar onde inserir e recalcular todos
           dataInicioCalculada = dataInicioOP.value
@@ -1075,11 +1070,9 @@ const recalcularDatasCascata = async () => {
         // Primeiro processo: inicia na data da OP
         processo.dataInicioPrevista = dataInicioOP.value
       } else {
-        // Processos subsequentes: iniciam no dia seguinte ao término do anterior
+        // Processos subsequentes: iniciam no mesmo dia do término do anterior
         const processoAnterior = processosAtualizados[i - 1]
-        const dataTerminoAnterior = new Date(processoAnterior.dataTerminoPrevista || dataInicioOP.value)
-        dataTerminoAnterior.setDate(dataTerminoAnterior.getDate() + 1)
-        processo.dataInicioPrevista = dataTerminoAnterior.toISOString().split('T')[0]
+        processo.dataInicioPrevista = processoAnterior.dataTerminoPrevista || dataInicioOP.value
         dataInicioAtual = new Date(processo.dataInicioPrevista)
       }
       

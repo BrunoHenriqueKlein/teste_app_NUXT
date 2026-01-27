@@ -97,7 +97,6 @@ export default defineEventHandler(async (event) => {
             })
 
             dataInicioAtual = new Date(dataTerminoPrevista)
-            dataInicioAtual.setDate(dataInicioAtual.getDate() + 1)
             dataInicioAtual.setHours(0, 0, 0, 0)
           }
         }
