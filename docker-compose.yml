@@ -9,11 +9,13 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
 
   app:
     build: .
     ports:
-      - "3000:3000"
+      - "3080:3000"
     environment:
       DATABASE_URL: "postgresql://usuario:senha123@postgres:5432/meu_banco"
     depends_on:
@@ -21,6 +23,12 @@ services:
     volumes:
       - ./nuxt-app:/app
       - /app/node_modules
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
 
 volumes:
   postgres_data:
