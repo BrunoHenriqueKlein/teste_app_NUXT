@@ -18,28 +18,19 @@
       </template>
     </PageHeader>
 
-    <!-- Conteúdo ESPECÍFICO do Dashboard -->
-    <v-row class="mt-4 no-print">
-      <v-col cols="12">
-        <v-card>
-          <v-card-title class="d-flex justify-space-between align-center">
-            <span class="no-print">Gráfico de Gantt - Timeline de Processos</span>
-            <div class="d-flex align-center flex-wrap gap-2 mb-4 no-print">
-        <v-btn
-          color="primary"
-          prepend-icon="mdi-arrow-left"
-          variant="text"
-          @click="navigateTo('/ops')"
-        >
-          Voltar para Lista
-        </v-btn>
+    <!-- Toolbar de Ações e Controles -->
+    <v-card class="mt-4 mb-4 no-print" elevation="1">
+      <v-toolbar color="white" density="comfortable" flat>
+        <v-toolbar-title class="text-subtitle-1 font-weight-bold">
+          Visualização e Controles
+        </v-toolbar-title>
         
-        <v-spacer></v-spacer>
-
-        <!-- Controles de Escala e Margens -->
-        <div class="d-flex align-center no-print mr-4 flex-wrap gap-4" style="max-width: 600px;">
-          <div class="d-flex align-center" style="width: 200px;">
-            <v-icon size="small" class="mr-2" title="Largura dos Dias">mdi-magnify-plus-outline</v-icon>
+        <v-divider vertical class="mx-4"></v-divider>
+        
+        <!-- Grupo: Ajustes de Escala -->
+        <div class="d-flex align-center gap-4 px-2" style="max-width: 500px; flex-grow: 1;">
+          <div class="d-flex align-center" style="width: 140px;" title="Zoom do Calendário">
+            <v-icon size="small" class="mr-2" color="grey-darken-1">mdi-magnify-plus-outline</v-icon>
             <v-slider
               v-model="celulaLargura"
               :min="10"
@@ -51,50 +42,42 @@
             ></v-slider>
           </div>
           
-          <div class="d-flex align-center" style="width: 150px;">
-            <v-text-field
-              v-model.number="paddingInicio"
-              label="Folga Início (dias)"
-              type="number"
-              hide-details
-              density="compact"
-              variant="outlined"
-              class="mr-2"
-            ></v-text-field>
-          </div>
+          <v-text-field
+            v-model.number="paddingInicio"
+            label="Folga Início"
+            type="number"
+            hide-details
+            density="compact"
+            variant="outlined"
+            suffix="d"
+            style="width: 100px;"
+          ></v-text-field>
 
-          <div class="d-flex align-center" style="width: 150px;">
-            <v-text-field
-              v-model.number="paddingFim"
-              label="Folga Fim (dias)"
-              type="number"
-              hide-details
-              density="compact"
-              variant="outlined"
-            ></v-text-field>
-          </div>
+          <v-text-field
+            v-model.number="paddingFim"
+            label="Folga Fim"
+            type="number"
+            hide-details
+            density="compact"
+            variant="outlined"
+            suffix="d"
+            style="width: 100px;"
+          ></v-text-field>
           
           <v-btn
             icon="mdi-arrow-expand-horizontal"
-            variant="text"
+            variant="tonal"
             size="small"
+            color="primary"
             title="Ajustar à Tela"
             @click="ajustarATela"
           ></v-btn>
         </div>
 
-        <v-btn
-          color="secondary"
-          prepend-icon="mdi-file-pdf-box"
-          variant="elevated"
-          @click="abrirImpressao"
-          class="mr-2"
-        >
-          Exportar PDF
-        </v-btn>
+        <v-divider vertical class="mx-4"></v-divider>
 
-        <!-- Filtros de Visibilidade -->
-        <div class="d-flex align-center no-print mr-4">
+        <!-- Grupo: Filtros -->
+        <div class="d-flex align-center px-2">
           <v-checkbox
             v-model="mostrarPrevisto"
             label="Previsto"
@@ -112,38 +95,61 @@
           ></v-checkbox>
         </div>
 
+        <v-spacer></v-spacer>
+
+        <!-- Grupo: Ações de Exportação e PCP -->
+        <div class="d-flex align-center gap-2 px-2">
+          <v-btn
+            color="secondary"
+            prepend-icon="mdi-file-pdf-box"
+            variant="tonal"
+            @click="abrirImpressao"
+          >
+            PDF
+          </v-btn>
+
+          <v-btn
+            color="success"
+            prepend-icon="mdi-factory"
+            variant="elevated"
+            @click="generateOS"
+            :loading="loadingOS"
+          >
+            Gerar Ordens
+          </v-btn>
+        </div>
+      </v-toolbar>
+
+      <v-divider></v-divider>
+
+      <!-- Sub-Atalhos de Navegação -->
+      <div class="pa-2 d-flex gap-2 bg-grey-lighten-4">
         <v-btn
           color="primary"
-          prepend-icon="mdi-cog"
-          variant="outlined"
+          prepend-icon="mdi-format-list-checks"
+          variant="text"
+          size="small"
           @click="navigateTo(`/ops/${route.params.id}/processos`)"
-          class="mr-2"
         >
           Etapas da Máquina
         </v-btn>
 
         <v-btn
-          color="info"
-          prepend-icon="mdi-cogs"
-          variant="elevated"
+          color="primary"
+          prepend-icon="mdi-nut"
+          variant="text"
+          size="small"
           @click="navigateTo(`/ops/${route.params.id}/pecas`)"
-          class="mr-2"
         >
           Peças (BOM)
         </v-btn>
-
-        <v-btn
-          color="secondary"
-          prepend-icon="mdi-factory"
-          variant="elevated"
-          @click="generateOS"
-          :loading="loadingOS"
-        >
-          Gerar Ordens (PCP)
-        </v-btn>
       </div>
-          </v-card-title>
-          
+    </v-card>
+
+    <!-- Conteúdo do Gráfico -->
+    <v-row class="no-print">
+      <v-col cols="12">
+        <v-card>
           <v-card-text>
             <!-- Estado de Carregamento -->
             <div v-if="loading" class="text-center py-8">
