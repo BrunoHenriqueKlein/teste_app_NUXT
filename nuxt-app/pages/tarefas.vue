@@ -135,6 +135,7 @@
                 :step="5"
                 min="0"
                 max="100"
+                :disabled="task.status === 'NAO_INICIADO' || task.status === 'CONCLUIDO'"
                 class="flex-grow-1"
                 @update:model-value="task.hasChanged = true"
               />
@@ -165,12 +166,12 @@
 
           <v-card-actions class="pa-3">
             <v-btn
-              v-if="task.status === 'NAO_INICIADO' || task.status === 'AGUARDANDO'"
+              v-if="task.status === 'NAO_INICIADO'"
               color="success"
               variant="flat"
               block
               prepend-icon="mdi-play"
-              @click="updateStatus(task, 'EM_ANDAMENTO')"
+              @click="openConfirmDialog(task, 'INICIAR')"
               :loading="task.updating"
             >
               Iniciar Tarefa
@@ -181,11 +182,11 @@
               variant="flat"
               block
               prepend-icon="mdi-check-bold"
-              @click="openCompleteDialog(task)"
+              @click="openConfirmDialog(task, 'FINALIZAR')"
               :loading="task.updating"
               :disabled="task.progresso < 100 && !task.hasChanged"
             >
-              Concluir Tarefa
+              Finalizar Tarefa
             </v-btn>
             <v-btn
               v-else
@@ -200,18 +201,28 @@
       </v-col>
     </v-row>
 
-    <!-- Dialog de Conclusão -->
-    <v-dialog v-model="completeDialog.show" max-width="400">
+    <!-- Dialog de Confirmação Único -->
+    <v-dialog v-model="confirmDialog.show" max-width="400">
       <v-card>
-        <v-card-title class="text-h5">Concluir Tarefa</v-card-title>
-        <v-card-text>
-          Você deseja finalizar a tarefa <strong>{{ completeDialog.task?.nome }}</strong>?
-          Isso definirá o progresso como 100%.
+        <v-card-title class="text-h6 d-flex align-center">
+          <v-icon :color="confirmDialog.color" class="mr-2">{{ confirmDialog.icon }}</v-icon>
+          {{ confirmDialog.title }}
+        </v-card-title>
+        <v-card-text class="pt-2">
+          {{ confirmDialog.message }}
+          <div v-if="confirmDialog.task" class="mt-2 font-weight-bold">{{ confirmDialog.task.nome }}</div>
         </v-card-text>
-        <v-card-actions>
+        <v-card-actions class="pa-4">
           <v-spacer />
-          <v-btn variant="text" @click="completeDialog.show = false">Cancelar</v-btn>
-          <v-btn color="primary" @click="confirmComplete">Confirmar</v-btn>
+          <v-btn variant="outlined" @click="confirmDialog.show = false">Cancelar</v-btn>
+          <v-btn 
+            :color="confirmDialog.color" 
+            variant="flat" 
+            @click="executeConfirmedAction"
+            :loading="confirmDialog.loading"
+          >
+            Confirmar
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -226,11 +237,17 @@ const search = ref('')
 const statusFilter = ref('Todos')
 const showGlobal = ref(false)
 
-const statusOptions = ['Todos', 'NAO_INICIADO', 'EM_ANDAMENTO', 'AGUARDANDO', 'CONCLUIDO']
+const statusOptions = ['Todos', 'NAO_INICIADO', 'EM_ANDAMENTO', 'CONCLUIDO']
 
-const completeDialog = ref({
+const confirmDialog = ref({
   show: false,
-  task: null
+  task: null,
+  type: '', // 'INICIAR' ou 'FINALIZAR'
+  title: '',
+  message: '',
+  icon: '',
+  color: '',
+  loading: false
 })
 
 const fetchTasks = async () => {
@@ -359,15 +376,28 @@ const updateStatus = async (task, newStatus) => {
   }
 }
 
-const openCompleteDialog = (task) => {
-  completeDialog.value.task = task
-  completeDialog.value.show = true
+const openConfirmDialog = (task, type) => {
+  confirmDialog.value = {
+    show: true,
+    task,
+    type,
+    title: type === 'INICIAR' ? 'Iniciar Tarefa' : 'Finalizar Tarefa',
+    message: type === 'INICIAR' 
+      ? 'Deseja realmente iniciar esta tarefa? O cronômetro de execução começará a contar.'
+      : 'Deseja realmente finalizar esta tarefa? Isso marcará o progresso como 100%.',
+    icon: type === 'INICIAR' ? 'mdi-play-circle' : 'mdi-check-circle',
+    color: type === 'INICIAR' ? 'success' : 'primary',
+    loading: false
+  }
 }
 
-const confirmComplete = async () => {
-  if (completeDialog.value.task) {
-    await updateStatus(completeDialog.value.task, 'CONCLUIDO')
-    completeDialog.value.show = false
+const executeConfirmedAction = async () => {
+  if (confirmDialog.value.task) {
+    confirmDialog.value.loading = true
+    const newStatus = confirmDialog.value.type === 'INICIAR' ? 'EM_ANDAMENTO' : 'CONCLUIDO'
+    await updateStatus(confirmDialog.value.task, newStatus)
+    confirmDialog.value.loading = false
+    confirmDialog.value.show = false
   }
 }
 

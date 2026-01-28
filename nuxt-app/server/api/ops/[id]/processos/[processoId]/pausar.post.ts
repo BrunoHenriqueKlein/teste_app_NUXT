@@ -1,4 +1,6 @@
+import { defineEventHandler, createError, getRouterParam } from 'h3'
 import { PrismaClient } from '@prisma/client'
+import { updateOPStatus } from '../../../../../utils/opStatus'
 
 const prisma = new PrismaClient()
 
@@ -38,6 +40,9 @@ export default defineEventHandler(async (event) => {
                 status: 'AGUARDANDO'
             }
         })
+
+        // Atualizar OP de forma inteligente
+        await updateOPStatus(parseInt(opId))
 
         // Criar histórico
         await prisma.processoHistorico.create({

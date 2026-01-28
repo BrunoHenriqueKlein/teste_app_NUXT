@@ -1,4 +1,6 @@
+import { defineEventHandler, createError, getRouterParam } from 'h3'
 import { PrismaClient } from '@prisma/client'
+import { updateOPStatus } from '../../../../../utils/opStatus'
 
 const prisma = new PrismaClient()
 
@@ -41,23 +43,8 @@ export default defineEventHandler(async (event) => {
             }
         })
 
-        // Atualizar progresso da OP
-        const processosOP = await prisma.oPProcesso.findMany({
-            where: { opId: parseInt(opId) },
-            select: { progresso: true }
-        })
-
-        const progressoMedio = processosOP.length > 0
-            ? Math.round(processosOP.reduce((sum, p) => sum + p.progresso, 0) / processosOP.length)
-            : 0
-
-        await prisma.oP.update({
-            where: { id: parseInt(opId) },
-            data: {
-                progresso: progressoMedio,
-                status: progressoMedio === 100 ? 'CONCLUIDA' : undefined
-            }
-        })
+        // Atualizar OP (Status e Progresso) de forma inteligente
+        await updateOPStatus(parseInt(opId))
 
         // Criar histórico
         await prisma.processoHistorico.create({

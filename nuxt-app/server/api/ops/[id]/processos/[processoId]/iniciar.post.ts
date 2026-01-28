@@ -1,5 +1,6 @@
 import { defineEventHandler, createError, getRouterParam } from 'h3'
 import { PrismaClient } from '@prisma/client'
+import { updateOPStatus } from '../../../../../utils/opStatus'
 
 const prisma = new PrismaClient()
 
@@ -43,30 +44,8 @@ export default defineEventHandler(async (event) => {
             }
         })
 
-        // Atualizar OP (Status e Data de Início se for a primeira)
-        const updateOPData: any = {}
-
-        // Se houver vínculo de status
-        if (existingProcesso.vinculoStatusOP) {
-            updateOPData.status = existingProcesso.vinculoStatusOP
-        }
-
-        // Se a OP ainda não tem data de início, definir como AGORA
-        const op = await prisma.oP.findUnique({
-            where: { id: parseInt(opId) },
-            select: { dataInicio: true }
-        })
-
-        if (op && !op.dataInicio) {
-            updateOPData.dataInicio = now
-        }
-
-        if (Object.keys(updateOPData).length > 0) {
-            await prisma.oP.update({
-                where: { id: parseInt(opId) },
-                data: updateOPData
-            })
-        }
+        // Atualizar OP (Status e Progresso) de forma inteligente
+        await updateOPStatus(parseInt(opId))
 
         // Criar histórico
         await prisma.processoHistorico.create({

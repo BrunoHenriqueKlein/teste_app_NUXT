@@ -215,7 +215,7 @@
                     </div>
                   </div>
                 </div>
-                <span v-else class="text-tiny text-grey italic">Aguardando...</span>
+                <span v-else class="text-tiny text-grey italic">Pendente</span>
               </td>
 
               <!-- Progresso -->
@@ -242,7 +242,7 @@
                     color="success"
                     prepend-icon="mdi-play"
                     @click="iniciarProcesso(processo)"
-                    v-if="processo.status === 'NAO_INICIADO' || processo.status === 'AGUARDANDO'"
+                    v-if="processo.status === 'NAO_INICIADO'"
                     class="font-weight-bold"
                   >
                     Iniciar
@@ -254,10 +254,10 @@
                     color="success"
                     prepend-icon="mdi-check"
                     @click="concluirProcesso(processo)"
-                    v-if="processo.status === 'EM_ANDAMENTO' || processo.status === 'AGUARDANDO'"
+                    v-if="processo.status === 'EM_ANDAMENTO'"
                     class="font-weight-bold"
                   >
-                    Concluir
+                    Finalizar
                   </v-btn>
 
                   <v-chip
@@ -511,6 +511,32 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- Dialog de Confirmação Genérico -->
+    <v-dialog v-model="confirmDialog.show" max-width="400">
+      <v-card>
+        <v-card-title class="text-h6 d-flex align-center">
+          <v-icon :color="confirmDialog.color" class="mr-2">{{ confirmDialog.icon }}</v-icon>
+          {{ confirmDialog.title }}
+        </v-card-title>
+        <v-card-text class="pt-2">
+          {{ confirmDialog.message }}
+          <div v-if="confirmDialog.taskName" class="mt-2 font-weight-bold">{{ confirmDialog.taskName }}</div>
+        </v-card-text>
+        <v-card-actions class="pa-4">
+          <v-spacer />
+          <v-btn variant="outlined" @click="confirmDialog.show = false">Cancelar</v-btn>
+          <v-btn 
+            :color="confirmDialog.color" 
+            variant="flat" 
+            @click="confirmDialog.action"
+            :loading="confirmDialog.loading"
+          >
+            Confirmar
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
     </div>
   </div>
 </template>
@@ -591,6 +617,18 @@ const editingProcesso = ref(null)
 const usuarios = ref([])
 const selectedTemplate = ref(null)
 
+// Diálogo de Confirmação
+const confirmDialog = ref({
+  show: false,
+  title: '',
+  message: '',
+  icon: 'mdi-help-circle',
+  color: 'primary',
+  taskName: '',
+  loading: false,
+  action: null
+})
+
 // ✅ VARIÁVEIS PARA CÁLCULO AUTOMÁTICO
 const dataInicioOP = ref('')
 const minDate = ref(new Date().toISOString().split('T')[0])
@@ -612,8 +650,7 @@ const formProcesso = ref({
 const statusOptions = [
   { title: 'Não Iniciado', value: 'NAO_INICIADO' },
   { title: 'Em Andamento', value: 'EM_ANDAMENTO' },
-  { title: 'Aguardando', value: 'AGUARDANDO' },
-  { title: 'Concluído', value: 'CONCLUIDO' },
+  { title: 'Finalizado', value: 'CONCLUIDO' },
   { title: 'Bloqueado', value: 'BLOQUEADO' },
   { title: 'Cancelado', value: 'CANCELADO' }
 ]
@@ -898,8 +935,7 @@ const formatStatus = (status) => {
   const statusMap = {
     'NAO_INICIADO': 'Não Iniciado',
     'EM_ANDAMENTO': 'Em Andamento',
-    'AGUARDANDO': 'Aguardando',
-    'CONCLUIDO': 'Concluído',
+    'CONCLUIDO': 'Finalizado',
     'BLOQUEADO': 'Bloqueado',
     'CANCELADO': 'Cancelado'
   }
@@ -1102,43 +1138,65 @@ const recalcularDatasCascata = async () => {
   }
 }
 
-const iniciarProcesso = async (processo) => {
-  try {
-    const response = await $fetch(`/api/ops/${route.params.id}/processos/${processo.id}/iniciar`, {
-      method: 'POST'
-    })
-    
-    // Atualizar objeto local com resposta da API
-    if (response && response.processo) {
-      Object.assign(processo, response.processo)
+const iniciarProcesso = (processo) => {
+  confirmDialog.value = {
+    show: true,
+    title: 'Iniciar Etapa',
+    message: 'Deseja realmente iniciar esta etapa?',
+    icon: 'mdi-play-circle',
+    color: 'success',
+    taskName: processo.nome,
+    loading: false,
+    action: async () => {
+      confirmDialog.value.loading = true
+      try {
+        const response = await $fetch(`/api/ops/${route.params.id}/processos/${processo.id}/iniciar`, {
+          method: 'POST'
+        })
+        if (response && response.processo) {
+          Object.assign(processo, response.processo)
+        }
+        await loadProcessos()
+        await loadOP()
+        confirmDialog.value.show = false
+      } catch (error) {
+        console.error('Erro ao iniciar processo:', error)
+        alert('Erro ao iniciar processo: ' + (error.data?.message || error.message))
+      } finally {
+        confirmDialog.value.loading = false
+      }
     }
-    
-    // Recarregar tudo para atualizar progresso geral
-    await loadProcessos()
-    await loadOP()
-  } catch (error) {
-    console.error('Erro ao iniciar processo:', error)
-    alert('Erro ao iniciar processo: ' + (error.data?.message || error.message))
   }
 }
 
-
-const concluirProcesso = async (processo) => {
-  try {
-    const response = await $fetch(`/api/ops/${route.params.id}/processos/${processo.id}/concluir`, {
-      method: 'POST'
-    })
-    
-    if (response && response.processo) {
-      Object.assign(processo, response.processo)
+const concluirProcesso = (processo) => {
+  confirmDialog.value = {
+    show: true,
+    title: 'Finalizar Etapa',
+    message: 'Deseja realmente finalizar esta etapa?',
+    icon: 'mdi-check-circle',
+    color: 'success',
+    taskName: processo.nome,
+    loading: false,
+    action: async () => {
+      confirmDialog.value.loading = true
+      try {
+        const response = await $fetch(`/api/ops/${route.params.id}/processos/${processo.id}/concluir`, {
+          method: 'POST'
+        })
+        if (response && response.processo) {
+          Object.assign(processo, response.processo)
+        }
+        await loadProcessos()
+        await loadOP()
+        confirmDialog.value.show = false
+      } catch (error) {
+        console.error('Erro ao concluir processo:', error)
+        alert('Erro ao finalizar processo: ' + (error.data?.message || error.message))
+      } finally {
+        confirmDialog.value.loading = false
+      }
     }
-    
-    // Concluir afeta muito o progresso geral, importante recarregar
-    await loadProcessos()
-    await loadOP()
-  } catch (error) {
-    console.error('Erro ao concluir processo:', error)
-    alert('Erro ao concluir processo: ' + (error.data?.message || error.message))
   }
 }
 

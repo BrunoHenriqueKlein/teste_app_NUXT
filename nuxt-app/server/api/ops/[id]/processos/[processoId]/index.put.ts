@@ -1,4 +1,6 @@
+import { defineEventHandler, createError, getRouterParam, readBody } from 'h3'
 import { PrismaClient } from '@prisma/client'
+import { updateOPStatus } from '../../../../../utils/opStatus'
 
 const prisma = new PrismaClient()
 
@@ -7,9 +9,9 @@ export default defineEventHandler(async (event) => {
     const opId = getRouterParam(event, 'id')
     const processoId = getRouterParam(event, 'processoId') // Será capturado da URL
     const body = await readBody(event)
-    
+
     console.log('🔧 DEBUG - Atualizando processo:', { opId, processoId, body })
-    
+
     if (!opId || !processoId) {
       throw createError({
         statusCode: 400,
@@ -93,6 +95,9 @@ export default defineEventHandler(async (event) => {
         detalhes: `Processo "${body.nome}" atualizado na OP ${opId}`
       }
     })
+
+    // Atualizar OP (Status e Progresso) de forma inteligente
+    await updateOPStatus(parseInt(opId))
 
     console.log('✅ Processo atualizado com sucesso')
     return { success: true, processo }
