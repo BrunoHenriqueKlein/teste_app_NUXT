@@ -42,263 +42,260 @@
 
     <!-- Conteúdo principal apenas se tiver processos -->
     <div v-if="processos.length > 0">
-      <!-- Progresso Geral -->
-      <v-row class="mb-4">
-        <v-col cols="12" md="8">
-          <v-card>
-            <v-card-title class="text-h6">
-              Progresso Geral da OP
-            </v-card-title>
-            <v-card-text>
-              <div class="d-flex align-center mb-4">
-                <v-progress-circular 
-                  :model-value="progressoGeral" 
-                  :color="getProgressColor(progressoGeral)"
-                  size="80"
-                  width="8"
-                >
-                  <strong>{{ progressoGeral }}%</strong>
-                </v-progress-circular>
-                <div class="ml-4">
-                  <div class="text-h6">{{ progressoGeral }}% Concluído</div>
-                  <div class="text-caption text-grey">
-                    {{ processosConcluidos }} de {{ processos.length }} processos finalizados
-                  </div>
-                </div>
-              </div>
-              
-              <v-progress-linear 
+      <!-- Progresso Geral e Cronograma -->
+      <v-row class="mb-4" dense>
+        <v-col cols="12" md="7">
+          <v-card class="h-100" elevation="1">
+            <v-card-text class="pa-4 d-flex align-center">
+              <v-progress-circular 
                 :model-value="progressoGeral" 
                 :color="getProgressColor(progressoGeral)"
-                height="12"
-                rounded
-              />
+                size="70"
+                width="7"
+                class="mr-4"
+              >
+                <span class="text-caption font-weight-bold">{{ progressoGeral }}%</span>
+              </v-progress-circular>
+              
+              <div class="flex-grow-1">
+                <div class="d-flex justify-space-between align-end mb-1">
+                  <div>
+                    <div class="text-overline mb-0 pb-0" style="line-height: 1;">Progresso Geral</div>
+                    <div class="text-h6 font-weight-bold">{{ progressoGeral }}% Concluído</div>
+                  </div>
+                  <div class="text-caption text-grey">
+                    {{ processosConcluidos }} / {{ processos.length }} Etapas
+                  </div>
+                </div>
+                <v-progress-linear 
+                  :model-value="progressoGeral" 
+                  :color="getProgressColor(progressoGeral)"
+                  height="8"
+                  rounded
+                />
+              </div>
             </v-card-text>
           </v-card>
         </v-col>
         
-        <v-col cols="12" md="4">
-          <v-card>
-            <v-card-title class="text-h6">
-              Cronograma
-            </v-card-title>
-            <v-card-text>
-              <v-list density="compact">
-                <v-list-item>
-                  <template v-slot:prepend>
-                    <v-avatar color="blue" size="32">
-                      <v-icon color="white">mdi-calendar-start</v-icon>
-                    </v-avatar>
-                  </template>
-                  <v-list-item-title>Início OP</v-list-item-title>
-                  <v-list-item-subtitle>{{ formatDate(dataInicioOP) }}</v-list-item-subtitle>
-                </v-list-item>
-                
-                <v-list-item>
-                  <template v-slot:prepend>
-                    <v-avatar color="green" size="32">
-                      <v-icon color="white">mdi-calendar-end</v-icon>
-                    </v-avatar>
-                  </template>
-                  <v-list-item-title>Previsão Término</v-list-item-title>
-                  <v-list-item-subtitle>{{ formatDate(dataTerminoPrevista) }}</v-list-item-subtitle>
-                </v-list-item>
-                
-                <v-list-item>
-                  <template v-slot:prepend>
-                    <v-avatar color="orange" size="32">
-                      <v-icon color="white">mdi-clock-outline</v-icon>
-                    </v-avatar>
-                  </template>
-                  <v-list-item-title>Duração Total</v-list-item-title>
-                  <v-list-item-subtitle>{{ duracaoTotal }} dias</v-list-item-subtitle>
-                </v-list-item>
-
-                <v-list-item>
-                  <template v-slot:prepend>
-                    <v-avatar color="purple" size="32">
-                      <v-icon color="white">mdi-progress-check</v-icon>
-                    </v-avatar>
-                  </template>
-                  <v-list-item-title>Progresso</v-list-item-title>
-                  <v-list-item-subtitle>{{ progressoGeral }}%</v-list-item-subtitle>
-                </v-list-item>
-              </v-list>
+        <v-col cols="12" md="5">
+          <v-card class="h-100" elevation="1">
+            <v-card-text class="pa-4">
+              <div class="text-overline mb-6" style="line-height: 1;">Cronograma da OP</div>
+              
+              <v-row dense>
+                <v-col cols="4">
+                  <div class="d-flex align-center">
+                    <v-icon color="blue" size="small" class="mr-2">mdi-calendar-start</v-icon>
+                    <div>
+                      <div class="text-tiny text-grey uppercase">Início OP</div>
+                      <div class="text-caption font-weight-bold text-blue">{{ formatDate(dataInicioOP) }}</div>
+                    </div>
+                  </div>
+                </v-col>
+                <v-col cols="4">
+                  <div class="d-flex align-center">
+                    <v-icon color="green" size="small" class="mr-2">mdi-calendar-check</v-icon>
+                    <div>
+                      <div class="text-tiny text-grey uppercase">Previsão</div>
+                      <div class="text-caption font-weight-bold text-green">{{ formatDate(dataTerminoPrevista) }}</div>
+                    </div>
+                  </div>
+                </v-col>
+                <v-col cols="4">
+                  <div class="d-flex align-center">
+                    <v-icon color="orange-darken-3" size="small" class="mr-2">mdi-clock-outline</v-icon>
+                    <div>
+                      <div class="text-tiny text-grey uppercase">Duração</div>
+                      <div class="text-caption font-weight-bold text-orange-darken-3">{{ duracaoTotal }} dias</div>
+                    </div>
+                  </div>
+                </v-col>
+              </v-row>
             </v-card-text>
           </v-card>
         </v-col>
       </v-row>
 
-      <!-- Lista de Processos -->
-      <v-row>
-        <v-col cols="12">
-          <v-card>
-            <v-card-title class="d-flex justify-space-between align-center">
-              <span class="text-h6">Fluxo de Processos (Datas Calculadas Automaticamente)</span>
-              <v-btn 
-                variant="outlined" 
-                color="primary" 
-                prepend-icon="mdi-refresh"
-                @click="loadProcessos"
-                :loading="loading"
-              >
-                Atualizar
-              </v-btn>
-            </v-card-title>
+      <!-- Tabela de Fluxo de Processos -->
+      <v-card class="mt-4 mb-8">
+        <v-card-title class="d-flex justify-space-between align-center px-4 py-3">
+          <div class="d-flex align-center">
+            <v-icon color="primary" class="mr-2">mdi-format-list-bulleted-type</v-icon>
+            <span class="text-h6 font-weight-bold">Fluxo de Processos</span>
+          </div>
+          <v-btn 
+            variant="tonal" 
+            color="primary" 
+            prepend-icon="mdi-refresh"
+            @click="loadProcessos"
+            :loading="loading"
+            size="small"
+          >
+            Sincronizar
+          </v-btn>
+        </v-card-title>
 
-            <v-card-text>
-              <v-timeline align="start" side="end" class="px-4">
-                <v-timeline-item
-                  v-for="processo in processosComDatasCalculadas"
-                  :key="processo.id"
-                  :dot-color="getStatusColor(processo.status)"
-                  size="small"
+        <v-divider></v-divider>
+
+        <v-table density="compact" class="processos-table">
+          <thead>
+            <tr class="bg-grey-lighten-4">
+              <th class="text-center font-weight-bold" style="width: 50px;">#</th>
+              <th class="text-center font-weight-bold" style="width: 110px;">Status</th>
+              <th class="text-left font-weight-bold" style="width: 250px;">Processo / Etapa</th>
+              <th class="text-left font-weight-bold" style="width: 140px;">Responsável</th>
+              <th class="text-center font-weight-bold" style="width: 200px;">Cronograma Previsto</th>
+              <th class="text-center font-weight-bold" style="width: 200px;">Execução Real</th>
+              <th class="text-center font-weight-bold" style="width: 150px;">Progresso</th>
+              <th class="text-center font-weight-bold" style="width: 280px;">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="processo in processosComDatasCalculadas" :key="processo.id" class="hover-row">
+              <!-- Sequência -->
+              <td class="text-center">
+                <v-avatar :color="getStatusColor(processo.status)" size="22" class="text-tiny font-weight-bold text-white">
+                  {{ processo.sequencia }}
+                </v-avatar>
+              </td>
+
+              <!-- Status -->
+              <td class="text-center">
+                <v-chip
+                  :color="getStatusColor(processo.status)"
+                  size="x-small"
+                  variant="flat"
+                  class="font-weight-bold text-uppercase"
                 >
-                  <template v-slot:icon>
-                    <v-avatar :color="getStatusColor(processo.status)" size="36">
-                      <v-icon color="white">{{ getStatusIcon(processo.status) }}</v-icon>
-                    </v-avatar>
-                  </template>
+                  {{ formatStatus(processo.status) }}
+                </v-chip>
+              </td>
 
-                  <v-card class="processo-card">
-                    <v-card-text class="pa-4">
-                      <div class="d-flex justify-space-between align-start mb-2">
-                        <div>
-                          <h3 class="text-h6 font-weight-bold">{{ processo.nome }}</h3>
-                          <p class="text-caption text-grey" v-if="processo.descricao">
-                            {{ processo.descricao }}
-                          </p>
-                        </div>
-                        <v-chip 
-                          :color="getStatusColor(processo.status)" 
-                          variant="flat"
-                          :prepend-icon="getStatusIcon(processo.status)"
-                        >
-                          {{ formatStatus(processo.status) }}
-                        </v-chip>
-                      </div>
+              <!-- Nome e Descrição -->
+              <td class="text-left py-2">
+                <div class="font-weight-bold text-body-2 lh-sm">{{ processo.nome }}</div>
+                <div v-if="processo.descricao" class="text-tiny text-grey text-truncate" style="max-width: 230px;">{{ processo.descricao }}</div>
+              </td>
 
-                      <!-- Informações do Processo -->
-                      <v-row dense class="mt-2">
-                        <v-col cols="12" sm="4">
-                          <div class="text-caption text-grey">Sequência</div>
-                          <div class="font-weight-medium">#{{ processo.sequencia }}</div>
-                        </v-col>
-                        <v-col cols="12" sm="4">
-                          <div class="text-caption text-grey">Prazo</div>
-                          <div class="font-weight-medium">{{ processo.prazoEstimado || 0 }} dia(s)</div>
-                        </v-col>
-                        <v-col cols="12" sm="4" v-if="processo.responsavel">
-                          <div class="text-caption text-grey">Responsável</div>
-                          <div class="font-weight-medium">{{ processo.responsavel.name }}</div>
-                        </v-col>
-                      </v-row>
+              <!-- Responsável -->
+              <td class="text-left">
+                <div v-if="processo.responsavel" class="d-flex align-center">
+                  <v-avatar size="20" color="grey-lighten-3" class="mr-1">
+                    <v-icon size="14">mdi-account</v-icon>
+                  </v-avatar>
+                  <span class="text-tiny">{{ processo.responsavel.name.split(' ')[0] }}</span>
+                </div>
+                <span v-else class="text-tiny text-grey italic">---</span>
+              </td>
 
-                      <!-- Datas Calculadas -->
-                      <v-row dense class="mt-3">
-                        <v-col cols="12" sm="6">
-                          <div class="text-caption text-grey">Início Previsto</div>
-                          <div class="font-weight-medium text-blue">
-                            {{ formatDate(processo.dataInicioPrevista) }}
-                          </div>
-                        </v-col>
-                        <v-col cols="12" sm="6">
-                          <div class="text-caption text-grey">Término Previsto</div>
-                          <div class="font-weight-medium text-green">
-                            {{ formatDate(processo.dataTerminoPrevista) }}
-                          </div>
-                        </v-col>
-                      </v-row>
+              <!-- Cronograma Previsto -->
+              <td class="text-center">
+                <div class="d-flex align-center justify-center gap-2">
+                  <div class="text-center">
+                    <div class="text-tiny font-weight-medium text-blue">{{ formatDate(processo.dataInicioPrevista) }}</div>
+                  </div>
+                  <v-icon size="x-small" color="grey-lighten-1">mdi-arrow-right</v-icon>
+                  <div class="text-center">
+                    <div class="text-tiny font-weight-medium text-green">{{ formatDate(processo.dataTerminoPrevista) }}</div>
+                  </div>
+                </div>
+              </td>
 
-                      <!-- Datas Reais (se existirem) -->
-                      <v-row dense class="mt-2" v-if="processo.dataInicio || processo.dataFim">
-                        <v-col cols="12" sm="6" v-if="processo.dataInicio">
-                          <div class="text-caption text-grey">Início Real</div>
-                          <div class="font-weight-medium text-orange">
-                            {{ formatDate(processo.dataInicio) }}
-                            <v-icon v-if="processo.dataInicio !== processo.dataInicioPrevista" color="warning" small class="ml-1">
-                              mdi-alert
-                            </v-icon>
-                          </div>
-                        </v-col>
-                        <v-col cols="12" sm="6" v-if="processo.dataFim">
-                          <div class="text-caption text-grey">Término Real</div>
-                          <div class="font-weight-medium text-orange">
-                            {{ formatDate(processo.dataFim) }}
-                            <v-icon v-if="processo.dataFim !== processo.dataTerminoPrevista" color="warning" small class="ml-1">
-                              mdi-alert
-                            </v-icon>
-                          </div>
-                        </v-col>
-                      </v-row>
+              <!-- Execução Real -->
+              <td class="text-center">
+                <div v-if="processo.dataInicio" class="d-flex align-center justify-center gap-2">
+                  <div class="text-center">
+                    <div class="text-tiny font-weight-bold text-orange-darken-3">{{ formatDate(processo.dataInicio) }}</div>
+                  </div>
+                  <v-icon size="x-small" color="grey-lighten-1">mdi-arrow-right</v-icon>
+                  <div class="text-center">
+                    <div class="text-tiny font-weight-bold" :class="processo.dataFim ? 'text-orange-darken-3' : 'text-grey-lighten-1'">
+                      {{ processo.dataFim ? formatDate(processo.dataFim) : '---' }}
+                    </div>
+                  </div>
+                </div>
+                <span v-else class="text-tiny text-grey italic">Aguardando...</span>
+              </td>
 
-                      <!-- Progresso do Processo -->
-                      <div class="mt-3">
-                        <div class="d-flex justify-space-between mb-1">
-                          <span class="text-caption">Progresso do Processo</span>
-                          <span class="text-caption font-weight-bold">{{ processo.progresso }}%</span>
-                        </div>
-                        <v-progress-linear 
-                          :model-value="processo.progresso" 
-                          :color="getProgressColor(processo.progresso)"
-                          height="8"
-                          rounded
-                        />
-                      </div>
+              <!-- Progresso -->
+              <td>
+                <div class="d-flex align-center px-1">
+                  <v-progress-linear
+                    :model-value="processo.progresso"
+                    :color="getProgressColor(processo.progresso)"
+                    height="6"
+                    rounded
+                    class="mr-2"
+                  ></v-progress-linear>
+                  <span class="text-tiny font-weight-bold">{{ processo.progresso }}%</span>
+                </div>
+              </td>
 
-                      <!-- Ações -->
-                      <div class="d-flex gap-2 mt-4 flex-wrap">
-                        <v-btn 
-                          size="small" 
-                          variant="outlined" 
-                          color="primary"
-                          @click="editarProcesso(processo)"
-                          prepend-icon="mdi-pencil"
-                        >
-                          Editar
-                        </v-btn>
-                        
-                        <v-btn 
-                          size="small" 
-                          variant="outlined" 
-                          color="green"
-                          @click="iniciarProcesso(processo)"
-                          v-if="processo.status === 'NAO_INICIADO' || processo.status === 'AGUARDANDO'"
-                          prepend-icon="mdi-play"
-                        >
-                          Iniciar
-                        </v-btn>
-                        
-                        
-                        <v-btn 
-                          size="small" 
-                          variant="outlined" 
-                          color="green"
-                          @click="concluirProcesso(processo)"
-                          v-if="processo.status === 'EM_ANDAMENTO' || processo.status === 'AGUARDANDO'"
-                          prepend-icon="mdi-check"
-                        >
-                          Concluir
-                        </v-btn>
-                        
-                        <v-btn 
-                          size="small" 
-                          variant="outlined" 
-                          color="red"
-                          @click="excluirProcesso(processo)"
-                          prepend-icon="mdi-delete"
-                        >
-                          Excluir
-                        </v-btn>
-                      </div>
-                    </v-card-text>
-                  </v-card>
-                </v-timeline-item>
-              </v-timeline>
-            </v-card-text>
-          </v-card>
-        </v-col>
-      </v-row>
+              <!-- Ações -->
+              <td class="text-center px-2">
+                <div class="d-flex justify-center gap-1">
+                  <!-- Botões de Fluxo com Texto -->
+                  <v-btn
+                    variant="tonal"
+                    size="x-small"
+                    color="success"
+                    prepend-icon="mdi-play"
+                    @click="iniciarProcesso(processo)"
+                    v-if="processo.status === 'NAO_INICIADO' || processo.status === 'AGUARDANDO'"
+                    class="font-weight-bold"
+                  >
+                    Iniciar
+                  </v-btn>
+                  
+                  <v-btn
+                    variant="elevated"
+                    size="x-small"
+                    color="success"
+                    prepend-icon="mdi-check"
+                    @click="concluirProcesso(processo)"
+                    v-if="processo.status === 'EM_ANDAMENTO' || processo.status === 'AGUARDANDO'"
+                    class="font-weight-bold"
+                  >
+                    Concluir
+                  </v-btn>
+
+                  <v-chip
+                    v-if="processo.status === 'CONCLUIDO'"
+                    size="x-small"
+                    color="success"
+                    variant="tonal"
+                    prepend-icon="mdi-check-circle"
+                    class="font-weight-bold"
+                  >
+                    Finalizado
+                  </v-chip>
+
+                  <!-- Ações de Gestão (Ícones) -->
+                  <v-btn
+                    icon="mdi-pencil"
+                    variant="text"
+                    size="x-small"
+                    color="primary"
+                    @click="editarProcesso(processo)"
+                    title="Editar Etapa"
+                    class="ml-2"
+                  ></v-btn>
+                  
+                  <v-btn
+                    icon="mdi-delete"
+                    variant="text"
+                    size="x-small"
+                    color="red"
+                    @click="excluirProcesso(processo)"
+                    title="Excluir Etapa"
+                  ></v-btn>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </v-table>
+      </v-card>
     </div>
 
     <!-- Estado vazio -->
@@ -1162,11 +1159,48 @@ const excluirProcesso = async (processo) => {
 </script>
 
 <style scoped>
-.processo-card {
-  border-left: 4px solid v-bind('getStatusColor(processo?.status || "NAO_INICIADO")');
+.processos-table :deep(th) {
+  text-transform: uppercase;
+  font-size: 0.70rem !important;
+  letter-spacing: 0.05em;
+  color: #616161 !important;
+}
+
+.processos-table :deep(td) {
+  height: 48px !important;
+}
+
+.hover-row {
+  transition: background-color 0.2s ease;
+}
+
+.hover-row:hover {
+  background-color: #f5f5f5 !important;
+}
+
+.text-tiny {
+  font-size: 0.65rem;
+  line-height: 1;
+}
+
+.uppercase {
+  text-transform: uppercase;
+}
+
+.italic {
+  font-style: italic;
+}
+
+.gap-1 {
+  gap: 4px;
 }
 
 .gap-2 {
   gap: 8px;
+}
+
+.processos-table {
+  border-radius: 4px;
+  overflow: hidden;
 }
 </style>
