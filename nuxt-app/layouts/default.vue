@@ -157,7 +157,7 @@
 <script setup>
 import { useTheme } from 'vuetify'
 
-const { user, userName, userRole, userDepartment, logout, hasPermission, isAdmin } = useAuth()
+const { user, userName, userRole, userDepartment, logout, hasPermission, isAdmin, authHeaders } = useAuth()
 const router = useRouter()
 const route = useRoute()
 const theme = useTheme()
@@ -167,6 +167,20 @@ const showLogoutConfirm = ref(false)
 const logoutTimer = ref(null)
 const themeCookie = useCookie('theme')
 const currentTime = ref('')
+const tasksCount = ref(0)
+
+const { data: countData, refresh: refreshCount } = await useFetch('/api/user/tasks-count', {
+  headers: authHeaders
+})
+
+watch(countData, (newData) => {
+  if (newData) tasksCount.value = newData.count
+}, { immediate: true })
+
+// Atualizar contagem periodicamente (a cada 2 minutos)
+if (process.client) {
+  setInterval(() => refreshCount(), 120000)
+}
 
 // Importar logo (Mesma para fundo escuro e azul escuro)
 import logoSomeh from '@/assets/imagens/logo-someh-fundo-escuro-simples.png'
@@ -211,7 +225,13 @@ const updateTime = () => {
 // Computed Properties
 const filteredNavigation = computed(() => {
   // Filtrar módulos normais por permissão canView OU se for universal
-  const filtered = navigation.filter(item => item.isUniversal || hasPermission(item.moduleName, 'canView'))
+  const filtered = navigation.map(item => {
+    const newItem = { ...item }
+    if (item.title === 'Tarefas' && tasksCount.value > 0) {
+      newItem.badge = tasksCount.value
+    }
+    return newItem
+  }).filter(item => item.isUniversal || hasPermission(item.moduleName, 'canView'))
   
   // Adicionar itens de admin se for ADMIN
   if (isAdmin.value) {
