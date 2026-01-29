@@ -144,7 +144,32 @@ Private Sub ProcessarProximo()
     On Error Resume Next ' Previne erro se o controle txtDescricao ou txtMaterial não existir
     Me.txtDescricao.Text = desc
     Me.txtMaterial.Text = ""
-    If typeDoc = 1 Then Me.txtMaterial.Text = swCompModel.MaterialIdName
+    If typeDoc = 1 Then
+        ' Tentar pegar diretamente da propriedade nativa SW-Material
+        Dim resMat As String
+        swCustProp.Get4 "SW-Material", False, "", resMat
+        
+        ' Se vier "Instâncias de...", pegamos o nome do banco
+        If resMat = "" Or InStr(LCase(resMat), "inst") > 0 Then
+            resMat = swCompModel.MaterialIdName
+        End If
+        
+        ' Limpeza Inteligente: Lida com "Banco|Material|Config"
+        Dim matPartes() As String
+        resMat = Replace(resMat, ":", "|")
+        matPartes = Split(resMat, "|")
+        
+        Dim cleanMat As String
+        If UBound(matPartes) >= 0 Then
+            cleanMat = Trim(matPartes(UBound(matPartes)))
+            ' Se o último for um número (ID de Configuração) e houver parte anterior
+            If IsNumeric(cleanMat) And UBound(matPartes) > 0 Then
+                cleanMat = Trim(matPartes(UBound(matPartes) - 1))
+            End If
+        End If
+        
+        Me.txtMaterial.Text = cleanMat
+    End If
     On Error GoTo 0
     
     Me.cmbCategoria.Clear
