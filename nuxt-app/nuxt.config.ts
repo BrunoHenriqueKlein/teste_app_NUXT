@@ -1,14 +1,14 @@
 export default defineNuxtConfig({
   devtools: { enabled: true },
   ssr: false,
-  
+
   // CSS global
   css: [
     'vuetify/styles',
     '@mdi/font/css/materialdesignicons.min.css',
     '@/assets/css/global.css'
   ],
-  
+
   // Build configuration
   build: {
     transpile: ['vuetify']
@@ -19,8 +19,11 @@ export default defineNuxtConfig({
     plugins: ['~/server/plugins/prisma.ts']
   },
 
-  // Configuração do Vite para SCSS
+  // Configuração do Vite para SCSS e Host
   vite: {
+    server: {
+      allowedHosts: ['somehsystem.tail0ddfd0.ts.net']
+    },
     css: {
       preprocessorOptions: {
         scss: {
@@ -51,6 +54,6 @@ export default defineNuxtConfig({
   plugins: [
     '~/plugins/mask.ts'
   ],
-  
+
   compatibilityDate: '2024-11-12'
 })
