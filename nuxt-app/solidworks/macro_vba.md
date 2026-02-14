@@ -1,6 +1,6 @@
-# Instruções para Instalação da Macro SolidWorks (V3.4 - MASTER CUT-LIST)
+# Instruções para Instalação da Macro SolidWorks (V4.0 - BRIDGE STRATEGY)
 
-Esta versão implementa o agrupamento inteligente por **Lista de Corte (Cut-List)**, garantindo que corpos idênticos sejam contados corretamente e multiplicados pela quantidade de peças na montagem.
+Esta versão implementa a **Estratégia de Ponte**, exportando e enviando desenhos (PDF) automaticamente para o servidor via API.
 
 ## 1. Preparação
 1. No SolidWorks: **Ferramentas > Macro > Nova**.
@@ -218,7 +218,9 @@ End Sub
 
 Private Sub btnConfirmar_Click()
     SalvarNoArquivo
-    EnviarParaAPI
+    Dim pecaId As Long
+    pecaId = EnviarParaAPI()
+    If pecaId > 0 Then ExportarEEnviarDesenho pecaId
     FinalizarItem
 End Sub
 
@@ -377,14 +379,76 @@ Private Sub SalvarNoArquivo()
     swModel.Save3 1, 0, 0
 End Sub
 
-Private Sub EnviarParaAPI()
+Private Function EnviarParaAPI() As Long
+    On Error GoTo Erro
     Dim http As Object: Set http = CreateObject("MSXML2.XMLHTTP")
     Dim escolhidos As String, i As Integer: For i = 0 To Me.lstProcessos.ListCount - 1
         If Me.lstProcessos.Selected(i) Then escolhidos = escolhidos & """" & Me.lstProcessos.List(i) & ""","
     Next i
     If Len(escolhidos) > 0 Then escolhidos = Left(escolhidos, Len(escolhidos) - 1)
-    Dim body As String: body = "{""numeroOP"": """ & mOP & """, ""peca"": {""codigo"": """ & Me.txtCodPeca.Text & """, ""descricao"": """ & Me.txtDescricao.Text & """, ""material"": """ & Me.txtMaterial.Text & """, ""quantidade"": " & mDictComps(mKeyAtual) & ", ""categoria"": """ & Me.cmbCategoria.Text & """, ""processos"": [" & escolhidos & "]}}"
-    http.Open "POST", mUrl & "/ops/import-bom", False: http.setRequestHeader "Content-Type", "application/json": http.setRequestHeader "X-SW-Secret", "someh-sw-integration-2024": http.send body
+    
+    Dim body As String: body = "{""numeroOP"": """ & mOP & """, ""peca"": {""codigo"": """ & Me.txtCodPeca.Text & """, ""descricao"": """ & Me.txtDescricao.Text & """, ""material"": """ & Me.txtMaterial.Text & """, ""quantidade"": " & mDictComps(mKeyAtual) & ", ""categoria"": """ & Me.cmbCategoria.Text & """, ""subcategoria"": """ & Me.subcategoria & """, ""processos"": [" & escolhidos & "]}}"
+    
+    http.Open "POST", mUrl & "/ops/import-bom", False
+    http.setRequestHeader "Content-Type", "application/json"
+    http.setRequestHeader "X-SW-Secret", "someh-sw-integration-2024"
+    http.send body
+    
+    If http.Status = 200 Then
+        ' Tentar extrair o pecaId do JSON de resposta (simplificado)
+        Dim resp As String: resp = http.responseText
+        Dim pos As Long: pos = InStr(resp, """pecaId"":")
+        If pos > 0 Then
+            EnviarParaAPI = CLng(Split(Mid(resp, pos + 9), ",")(0))
+        End If
+    End If
+    Exit Function
+Erro:
+    EnviarParaAPI = 0
+End Function
+
+Private Sub ExportarEEnviarDesenho(pecaId As Long)
+    On Error Resume Next
+    Dim swApp As SldWorks.SldWorks: Set swApp = Application.SldWorks
+    Dim swModel As SldWorks.ModelDoc2: Set swModel = swApp.ActiveDoc
+    
+    ' 1. Gerar PDF Temporário
+    Dim tempPath As String: tempPath = Environ("TEMP") & "\desenho_temp.pdf"
+    
+    ' Se for desenho (SLDDRW) aberto, exporta. Se for peça, tentamos abrir o desenho dela.
+    ' Para simplificar nesta V4, assumiremos que o usuário exporta se o desenho estiver aberto
+    ' Ou implementaremos a busca automática do arquivo .slddrw na mesma pasta futuramente.
+    
+    ' Exportação básica de PDF do que estiver na tela
+    swModel.Extension.SaveAs tempPath, 0, 0, Nothing, 0, 0
+    
+    If Dir(tempPath) <> "" Then
+        UploadArquivo pecaId, tempPath
+        Kill tempPath
+    End If
+End Sub
+
+Private Sub UploadArquivo(pecaId As Long, filePath As String)
+    Dim strBoundary As String: strBoundary = "---------------------------" & Format(Now, "ddmmyyhhmmss")
+    Dim http As Object: Set http = CreateObject("MSXML2.XMLHTTP")
+    
+    ' Ler arquivo binário
+    Dim adodbStream As Object: Set adodbStream = CreateObject("ADODB.Stream")
+    adodbStream.Type = 1 ' adTypeBinary
+    adodbStream.Open
+    adodbStream.LoadFromFile filePath
+    Dim fileContent As Variant: fileContent = adodbStream.Read
+    adodbStream.Close
+
+    ' Construir Multipart (Corpo simplificado para envio binário)
+    ' Nota: Em VBA puro é complexo construir o multipart perfeito com binário.
+    ' Uma alternativa estável é usar o Helper VBA-JSON ou enviar via Base64 se a API suportar.
+    ' Para esta primeira versão, vamos enviar o binário puro com o pecaId na URL.
+    
+    http.Open "POST", mUrl & "/pecas/" & pecaId & "/desenho", False
+    http.setRequestHeader "Content-Type", "application/pdf" ' Enviando direto por ora
+    http.setRequestHeader "X-File-Name", Me.txtCodPeca.Text & ".pdf"
+    http.send fileContent
 End Sub
 
 Private Sub PopularProcessosDaPeca(swModel As SldWorks.ModelDoc2, configName As String)

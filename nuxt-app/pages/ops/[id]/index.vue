@@ -146,6 +146,72 @@
       </div>
     </v-card>
 
+    <!-- Dashboard Financeiro de Custos -->
+    <v-expand-transition>
+      <v-card v-if="custos" variant="outlined" class="mb-4 bg-blue-grey-lighten-5">
+        <v-card-text>
+          <div class="d-flex align-center justify-space-between mb-4">
+            <h3 class="text-h6 d-flex align-center">
+              <v-icon class="mr-2" color="primary">mdi-finance</v-icon>
+              Balanço Financeiro da Fabricação
+            </h3>
+            <v-chip :color="custos.resumo.financeiro.statusOrcamento === 'DENTRO' ? 'success' : 'error'" variant="flat">
+              Orçamento: {{ custos.resumo.financeiro.statusOrcamento }}
+            </v-chip>
+          </div>
+
+          <v-row>
+            <v-col cols="12" sm="6" md="3">
+              <v-card elevation="0" class="border">
+                <v-card-text>
+                  <div class="text-caption text-grey">Orçamento Disponível</div>
+                  <div class="text-h6">R$ {{ custos.op.orcamentoPrevisto?.toFixed(2) || '0.00' }}</div>
+                </v-card-text>
+              </v-card>
+            </v-col>
+            
+            <v-col cols="12" sm="6" md="3">
+              <v-card elevation="0" class="border">
+                <v-card-text>
+                  <div class="text-caption text-grey">Custo Líquido Real</div>
+                  <div class="text-h6 text-primary">R$ {{ custos.resumo.totais.liquido.toFixed(2) }}</div>
+                  <div class="text-caption text-success">- R$ {{ custos.resumo.totais.creditosImpostos.toFixed(2) }} em créditos fiscais</div>
+                </v-card-text>
+              </v-card>
+            </v-col>
+
+            <v-col cols="12" sm="6" md="3">
+              <v-card elevation="0" class="border">
+                <v-card-text>
+                  <div class="text-caption text-grey">Valor de Venda</div>
+                  <div class="text-h6">R$ {{ custos.op.valorVenda?.toFixed(2) || '0.00' }}</div>
+                </v-card-text>
+              </v-card>
+            </v-col>
+
+            <v-col cols="12" sm="6" md="3">
+              <v-card 
+                elevation="0" 
+                class="border" 
+                :class="custos.resumo.financeiro.lucroPrejuizo >= 0 ? 'bg-green-lighten-5' : 'bg-red-lighten-5'"
+              >
+                <v-card-text>
+                  <div class="text-caption text-grey">Lucro / Prejuízo</div>
+                  <div 
+                    class="text-h6 font-weight-bold" 
+                    :class="custos.resumo.financeiro.lucroPrejuizo >= 0 ? 'text-success' : 'text-error'"
+                  >
+                    R$ {{ custos.resumo.financeiro.lucroPrejuizo.toFixed(2) }}
+                  </div>
+                  <div class="text-caption font-weight-bold">Margem: {{ custos.resumo.financeiro.margemPercentual.toFixed(1) }}%</div>
+                </v-card-text>
+              </v-card>
+            </v-col>
+          </v-row>
+        </v-card-text>
+      </v-card>
+    </v-expand-transition>
+
     <!-- Conteúdo do Gráfico -->
     <v-row class="no-print">
       <v-col cols="12">
@@ -472,6 +538,7 @@ const processos = ref([])
 const loading = ref(true)
 const dataInicioOP = ref('')
 const showTodayLine = ref(true)
+const custos = ref(null)
 
 // Configurações de Escala e Timeline
 const celulaLargura = ref(40)
@@ -737,6 +804,9 @@ const carregarDadosGantt = async () => {
       timelineDias: timelineDates.value.length,
       hojePosicao: todayPosition.value + '%'
     })
+    
+    // Carregar custos separadamente
+    custos.value = await $fetch(`/api/ops/${route.params.id}/custos`)
     
   } catch (error) {
     console.error('❌ Erro ao carregar dados do Gantt:', error)

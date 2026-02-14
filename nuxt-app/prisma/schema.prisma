@@ -13,6 +13,8 @@ enum UserRole {
   GERENTE
   ENGENHEIRO
   COMPRADOR
+  COMPRADOR_SOLICITANTE
+  COMPRADOR_NEGOCIADOR
   PCP
   QUALIDADE
   ESTOQUE
@@ -153,6 +155,9 @@ model OP {
   cliente          String
   cnpjCliente      String?
   enderecoCliente  String?
+  orcamentoPrevisto Float?                 @map("orcamento_previsto")
+  valorVenda       Float?                 @map("valor_venda")
+  caminhoProjetoServidor String?          @map("caminho_projeto_servidor")
   criadoPorId      Int
   responsavelId    Int?
   arquivos         Arquivo[]
@@ -215,6 +220,7 @@ model Peca {
   subcategoria     String?
   statusSuprimento SuprimentoStatus @default(NAO_SOLICITADO)
   valorUnitario    Float?           @map("valor_unitario")
+  custoTotal       Float?           @map("custo_total")
   fornecedorId     Int?             @map("fornecedor_id")
   anexos           PecaAnexo[]
   arquivoBOM       String?
@@ -248,6 +254,9 @@ model ProcessoPeca {
   status        ProcessoStatus @default(NAO_INICIADO)
   fornecedorRef Fornecedor?    @relation(fields: [fornecedorId], references: [id])
   tempoEstimado Int?
+  valorCusto    Float?           @map("valor_custo")
+  valorIPI      Float?           @map("valor_ipi")
+  valorICMS     Float?           @map("valor_icms")
   peca          Peca           @relation(fields: [pecaId], references: [id], onDelete: Cascade)
   ordemServico  OrdemServico?  @relation(fields: [osId], references: [id])
 
@@ -326,7 +335,10 @@ model Compra {
   valorTotal          Float?
   status              CompraStatus @default(SOLICITADA)
   dataSolicitacao     DateTime     @default(now())
-  dataEntregaPrevista DateTime?
+  dataCompra          DateTime?    @map("data_compra")
+  dataPrevisaoEntrega DateTime?    @map("data_previsao_entrega")
+  dataEntregaReal     DateTime?    @map("data_entrega_real")
+  numeroNF            String?      @map("numero_nf")
   itens               CompraItem[]
   op                  OP           @relation(fields: [opId], references: [id], onDelete: Cascade)
 
@@ -340,6 +352,9 @@ model CompraItem {
   descricao     String
   quantidade    Int
   valorUnitario Float
+  valorIPI      Float? @map("valor_ipi")
+  valorICMS     Float? @map("valor_icms")
+  custoLiquido  Float? @map("custo_liquido")
   compra        Compra @relation(fields: [compraId], references: [id])
   peca          Peca?  @relation(fields: [pecaId], references: [id], onDelete: SetNull)
 
@@ -366,6 +381,7 @@ model Arquivo {
   tipo      String
   url       String
   tamanho   Int
+  isReferencia Boolean @default(false) @map("is_referencia")
   usuarioId Int
   createdAt DateTime @default(now())
   op        OP?      @relation(fields: [opId], references: [id], onDelete: Cascade)
@@ -381,6 +397,7 @@ enum PecaCategoria {
 
 enum SuprimentoStatus {
   NAO_SOLICITADO
+  PARA_COTACAO
   EM_ORCAMENTO
   COMPRADO
   RECEBIDO

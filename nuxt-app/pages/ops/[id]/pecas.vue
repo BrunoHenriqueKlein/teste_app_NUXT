@@ -20,6 +20,16 @@
             Gerar PCP
           </v-btn>
           <v-btn
+            color="success"
+            variant="flat"
+            prepend-icon="mdi-cart-arrow-down"
+            @click="liberarParaCompra"
+            :loading="loadingRelease"
+            :disabled="selected.length === 0"
+          >
+            Liberar p/ Compra ({{ selected.length }})
+          </v-btn>
+          <v-btn
             color="white"
             variant="tonal"
             prepend-icon="mdi-plus"
@@ -69,9 +79,11 @@
     <!-- Tabela de Peças -->
     <v-card variant="outlined">
       <v-data-table
+        v-model="selected"
         :headers="headers"
         :items="pecas"
         :loading="loading"
+        show-select
         hover
         no-data-text="Nenhuma peça cadastrada. Importe um arquivo Excel para começar."
       >
@@ -453,6 +465,8 @@ const fileInput = ref(null)
 const drawingInput = ref(null)
 const selectedPecaForDrawing = ref(null)
 const loadingOS = ref(false)
+const loadingRelease = ref(false)
+const selected = ref([])
 
 const loadFornecedores = async () => {
   try {
@@ -733,6 +747,31 @@ const handleDrawingUpload = async (event) => {
     showSnackbar('Erro ao enviar desenho', 'error')
   } finally {
     event.target.value = ''
+  }
+}
+
+
+
+const liberarParaCompra = async () => {
+  if (selected.value.length === 0) return
+  
+  loadingRelease.value = true
+  try {
+    const result = await $fetch('/api/ops/liberar-itens-bom', {
+      method: 'POST',
+      body: { pecaIds: selected.value }
+    })
+    
+    if (result.success) {
+      showSnackbar(`${selected.value.length} itens liberados para compra!`)
+      selected.value = []
+      await loadPecas()
+    }
+  } catch (error) {
+    console.error('Erro ao liberar itens:', error)
+    showSnackbar('Erro ao liberar itens para compra', 'error')
+  } finally {
+    loadingRelease.value = false
   }
 }
 

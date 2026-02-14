@@ -50,7 +50,8 @@ export default defineEventHandler(async (event) => {
                 descricao: peca.descricao || '',
                 material: peca.material || '',
                 quantidade: peca.quantidade || 1,
-                categoria: peca.categoria || 'FABRICADO'
+                categoria: peca.categoria || 'FABRICADO',
+                subcategoria: peca.subcategoria || ''
             },
             create: {
                 opId: op.id,
@@ -59,6 +60,7 @@ export default defineEventHandler(async (event) => {
                 material: peca.material || '',
                 quantidade: peca.quantidade || 1,
                 categoria: peca.categoria || 'FABRICADO',
+                subcategoria: peca.subcategoria || '',
                 status: 'NAO_INICIADA'
             }
         })

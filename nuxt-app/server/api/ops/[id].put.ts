@@ -6,26 +6,26 @@ export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
     const id = getRouterParam(event, 'id')
-    
+
     if (!id) {
       throw createError({
         statusCode: 400,
         statusMessage: 'ID da OP não informado'
       })
     }
-    
+
     // Verificar se OP existe
     const existingOP = await prisma.oP.findUnique({
       where: { id: parseInt(id) }
     })
-    
+
     if (!existingOP) {
       throw createError({
         statusCode: 404,
         statusMessage: 'OP não encontrada'
       })
     }
-    
+
     // Atualizar OP
     const op = await prisma.oP.update({
       where: { id: parseInt(id) },
@@ -39,6 +39,8 @@ export default defineEventHandler(async (event) => {
         cnpjCliente: body.cnpjCliente,
         enderecoCliente: body.enderecoCliente,
         observacoes: body.observacoes,
+        orcamentoPrevisto: body.orcamentoPrevisto ? parseFloat(body.orcamentoPrevisto) : null,
+        valorVenda: body.valorVenda ? parseFloat(body.valorVenda) : null,
         status: body.status,
         responsavelId: body.responsavelId || null
       },
@@ -48,7 +50,7 @@ export default defineEventHandler(async (event) => {
         }
       }
     })
-    
+
     // Criar histórico
     await prisma.oPHistorico.create({
       data: {
@@ -58,7 +60,7 @@ export default defineEventHandler(async (event) => {
         detalhes: `Ordem de produção ${body.numeroOP} atualizada`
       }
     })
-    
+
     return { success: true, op }
   } catch (error: any) {
     console.error('Erro ao atualizar OP:', error)

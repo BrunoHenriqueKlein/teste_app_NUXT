@@ -52,6 +52,8 @@ export default defineEventHandler(async (event) => {
           cnpjCliente: body.cnpjCliente,
           enderecoCliente: body.enderecoCliente,
           observacoes: body.observacoes,
+          orcamentoPrevisto: body.orcamentoPrevisto ? parseFloat(body.orcamentoPrevisto) : null,
+          valorVenda: body.valorVenda ? parseFloat(body.valorVenda) : null,
           status: body.status || 'AGUARDANDO',
           progresso: (body.progresso ? parseInt(body.progresso) : 0) as number,
           criadoPorId: primeiroUsuario.id
