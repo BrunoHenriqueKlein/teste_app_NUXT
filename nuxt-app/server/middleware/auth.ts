@@ -16,11 +16,19 @@ export default defineEventHandler(async (event) => {
         try {
             const decoded = jwt.verify(token, jwtSecret)
             event.context.user = decoded
-            console.log('🔐 Usuário autenticado via middleware:', (decoded as any).email)
-        } catch (error) {
-            console.error('❌ Erro na verificação do JWT no middleware:', error)
-            // Não bloqueamos aqui para permitir que rotas públicas funcionem,
-            // mas o event.context.user ficará vazio.
+        } catch (error: any) {
+            // Se o token expirou, retornar 401 para o cliente saber que precisa logar novamente
+            if (error.name === 'TokenExpiredError') {
+                throw createError({
+                    statusCode: 401,
+                    statusMessage: 'Token expirado',
+                    message: 'Sua sessão expirou. Por favor, faça login novamente.'
+                })
+            }
+
+            console.error('❌ Erro na verificação do JWT no middleware:', error.message)
+            // Para outros erros (token inválido/malformado), continuamos sem autenticar
+            // para permitir acesso a rotas públicas
         }
     }
 })
