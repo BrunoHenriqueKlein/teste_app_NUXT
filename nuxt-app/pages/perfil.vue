@@ -46,6 +46,82 @@
 
               <v-divider class="mb-6"></v-divider>
 
+              <!-- Configurações de E-mail -->
+              <div class="text-subtitle-1 font-weight-bold mb-4">Configurações de E-mail (Envio de Orçamentos)</div>
+              
+              <v-row>
+                <v-col cols="12" sm="8">
+                  <v-text-field
+                    v-model="profileForm.mailHost"
+                    label="Servidor SMTP"
+                    placeholder="ex: smtp.gmail.com"
+                    variant="outlined"
+                    prepend-inner-icon="mdi-server"
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="12" sm="4">
+                  <v-text-field
+                    v-model="profileForm.mailPort"
+                    label="Porta"
+                    type="number"
+                    variant="outlined"
+                  ></v-text-field>
+                </v-col>
+              </v-row>
+
+              <v-text-field
+                v-model="profileForm.mailUser"
+                label="Usuário SMTP (E-mail)"
+                variant="outlined"
+                prepend-inner-icon="mdi-account-key"
+              ></v-text-field>
+
+              <v-text-field
+                v-model="profileForm.mailPass"
+                label="Senha SMTP"
+                type="password"
+                variant="outlined"
+                prepend-inner-icon="mdi-key"
+              ></v-text-field>
+
+              <v-text-field
+                v-model="profileForm.mailFrom"
+                label="Nome do Remetente"
+                placeholder="ex: João - Compras SOMEH"
+                variant="outlined"
+                prepend-inner-icon="mdi-rename-box"
+              ></v-text-field>
+
+              <v-switch
+                v-model="profileForm.mailSecure"
+                label="Usar SSL/TLS Seguro (Porta 465)"
+                color="primary"
+                hide-details
+                class="mb-4"
+              ></v-switch>
+
+              <div class="text-subtitle-2 mb-4 text-grey">Configurações Adicionais (Opcional)</div>
+              <v-row>
+                <v-col cols="12" sm="6">
+                  <v-text-field
+                    v-model="profileForm.imapHost"
+                    label="Servidor IMAP"
+                    variant="outlined"
+                    density="compact"
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="12" sm="6">
+                  <v-text-field
+                    v-model="profileForm.popHost"
+                    label="Servidor POP"
+                    variant="outlined"
+                    density="compact"
+                  ></v-text-field>
+                </v-col>
+              </v-row>
+
+              <v-divider class="my-6"></v-divider>
+
               <!-- Alterar Senha -->
               <div class="d-flex justify-space-between align-center mb-4">
                 <div class="text-subtitle-1 font-weight-bold">Alterar Senha</div>
@@ -111,6 +187,16 @@
                   Voltar
                 </v-btn>
                 <v-btn
+                  color="info"
+                  variant="outlined"
+                  size="large"
+                  class="mr-2"
+                  @click="testEmailConnection"
+                  :loading="testingConnection"
+                >
+                  Testar Conexão
+                </v-btn>
+                <v-btn
                   color="primary"
                   type="submit"
                   :loading="loading"
@@ -133,13 +219,22 @@ const loading = ref(false)
 const changePassword = ref(false)
 const statusMessage = ref('')
 const statusType = ref('success')
+const testingConnection = ref(false)
 
 const profileForm = ref({
   userId: user.value?.id,
   name: user.value?.name,
   currentPassword: '',
   newPassword: '',
-  confirmPassword: ''
+  confirmPassword: '',
+  mailHost: user.value?.mailHost || '',
+  mailPort: user.value?.mailPort || 587,
+  mailUser: user.value?.mailUser || '',
+  mailPass: user.value?.mailPass || '',
+  mailSecure: user.value?.mailSecure || false,
+  mailFrom: user.value?.mailFrom || '',
+  imapHost: user.value?.imapHost || '',
+  popHost: user.value?.popHost || ''
 })
 
 const handleUpdateProfile = async () => {
@@ -156,7 +251,15 @@ const handleUpdateProfile = async () => {
     userId: user.value.id,
     name: profileForm.value.name,
     currentPassword: changePassword.value ? profileForm.value.currentPassword : null,
-    newPassword: changePassword.value ? profileForm.value.newPassword : null
+    newPassword: changePassword.value ? profileForm.value.newPassword : null,
+    mailHost: profileForm.value.mailHost,
+    mailPort: profileForm.value.mailPort,
+    mailUser: profileForm.value.mailUser,
+    mailPass: profileForm.value.mailPass,
+    mailSecure: profileForm.value.mailSecure,
+    mailFrom: profileForm.value.mailFrom,
+    imapHost: profileForm.value.imapHost,
+    popHost: profileForm.value.popHost
   })
 
   if (success) {
@@ -173,6 +276,33 @@ const handleUpdateProfile = async () => {
   }
   
   loading.value = false
+}
+
+const testEmailConnection = async () => {
+  testingConnection.value = true
+  statusMessage.value = ''
+  
+  try {
+    const response = await $fetch('/api/user/test-email', {
+      method: 'POST',
+      body: {
+        mailHost: profileForm.value.mailHost,
+        mailPort: profileForm.value.mailPort,
+        mailUser: profileForm.value.mailUser,
+        mailPass: profileForm.value.mailPass,
+        mailSecure: profileForm.value.mailSecure,
+        mailFrom: profileForm.value.mailFrom
+      }
+    })
+    
+    statusMessage.value = response.message
+    statusType.value = 'success'
+  } catch (error) {
+    statusMessage.value = error.data?.statusMessage || error.message || 'Falha ao testar conexão'
+    statusType.value = 'error'
+  } finally {
+    testingConnection.value = false
+  }
 }
 </script>
 

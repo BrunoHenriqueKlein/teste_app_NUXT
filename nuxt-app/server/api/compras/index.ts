@@ -39,27 +39,33 @@ export default defineEventHandler(async (event) => {
         const body = await readBody(event)
         try {
             const count = await prisma.compra.count()
-            const numero = `OC-${(count + 1).toString().padStart(4, '0')}`
+            // Se já vier com número (ex: de uma REQ), mantém. Se não, gera um REQ temporário.
+            const numero = body.numero || `REQ-${(count + 1).toString().padStart(4, '0')}`
 
             const compra = await prisma.compra.create({
                 data: {
                     numero,
                     opId: body.opId,
+                    osId: body.osId,
                     fornecedor: body.fornecedor,
                     status: body.status || 'SOLICITADA',
-                    valorTotal: body.valorTotal,
+                    valorTotal: body.valorTotal || 0,
+                    valorFrete: body.valorFrete || 0,
+                    valorDesconto: body.valorDesconto || 0,
+                    observacoes: body.observacoes,
                     dataCompra: body.dataCompra ? new Date(body.dataCompra) : null,
                     dataPrevisaoEntrega: body.dataPrevisaoEntrega ? new Date(body.dataPrevisaoEntrega) : null,
-                    numeroNF: body.numeroNF,
                     itens: {
                         create: body.itens.map((item: any) => ({
                             descricao: item.descricao,
                             quantidade: item.quantidade,
                             pecaId: item.pecaId,
                             valorUnitario: item.valorUnitario || 0,
+                            aliqIPI: item.aliqIPI || 0,
+                            aliqICMS: item.aliqICMS || 0,
                             valorIPI: item.valorIPI || 0,
                             valorICMS: item.valorICMS || 0,
-                            custoLiquido: item.custoLiquido || item.valorUnitario || 0
+                            custoLiquido: item.custoLiquido || 0
                         }))
                     }
                 },
@@ -95,13 +101,38 @@ export default defineEventHandler(async (event) => {
         const { id, ...data } = body
 
         try {
+            const currentCompra = await prisma.compra.findUnique({ where: { id: Number(id) } })
+            let finalNumero = currentCompra?.numero
+
+            // Se o status mudar para PEDIDO_EMITIDO e ainda for uma REQ, gera o número da OC
+            if (data.status === 'PEDIDO_EMITIDO' && (finalNumero?.startsWith('REQ') || !finalNumero)) {
+                // Busca a última OC para seguir a sequência
+                const lastOC = await prisma.compra.findFirst({
+                    where: { numero: { startsWith: 'OC-' } },
+                    orderBy: { numero: 'desc' }
+                })
+
+                let nextNum = 1
+                if (lastOC) {
+                    const parts = lastOC.numero.split('-')
+                    const lastNum = parseInt(parts[parts.length - 1])
+                    if (!isNaN(lastNum)) nextNum = lastNum + 1
+                }
+
+                const year = new Date().getFullYear()
+                finalNumero = `OC-${year}-${nextNum.toString().padStart(4, '0')}`
+            }
+
             const updatedCompra = await prisma.compra.update({
                 where: { id: Number(id) },
                 data: {
-                    numero: data.numero,
+                    numero: finalNumero,
                     status: data.status,
                     valorTotal: data.valorTotal,
-                    dataCompra: data.dataCompra ? new Date(data.dataCompra) : undefined,
+                    valorFrete: data.valorFrete,
+                    valorDesconto: data.valorDesconto,
+                    observacoes: data.observacoes,
+                    dataCompra: data.status === 'PEDIDO_EMITIDO' && !currentCompra?.dataCompra ? new Date() : (data.dataCompra ? new Date(data.dataCompra) : undefined),
                     dataPrevisaoEntrega: data.dataPrevisaoEntrega ? new Date(data.dataPrevisaoEntrega) : undefined,
                     dataEntregaReal: data.dataEntregaReal ? new Date(data.dataEntregaReal) : undefined,
                     numeroNF: data.numeroNF,
@@ -109,9 +140,16 @@ export default defineEventHandler(async (event) => {
                 include: { itens: true }
             })
 
-            // Atualização de status em massa para as peças
-            // Se foi emitido pedido -> COMPRADO
+            // Atualização de status em massa para as peças e OS vinculada
             if (data.status === 'PEDIDO_EMITIDO' || data.status === 'APROVADA') {
+                // Se houver OS vinculada, atualizar o status dela
+                if (updatedCompra.osId) {
+                    await prisma.ordemServico.update({
+                        where: { id: updatedCompra.osId },
+                        data: { status: 'EM_ANDAMENTO' }
+                    })
+                }
+
                 for (const item of updatedCompra.itens) {
                     if (item.pecaId) {
                         await prisma.peca.update({
@@ -124,6 +162,14 @@ export default defineEventHandler(async (event) => {
 
             // Se foi recebido -> RECEBIDO
             if (data.status === 'RECEBIDA_TOTAL' || data.dataEntregaReal) {
+                // Se houver OS vinculada, marcar como CONCLUIDA (ou aguardando proximo passo)
+                if (updatedCompra.osId) {
+                    await prisma.ordemServico.update({
+                        where: { id: updatedCompra.osId },
+                        data: { status: 'CONCLUIDA' }
+                    })
+                }
+
                 for (const item of updatedCompra.itens) {
                     if (item.pecaId) {
                         await prisma.peca.update({

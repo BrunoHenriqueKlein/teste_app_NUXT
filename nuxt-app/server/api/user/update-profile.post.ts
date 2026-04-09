@@ -37,6 +37,16 @@ export default defineEventHandler(async (event) => {
         const updateData: any = {}
         if (name) updateData.name = name
 
+        // Novos campos de E-mail
+        if (body.mailHost) updateData.mailHost = body.mailHost
+        if (body.mailPort) updateData.mailPort = Number(body.mailPort)
+        if (body.mailUser) updateData.mailUser = body.mailUser
+        if (body.mailPass) updateData.mailPass = body.mailPass
+        if (body.mailSecure !== undefined) updateData.mailSecure = body.mailSecure
+        if (body.mailFrom) updateData.mailFrom = body.mailFrom
+        if (body.imapHost) updateData.imapHost = body.imapHost
+        if (body.popHost) updateData.popHost = body.popHost
+
         if (newPassword) {
             if (!currentPassword) {
                 throw createError({
@@ -68,7 +78,15 @@ export default defineEventHandler(async (event) => {
                 name: updatedUser.name,
                 email: updatedUser.email,
                 role: updatedUser.role,
-                department: updatedUser.department
+                department: updatedUser.department,
+                mailHost: updatedUser.mailHost,
+                mailPort: updatedUser.mailPort,
+                mailUser: updatedUser.mailUser,
+                mailPass: updatedUser.mailPass,
+                mailSecure: updatedUser.mailSecure,
+                mailFrom: updatedUser.mailFrom,
+                imapHost: updatedUser.imapHost,
+                popHost: updatedUser.popHost
             }
         }
     } catch (error: any) {

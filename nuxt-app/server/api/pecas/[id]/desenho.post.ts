@@ -1,4 +1,4 @@
-import { defineEventHandler, createError, readMultipartFormData, getRouterParam } from 'h3'
+import { defineEventHandler, createError, readMultipartFormData, getRouterParam, readRawBody } from 'h3'
 import fs from 'fs'
 import path from 'path'
 
@@ -12,21 +12,30 @@ export default defineEventHandler(async (event) => {
     }
 
     const prisma = event.context.prisma
-    const formData = await readMultipartFormData(event)
+    const contentType = event.headers.get('content-type') || ''
 
-    if (!formData || formData.length === 0) {
-        throw createError({
-            statusCode: 400,
-            statusMessage: 'Nenhum arquivo enviado'
-        })
-    }
+    let fileData: Buffer
+    let fileName: string
 
-    const file = formData.find(item => item.name === 'file')
-    if (!file) {
-        throw createError({
-            statusCode: 400,
-            statusMessage: 'Arquivo não encontrado'
-        })
+    if (contentType.includes('multipart/form-data')) {
+        const formData = await readMultipartFormData(event)
+        if (!formData || formData.length === 0) {
+            throw createError({ statusCode: 400, statusMessage: 'Nenhum arquivo enviado' })
+        }
+        const file = formData.find(item => item.name === 'file')
+        if (!file) {
+            throw createError({ statusCode: 400, statusMessage: 'Arquivo não encontrado no multipart' })
+        }
+        fileData = file.data
+        fileName = file.filename || 'Anexo'
+    } else {
+        // Suporte para envio binário direto (Macro SW / Script Simulação)
+        const body = await readRawBody(event)
+        if (!body) {
+            throw createError({ statusCode: 400, statusMessage: 'Corpo binário vazio' })
+        }
+        fileData = body as Buffer
+        fileName = event.headers.get('x-file-name') || `desenho_${pecaId}.pdf`
     }
 
     try {
@@ -36,22 +45,22 @@ export default defineEventHandler(async (event) => {
             fs.mkdirSync(uploadDir, { recursive: true })
         }
 
-        // Criar nome único para o arquivo
-        const fileExt = path.extname(file.filename || '')
-        const fileName = `desenho_${pecaId}_${Date.now()}${fileExt}`
-        const filePath = path.join(uploadDir, fileName)
+        // Criar nome final para o arquivo no disco (único)
+        const fileExt = path.extname(fileName)
+        const diskFileName = `desenho_${pecaId}_${Date.now()}${fileExt}`
+        const filePath = path.join(uploadDir, diskFileName)
 
         // Salvar o arquivo
-        fs.writeFileSync(filePath, file.data)
+        fs.writeFileSync(filePath, fileData)
 
         // URL pública
-        const url = `/uploads/desenhos/${fileName}`
+        const url = `/uploads/desenhos/${diskFileName}`
 
         // Criar registro na nova tabela de anexos
         const anexo = await prisma.pecaAnexo.create({
             data: {
                 pecaId: parseInt(pecaId),
-                nome: file.filename || 'Anexo',
+                nome: fileName,
                 url
             }
         })

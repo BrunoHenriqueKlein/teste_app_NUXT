@@ -76,17 +76,26 @@
       </v-col>
     </v-row>
 
-    <!-- Tabela de Peças -->
-    <v-card variant="outlined">
-      <v-data-table
-        v-model="selected"
-        :headers="headers"
-        :items="pecas"
-        :loading="loading"
-        show-select
-        hover
-        no-data-text="Nenhuma peça cadastrada. Importe um arquivo Excel para começar."
-      >
+    <!-- Abas de Visualização -->
+    <v-tabs v-model="activeTab" color="primary" class="mb-4">
+      <v-tab value="bom" prepend-icon="mdi-format-list-bulleted">Peças e Materiais</v-tab>
+      <v-tab value="kits" prepend-icon="mdi-package-variant">Kits de Montagem</v-tab>
+    </v-tabs>
+
+    <v-tabs-window v-model="activeTab">
+      <!-- Aba 1: BOM Geral -->
+      <v-tabs-window-item value="bom">
+        <v-card variant="outlined">
+          <v-data-table
+            v-model="selected"
+            :headers="headers"
+            :items="pecas"
+            :loading="loading"
+            item-value="id"
+            show-select
+            hover
+            no-data-text="Nenhuma peça cadastrada. Importe um arquivo Excel para começar."
+          >
         <!-- Customização das Colunas -->
         <template v-slot:item.codigo="{ item }">
           <div class="font-weight-bold text-primary">{{ item.codigo }}</div>
@@ -279,7 +288,50 @@
           </div>
         </template>
       </v-data-table>
-    </v-card>
+        </v-card>
+      </v-tabs-window-item>
+
+      <!-- Aba 2: Kits de Montagem -->
+      <v-tabs-window-item value="kits">
+        <v-row>
+          <v-col cols="12" md="6" v-for="(kit, name) in kitsGrouped" :key="name">
+            <v-card variant="outlined" class="mb-4">
+              <v-card-title class="d-flex justify-space-between align-center">
+                <span>Conjunto: {{ name }}</span>
+                <v-chip :color="kit.progresso === 100 ? 'success' : 'primary'" size="small">
+                  {{ kit.progresso }}% Pronto
+                </v-chip>
+              </v-card-title>
+              <v-card-text>
+                <v-progress-linear
+                  :model-value="kit.progresso"
+                  :color="kit.progresso === 100 ? 'success' : 'primary'"
+                  height="10"
+                  rounded
+                  class="mb-4"
+                ></v-progress-linear>
+
+                <v-list density="compact">
+                  <v-list-item v-for="peca in kit.itens" :key="peca.id" class="px-0">
+                    <template v-slot:prepend>
+                      <v-icon :color="pecaPronta(peca) ? 'success' : 'grey'" size="small">
+                        {{ pecaPronta(peca) ? 'mdi-check-circle' : 'mdi-circle-outline' }}
+                      </v-icon>
+                    </template>
+                    <v-list-item-title class="text-body-2">{{ peca.codigo }} - {{ peca.descricao }}</v-list-item-title>
+                    <template v-slot:append>
+                      <v-chip size="x-small" :color="getStatusColor(peca.statusSuprimento)" variant="tonal">
+                        {{ peca.statusSuprimento }}
+                      </v-chip>
+                    </template>
+                  </v-list-item>
+                </v-list>
+              </v-card-text>
+            </v-card>
+          </v-col>
+        </v-row>
+      </v-tabs-window-item>
+    </v-tabs-window>
 
     <!-- Diálogo de Inserção/Edição de Peça -->
     <v-dialog v-model="dialogPeca.show" max-width="500px">
@@ -467,6 +519,37 @@ const selectedPecaForDrawing = ref(null)
 const loadingOS = ref(false)
 const loadingRelease = ref(false)
 const selected = ref([])
+const activeTab = ref('bom')
+
+const pecaPronta = (peca) => {
+  // Peça está pronta se já estiver em estoque ou concluída no fluxo
+  if (['CONCLUIDA', 'EM_ESTOQUE'].includes(peca.status)) return true
+  
+  // Peça comprada está pronta se foi recebida
+  if (peca.statusSuprimento === 'RECEBIDO') return true
+  
+  return false
+}
+
+const kitsGrouped = computed(() => {
+  const groups = {}
+  pecas.value.forEach(p => {
+    // Usar subconjunto ou fallback para "OUTROS"
+    const sub = p.subconjunto || 'CONJUNTO GERAL'
+    if (!groups[sub]) groups[sub] = { itens: [], progresso: 0 }
+    groups[sub].itens.push(p)
+  })
+
+  // Calcular progresso por grupo (porcentagem de peças prontas)
+  for (const name in groups) {
+    const itens = groups[name].itens
+    const total = itens.length
+    const prontos = itens.filter(p => pecaPronta(p)).length
+    groups[name].progresso = total > 0 ? Math.round((prontos / total) * 100) : 0
+  }
+
+  return groups
+})
 
 const loadFornecedores = async () => {
   try {
@@ -763,7 +846,12 @@ const liberarParaCompra = async () => {
     })
     
     if (result.success) {
-      showSnackbar(`${selected.value.length} itens liberados para compra!`)
+      showSnackbar(`${selected.value.length} itens liberados! Gerando ordens de serviço...`)
+      
+      // Chamar geração de OS automaticamente após liberar
+      await $fetch(`/api/ops/${route.params.id}/pcp/generate-os`, { method: 'POST' })
+      
+      showSnackbar('Ordens de Serviço (OS) geradas com sucesso no PCP!', 'success')
       selected.value = []
       await loadPecas()
     }

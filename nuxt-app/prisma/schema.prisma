@@ -97,6 +97,17 @@ model User {
   isActive             Boolean               @default(true)
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
+  
+  // Configurações de E-mail Personalizadas
+  mailHost             String?               @map("mail_host")
+  mailPort             Int?                  @map("mail_port")
+  mailUser             String?               @map("mail_user")
+  mailPass             String?               @map("mail_pass")
+  mailSecure           Boolean               @default(false) @map("mail_secure")
+  mailFrom             String?               @map("mail_from")
+  imapHost             String?               @map("imap_host")
+  popHost              String?               @map("pop_host")
+
   arquivos             Arquivo[]             @relation("Arquivo_Usuario")
   estoqueMovimentacoes EstoqueMovimentacao[] @relation("EstoqueMovimentacao_Usuario")
   opHistorico          OPHistorico[]         @relation("OPHistorico_Usuario")
@@ -276,6 +287,7 @@ model OrdemServico {
   op              OP             @relation(fields: [opId], references: [id], onDelete: Cascade)
   fornecedor      Fornecedor?    @relation(fields: [fornecedorId], references: [id])
   itens           ProcessoPeca[]
+  compras         Compra[]
 
   @@map("ordens_servico")
 }
@@ -330,9 +342,13 @@ model EstoqueMovimentacao {
 model Compra {
   id                  Int          @id @default(autoincrement())
   opId                Int
+  osId                Int?         @map("os_id")
   numero              String       @unique
   fornecedor          String
   valorTotal          Float?
+  valorFrete          Float?       @default(0) @map("valor_frete")
+  valorDesconto       Float?       @default(0) @map("valor_desconto")
+  observacoes         String?      @db.Text
   status              CompraStatus @default(SOLICITADA)
   dataSolicitacao     DateTime     @default(now())
   dataCompra          DateTime?    @map("data_compra")
@@ -341,6 +357,7 @@ model Compra {
   numeroNF            String?      @map("numero_nf")
   itens               CompraItem[]
   op                  OP           @relation(fields: [opId], references: [id], onDelete: Cascade)
+  os                  OrdemServico? @relation(fields: [osId], references: [id], onDelete: SetNull)
 
   @@map("compras")
 }
@@ -352,13 +369,32 @@ model CompraItem {
   descricao     String
   quantidade    Int
   valorUnitario Float
+  aliqIPI       Float? @default(0) @map("aliq_ipi")
+  aliqICMS      Float? @default(0) @map("aliq_icms")
   valorIPI      Float? @map("valor_ipi")
   valorICMS     Float? @map("valor_icms")
   custoLiquido  Float? @map("custo_liquido")
-  compra        Compra @relation(fields: [compraId], references: [id])
+  compra        Compra @relation(fields: [compraId], references: [id], onDelete: Cascade)
   peca          Peca?  @relation(fields: [pecaId], references: [id], onDelete: SetNull)
 
   @@map("compra_itens")
+}
+
+model Empresa {
+  id          Int     @id @default(autoincrement())
+  nomeFantasia String
+  razaoSocial  String
+  cnpj         String
+  inscricaoEstadual String?
+  endereco     String
+  cidade       String
+  estado       String
+  cep          String
+  telefone     String?
+  email        String?
+  logoUrl      String?
+
+  @@map("empresas")
 }
 
 model OPHistorico {

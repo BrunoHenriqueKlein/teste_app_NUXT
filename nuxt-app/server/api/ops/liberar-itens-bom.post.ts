@@ -41,71 +41,9 @@ export default defineEventHandler(async (event) => {
             data: { statusSuprimento: 'PARA_COTACAO' }
         })
 
-        // 3. Agrupar peças por categoria para criar as requisições
-        // Lógica de agrupamento baseada no material ou subcategoria (simplificada para o exemplo)
-        const categorias = {
-            'MATERIA_PRIMA': pecas.filter(p => p.material?.toLowerCase().includes('barra') || p.material?.toLowerCase().includes('chapa')),
-            'ELETRICO': pecas.filter(p => p.subcategoria?.toLowerCase().includes('elet') || p.material?.toLowerCase().includes('cabo')),
-            'COMERCIAL': pecas.filter(p => p.subcategoria?.toLowerCase().includes('comerc') || p.material?.toLowerCase().includes('parafuso')),
-            'SERVICO_EXTERNO': pecas.filter(p => p.categoria === 'FABRICADO' && p.statusSuprimento === 'PARA_COTACAO') // Itens fabricados que precisam de processo externo
-        }
-
-        const results = []
-
-        for (const [catName, itens] of Object.entries(categorias)) {
-            if (itens.length === 0) continue
-
-            // 4. Localizar ou criar uma "Compra" (Requisição) para este lote/categoria
-            // Procuramos uma que ainda esteja no status SOLICITADA para a mesma OP e categoria (usando o nome do fornecedor como 'tag' temporária)
-            let compra = await prisma.compra.findFirst({
-                where: {
-                    opId: opId,
-                    status: 'SOLICITADA',
-                    fornecedor: `REQ_${catName}` // Usando o campo fornecedor para identificar a categoria da requisição por ora
-                }
-            })
-
-            if (!compra) {
-                const count = await prisma.compra.count()
-                compra = await prisma.compra.create({
-                    data: {
-                        opId: opId,
-                        numero: `REQ-${(count + 1).toString().padStart(4, '0')}`,
-                        fornecedor: `REQ_${catName}`,
-                        status: 'SOLICITADA'
-                    }
-                })
-            }
-
-            // 5. Adicionar itens à requisição
-            for (const item of itens) {
-                // Verificar se o item já está na requisição para não duplicar
-                const exists = await prisma.compraItem.findFirst({
-                    where: {
-                        compraId: compra.id,
-                        pecaId: item.id
-                    }
-                })
-
-                if (!exists) {
-                    await prisma.compraItem.create({
-                        data: {
-                            compraId: compra.id,
-                            pecaId: item.id,
-                            descricao: item.descricao,
-                            quantidade: item.quantidade,
-                            valorUnitario: 0
-                        }
-                    })
-                }
-            }
-            results.push({ categoria: catName, compraId: compra.id, numero: compra.numero })
-        }
-
         return {
             success: true,
-            message: `${pecaIds.length} itens liberados para compra.`,
-            requericoes: results
+            message: `${pecas.length} itens marcados para cotação. Vá ao PCP para gerar as Ordens de Serviço e solicitar orçamentos.`
         }
 
     } catch (error: any) {

@@ -14,20 +14,33 @@ export default defineEventHandler(async (event) => {
 
     try {
         // 1. Atualizar a Compra com a NF e data de entrega
-        await prisma.compra.update({
+        const updatedCompra = await prisma.compra.update({
             where: { id: Number(compraId) },
             data: {
                 numeroNF: numeroNF,
                 dataEntregaReal: dataEntregaReal ? new Date(dataEntregaReal) : new Date(),
-                status: 'RECEBIDA_TOTAL' // Simplificado (assume-se que recebeu tudo se está dando baixa)
-            }
+                status: 'RECEBIDA_TOTAL'
+            },
+            include: { itens: true }
         })
 
-        // 2. Atualizar o status de cada peça vinculada aos itens recebidos
-        for (const item of itens) {
-            // Buscar o pecaId se não foi passado (segurança)
-            let currentPecaId = item.pecaId
+        // 2. Se houver OS vinculada, fazer a baixa em cascata
+        if (updatedCompra.osId) {
+            await prisma.ordemServico.update({
+                where: { id: updatedCompra.osId },
+                data: { status: 'CONCLUIDO' }
+            })
 
+            // Marcar todos os processos de peças daquela OS como CONCLUIDO
+            await prisma.processoPeca.updateMany({
+                where: { osId: updatedCompra.osId },
+                data: { status: 'CONCLUIDO' }
+            })
+        }
+
+        // 3. Atualizar o status de cada peça vinculada aos itens recebidos
+        for (const item of itens) {
+            let currentPecaId = item.pecaId
             if (!currentPecaId && item.id) {
                 const dbItem = await prisma.compraItem.findUnique({
                     where: { id: item.id },
@@ -37,6 +50,8 @@ export default defineEventHandler(async (event) => {
             }
 
             if (currentPecaId) {
+                // Se a peça for COMPRADA pura, o statusSuprimento vai para RECEBIDO
+                // Se for um serviço de FABRICADO, o status da peça na BOM também pode avançar
                 await prisma.peca.update({
                     where: { id: currentPecaId },
                     data: {

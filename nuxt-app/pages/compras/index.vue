@@ -130,10 +130,15 @@
                 {{ item.status }}
               </v-chip>
             </template>
-            <template v-slot:item.previsao="{ item }">
-              <div :class="isDelayed(item.dataPrevisaoEntrega) ? 'text-error font-weight-bold' : ''">
-                {{ formatDate(item.dataPrevisaoEntrega) }}
-              </div>
+            <template v-slot:item.acoes_oc="{ item }">
+              <v-btn
+                icon="mdi-printer"
+                variant="text"
+                color="primary"
+                size="small"
+                @click="prepararImpressao(item)"
+                title="Imprimir OC"
+              ></v-btn>
             </template>
           </v-data-table>
         </v-card>
@@ -199,82 +204,227 @@
             Negocie os itens abaixo no SigeCloud e, após gerar a Ordem de Compra formal, vincule o número e a data de entrega aqui no sistema.
           </v-alert>
 
-          <v-table>
+          <v-table density="compact" class="mb-4">
             <thead>
               <tr>
-                <th class="text-left">Cód. Peça</th>
-                <th class="text-left">Descrição / Material</th>
-                <th class="text-center">Qtd</th>
-                <th class="text-center">Desenhos</th>
+                <th class="text-left font-weight-bold">Item / Descrição</th>
+                <th class="text-center font-weight-bold" style="width: 80px;">Qtd</th>
+                <th class="text-center font-weight-bold" style="width: 120px;">Vlr. Unit (R$)</th>
+                <th class="text-center font-weight-bold" style="width: 80px;">IPI (%)</th>
+                <th class="text-center font-weight-bold" style="width: 80px;">ICMS (%)</th>
+                <th class="text-right font-weight-bold" style="width: 120px;">Subtotal</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="item in dialogDetalhes.requisicao.itens" :key="item.id">
-                <td class="font-weight-bold text-primary">{{ item.peca?.codigo || '-' }}</td>
                 <td>
-                  <div>{{ item.descricao }}</div>
-                  <div class="text-caption text-grey">{{ item.peca?.material }}</div>
+                  <div class="font-weight-bold">{{ item.peca?.codigo || '-' }}</div>
+                  <div class="text-caption text-grey">{{ item.descricao }}</div>
                 </td>
                 <td class="text-center">{{ item.quantidade }}</td>
-                <td class="text-center">
-                  <div class="d-flex justify-center gap-1">
-                    <v-btn
-                      v-for="anexo in item.peca?.anexos"
-                      :key="anexo.id"
-                      icon="mdi-file-pdf-box"
-                      size="x-small"
-                      color="error"
-                      variant="text"
-                      @click="viewDrawing(anexo.url)"
-                      :title="anexo.nome"
-                    ></v-btn>
-                    <span v-if="!item.peca?.anexos?.length" class="text-caption text-grey">Sem desenho</span>
-                  </div>
+                <td>
+                  <v-text-field
+                    v-model.number="item.valorUnitario"
+                    type="number"
+                    variant="underlined"
+                    density="compact"
+                    hide-details
+                    prefix="R$"
+                    @update:model-value="recacheTotals"
+                  ></v-text-field>
+                </td>
+                <td>
+                  <v-text-field
+                    v-model.number="item.aliqIPI"
+                    type="number"
+                    variant="underlined"
+                    density="compact"
+                    hide-details
+                    suffix="%"
+                    @update:model-value="recacheTotals"
+                  ></v-text-field>
+                </td>
+                <td>
+                  <v-text-field
+                    v-model.number="item.aliqICMS"
+                    type="number"
+                    variant="underlined"
+                    density="compact"
+                    hide-details
+                    suffix="%"
+                    @update:model-value="recacheTotals"
+                  ></v-text-field>
+                </td>
+                <td class="text-right font-weight-bold">
+                  {{ formatCurrency(calculateItemTotal(item)) }}
                 </td>
               </tr>
             </tbody>
           </v-table>
 
-          <v-divider class="my-6"></v-divider>
+          <v-divider class="my-4"></v-divider>
 
-          <h3 class="text-h6 mb-4">Vincular Ordem de Compra (SigeCloud)</h3>
           <v-row dense>
-            <v-col cols="12" md="6">
+            <v-col cols="12" md="3">
               <v-text-field
-                v-model="dialogDetalhes.ocFomal"
-                label="Número da OC no SigeCloud"
+                v-model.number="dialogDetalhes.valorFrete"
+                label="Valor do Frete"
+                prefix="R$"
                 variant="outlined"
-                prepend-icon="mdi-file-certificate"
-                placeholder="Ex: OC-12345"
+                density="compact"
+                @update:model-value="recacheTotals"
               ></v-text-field>
             </v-col>
-            <v-col cols="12" md="6">
+            <v-col cols="12" md="3">
+              <v-text-field
+                v-model.number="dialogDetalhes.valorDesconto"
+                label="Desconto Total"
+                prefix="R$"
+                variant="outlined"
+                density="compact"
+                @update:model-value="recacheTotals"
+              ></v-text-field>
+            </v-col>
+            <v-col cols="12" md="3">
               <v-text-field
                 v-model="dialogDetalhes.dataPrevisao"
                 label="Previsão de Entrega"
                 type="date"
                 variant="outlined"
-                prepend-icon="mdi-calendar"
+                density="compact"
               ></v-text-field>
             </v-col>
+            <v-col cols="12" md="3" class="text-right">
+              <div class="text-overline">Total do Pedido</div>
+              <div class="text-h5 font-weight-bold text-success">{{ formatCurrency(totalPedidoCalculado) }}</div>
+            </v-col>
           </v-row>
+
+          <v-textarea
+            v-model="dialogDetalhes.observacoes"
+            label="Observações para o Fornecedor"
+            variant="outlined"
+            rows="2"
+            class="mt-2"
+          ></v-textarea>
         </v-card-text>
 
-        <v-card-actions class="pa-4">
+        <v-card-actions class="pa-4 bg-grey-lighten-4">
           <v-spacer></v-spacer>
-          <v-btn variant="text" @click="dialogDetalhes.show = false">Fechar</v-btn>
+          <v-btn variant="text" @click="dialogDetalhes.show = false">Desistir</v-btn>
           <v-btn
             color="success"
             variant="flat"
             :loading="saving"
-            :disabled="!dialogDetalhes.ocFomal || !dialogDetalhes.dataPrevisao"
-            @click="vincularOC"
+            @click="emitirOC"
+            prepend-icon="mdi-file-check"
           >
-            Confirmar Compra
+            Emitir Ordem de Compra
           </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- Layout de Impressão de OC (Oculto na Web) -->
+    <div id="print-oc" class="d-none print-only pa-8">
+      <div v-if="printData" class="oc-layout">
+        <!-- Cabeçalho Empresa -->
+        <div class="d-flex justify-space-between align-start mb-8 border-bottom pb-4">
+          <div class="d-flex">
+            <v-img :src="empresa?.logoUrl" width="100" class="mr-4" v-if="empresa?.logoUrl"></v-img>
+            <div>
+              <h1 class="text-h4 font-weight-black">{{ empresa?.nomeFantasia }}</h1>
+              <div class="text-caption font-weight-bold">{{ empresa?.razaoSocial }} - CNPJ: {{ empresa?.cnpj }}</div>
+              <div class="text-caption">{{ empresa?.endereco }}, {{ empresa?.cidade }}-{{ empresa?.estado }}</div>
+              <div class="text-caption">Telefone: {{ empresa?.telefone }} | E-mail: {{ empresa?.email }}</div>
+            </div>
+          </div>
+          <div class="text-right">
+            <h2 class="text-h5 text-primary font-weight-black">ORDEM DE COMPRA</h2>
+            <div class="text-h4 font-weight-bold mb-1">{{ printData.numero }}</div>
+            <div class="text-overline">Data: {{ formatDate(printData.dataCompra) }}</div>
+          </div>
+        </div>
+
+        <!-- Fornecedor / OP -->
+        <v-row class="mb-6">
+          <v-col cols="7">
+            <div class="bg-grey-lighten-3 pa-3 rounded">
+              <div class="text-overline text-primary">FORNECEDOR</div>
+              <div class="text-h6 font-weight-bold">{{ printData.fornecedor }}</div>
+            </div>
+          </v-col>
+          <v-col cols="5">
+            <div class="bg-grey-lighten-3 pa-3 rounded">
+              <div class="text-overline text-primary">REFERÊNCIA / PROJETO</div>
+              <div class="font-weight-bold">OP #{{ printData.op?.numeroOP }}</div>
+              <div class="text-caption">{{ printData.op?.cliente }} - {{ printData.op?.codigoMaquina }}</div>
+            </div>
+          </v-col>
+        </v-row>
+
+        <!-- Itens -->
+        <table class="oc-table w-100 mb-6">
+          <thead>
+            <tr class="bg-primary text-white">
+              <th class="pa-2 text-left">Item</th>
+              <th class="pa-2 text-left">Descrição</th>
+              <th class="pa-2 text-center" style="width: 60px;">Qtd</th>
+              <th class="pa-2 text-right">Unitário</th>
+              <th class="pa-2 text-right">IPI</th>
+              <th class="pa-2 text-right">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in printData.itens" :key="item.id" class="border-bottom">
+              <td class="pa-2 font-weight-bold">{{ item.peca?.codigo || '-' }}</td>
+              <td class="pa-2">{{ item.descricao }}</td>
+              <td class="pa-2 text-center">{{ item.quantidade }}</td>
+              <td class="pa-2 text-right">{{ formatCurrency(item.valorUnitario) }}</td>
+              <td class="pa-2 text-right">{{ item.aliqIPI }}%</td>
+              <td class="pa-2 text-right font-weight-bold">{{ formatCurrency(calculateItemTotal(item)) }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Totais -->
+        <v-row class="justify-end">
+          <v-col cols="5">
+            <v-table density="compact" class="totals-table">
+              <tr>
+                <td class="text-right text-grey">Subtotal de Itens:</td>
+                <td class="text-right font-weight-bold">{{ formatCurrency(printData.itensSum) }}</td>
+              </tr>
+              <tr>
+                <td class="text-right text-grey">Total IPI:</td>
+                <td class="text-right font-weight-bold text-orange">{{ formatCurrency(printData.totalIPI) }}</td>
+              </tr>
+              <tr>
+                <td class="text-right text-grey">Frete (+) / Desconto (-):</td>
+                <td class="text-right font-weight-bold">{{ formatCurrency(printData.valorFrete - printData.valorDesconto) }}</td>
+              </tr>
+              <tr class="bg-success-lighten-5">
+                <td class="text-right text-h6 font-weight-black">VALOR TOTAL:</td>
+                <td class="text-right text-h6 font-weight-black text-success">{{ formatCurrency(printData.valorTotal) }}</td>
+              </tr>
+            </v-table>
+          </v-col>
+        </v-row>
+
+        <!-- Rodapé / Assinatura -->
+        <div class="mt-12 pt-8 d-flex justify-space-between text-center border-top">
+          <div style="width: 250px;">
+            <div class="border-top pt-2">Responsável Compras</div>
+          </div>
+          <div style="width: 250px;">
+            <div class="border-top pt-2">Aprovação Financeira</div>
+          </div>
+          <div style="width: 250px;">
+            <div class="border-top pt-2">Setor Solicitante</div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- Editar Demanda (Item da BOM) -->
     <v-dialog v-model="dialogDemanda.show" max-width="500px">
@@ -333,11 +483,15 @@ const loading = ref(false)
 const saving = ref(false)
 
 const requisicoesEngenharia = computed(() => {
-  return compras.value.filter(c => c.status === 'SOLICITADA' && c.fornecedor.startsWith('REQ_'))
+  return compras.value.filter(c => c.status === 'SOLICITADA')
 })
 
 const activeOrders = computed(() => {
-  return compras.value.filter(o => o.status !== 'RECEBIDA_TOTAL' && o.status !== 'CANCELADA' && !o.fornecedor.startsWith('REQ_'))
+  return compras.value.filter(o => 
+    o.status !== 'SOLICITADA' && 
+    o.status !== 'RECEBIDA_TOTAL' && 
+    o.status !== 'CANCELADA'
+  )
 })
 
 const formatDate = (date) => {
@@ -405,8 +559,43 @@ const headers = [
   { title: 'Fornecedor', key: 'fornecedor' },
   { title: 'Previsão de Entrega', key: 'previsao' },
   { title: 'Status', key: 'status' },
-  { title: 'Itens', key: '_count.itens', align: 'center' }
+  { title: 'Itens', key: '_count.itens', align: 'center' },
+  { title: 'Ações', key: 'acoes_oc', align: 'center', sortable: false }
 ]
+
+const empresa = ref(null)
+const printData = ref(null)
+
+const formatCurrency = (value) => {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0)
+}
+
+const calculateItemTotal = (item) => {
+  const base = (item.valorUnitario || 0) * (item.quantidade || 0)
+  const ipi = base * ((item.aliqIPI || 0) / 100)
+  return base + ipi
+}
+
+const totalPedidoCalculado = computed(() => {
+  if (!dialogDetalhes.value.requisicao) return 0
+  const itensTotal = dialogDetalhes.value.requisicao.itens.reduce((acc, item) => {
+    return acc + calculateItemTotal(item)
+  }, 0)
+  return itensTotal + (dialogDetalhes.value.valorFrete || 0) - (dialogDetalhes.value.valorDesconto || 0)
+})
+
+const recacheTotals = () => {
+  // Apenas para forçar reatividade se necessário
+}
+
+const loadEmpresa = async () => {
+  try {
+    const empresas = await $fetch('/api/configuracoes/empresa')
+    if (empresas && empresas.length > 0) empresa.value = empresas[0]
+  } catch (error) {
+    console.error('Erro ao carregar dados da empresa')
+  }
+}
 
 const loadDemandas = async () => {
   loadingDemandas.value = true
@@ -491,46 +680,85 @@ const editDemanda = (item) => {
 const dialogDetalhes = ref({
   show: false,
   requisicao: null,
-  ocFomal: '',
-  dataPrevisao: ''
+  dataPrevisao: '',
+  valorFrete: 0,
+  valorDesconto: 0,
+  observacoes: ''
 })
 
 const verDetalhesRequisicao = (req) => {
   dialogDetalhes.value = {
     show: true,
-    requisicao: req,
-    ocFomal: '',
-    dataPrevisao: ''
+    requisicao: JSON.parse(JSON.stringify(req)), // Clone para edição
+    dataPrevisao: '',
+    valorFrete: 0,
+    valorDesconto: 0,
+    observacoes: ''
   }
 }
 
-const vincularOC = async () => {
-  if (!dialogDetalhes.value.ocFomal || !dialogDetalhes.value.dataPrevisao) return
+const emitirOC = async () => {
+  if (!dialogDetalhes.value.dataPrevisao) {
+    showSnackbar('Por favor, informe a previsão de entrega', 'warning')
+    return
+  }
   
   saving.value = true
   try {
+    // 1. Atualizar a Compra com os novos valores e status
+    const body = {
+      id: dialogDetalhes.value.requisicao.id,
+      status: 'PEDIDO_EMITIDO',
+      valorTotal: totalPedidoCalculado.value,
+      valorFrete: dialogDetalhes.value.valorFrete,
+      valorDesconto: dialogDetalhes.value.valorDesconto,
+      observacoes: dialogDetalhes.value.observacoes,
+      dataPrevisaoEntrega: dialogDetalhes.value.dataPrevisao,
+      itens: dialogDetalhes.value.requisicao.itens.map(item => ({
+        id: item.id,
+        valorUnitario: item.valorUnitario,
+        aliqIPI: item.aliqIPI,
+        aliqICMS: item.aliqICMS,
+        valorIPI: (item.valorUnitario * item.quantidade) * (item.aliqIPI / 100),
+        valorICMS: (item.valorUnitario * item.quantidade) * (item.aliqICMS / 100),
+        custoLiquido: item.valorUnitario * (1 + (item.aliqIPI / 100))
+      }))
+    }
+
     const response = await $fetch('/api/compras', {
       method: 'PUT',
-      body: {
-        id: dialogDetalhes.value.requisicao.id,
-        numero: dialogDetalhes.value.ocFomal, // Substitui o número temporário REQ-xxx pelo real da OC
-        status: 'PEDIDO_EMITIDO',
-        dataPrevisaoEntrega: dialogDetalhes.value.dataPrevisao,
-        dataCompra: new Date().toISOString()
-      }
+      body
     })
     
     if (response) {
-      showSnackbar('Ordem de Compra vinculada com sucesso!')
+      showSnackbar('Ordem de Compra emitida com sucesso!')
       dialogDetalhes.value.show = false
       await loadCompras()
+      
+      // Abrir para impressão automaticamente?
+      prepararImpressao(response)
     }
   } catch (error) {
-    console.error('Erro ao vincular OC:', error)
-    showSnackbar('Erro ao vincular OC', 'error')
+    console.error('Erro ao emitir OC:', error.data || error)
+    showSnackbar('Erro ao emitir OC: ' + (error.data?.statusMessage || error.message), 'error')
   } finally {
     saving.value = false
   }
+}
+
+const prepararImpressao = (oc) => {
+  const itensSum = oc.itens.reduce((acc, i) => acc + (i.valorUnitario * i.quantidade), 0)
+  const totalIPI = oc.itens.reduce((acc, i) => acc + (i.valorIPI || 0), 0)
+  
+  printData.value = {
+    ...oc,
+    itensSum,
+    totalIPI
+  }
+  
+  setTimeout(() => {
+    window.print()
+  }, 500)
 }
 
 const viewDrawing = (url) => {
@@ -562,6 +790,8 @@ const getStatusColor = (status) => {
   const colors = {
     SOLICITADA: 'grey',
     COTADA: 'blue',
+    PEDIDO_EMITIDO: 'orange',
+    APROVADA: 'success',
     COMPRADA: 'orange',
     ENTREGUE: 'success',
     CANCELADA: 'red'
@@ -586,5 +816,63 @@ const showSnackbar = (text, color = 'success') => {
 onMounted(() => {
   loadDemandas()
   loadCompras()
+  loadEmpresa()
 })
 </script>
+
+<style scoped>
+@media print {
+  .v-application {
+    background: white !important;
+  }
+  .print-only {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    z-index: 9999;
+    background: white !important;
+  }
+  body * {
+    visibility: hidden;
+  }
+  .print-only, .print-only * {
+    visibility: visible;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
+
+.oc-layout {
+  font-family: 'Roboto', sans-serif;
+  color: #333;
+  line-height: 1.4;
+}
+
+.border-bottom {
+  border-bottom: 2px solid #eee;
+}
+
+.border-top {
+  border-top: 1px solid #ccc;
+}
+
+.oc-table {
+  border-collapse: collapse;
+}
+
+.oc-table th {
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.oc-table td {
+  font-size: 12px;
+}
+
+.totals-table td {
+  padding: 4px 8px;
+}
+</style>

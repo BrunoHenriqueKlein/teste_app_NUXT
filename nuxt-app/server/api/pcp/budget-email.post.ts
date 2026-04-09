@@ -1,12 +1,12 @@
-import { defineEventHandler, createError, readBody } from 'h3'
-import nodemailer from 'nodemailer'
-import path from 'path'
-import fs from 'fs'
-
 export default defineEventHandler(async (event) => {
     const prisma = event.context.prisma
     const body = await readBody(event)
-    const { osId, fornecedorId } = body
+    const { osId, fornecedorId, preview, subject: overrideSubject, html: overrideHtml } = body
+
+    const userId = event.context.user?.id
+    if (!userId) {
+        throw createError({ statusCode: 401, statusMessage: 'Usuário não autenticado' })
+    }
 
     if (!osId || !fornecedorId) {
         throw createError({
@@ -44,6 +44,15 @@ export default defineEventHandler(async (event) => {
             throw new Error('Fornecedor não encontrado ou sem e-mail cadastrado')
         }
 
+        // 2.1 Buscar configurações de e-mail do remetente
+        const sender = await prisma.user.findUnique({
+            where: { id: userId }
+        })
+
+        if (!preview && (!sender?.mailHost || !sender?.mailUser || !sender?.mailPass)) {
+            throw new Error('Suas configurações de e-mail (SMTP) estão incompletas. Acesse "Meu Perfil" para configurar seu servidor de e-mail.')
+        }
+
         // 3. Preparar lista de peças e anexos
         const pecasTable = os.itens.map((item: any) => `
             <tr>
@@ -69,58 +78,120 @@ export default defineEventHandler(async (event) => {
             }
         }
 
-        // 4. Configurar Nodemailer (usando variáveis de ambiente)
-        const transporter = nodemailer.createTransport({
-            host: process.env.EMAIL_HOST,
-            port: parseInt(process.env.EMAIL_PORT || '587'),
-            secure: false,
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASSWORD,
-            },
-        })
+        // 5. Preparar E-mail Final
+        const finalSubject = overrideSubject || `Solicitação de Orçamento - OS ${os.numero} - OP ${os.op.numeroOP}`
+        const defaultHtml = `
+            <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+                <h2>Solicitação de Orçamento</h2>
+                <p>Olá <strong>${fornecedor.contato || fornecedor.nome}</strong>,</p>
+                <p>Gostaríamos de solicitar um orçamento para os itens listados abaixo, referentes à <strong>OS ${os.numero}</strong> da <strong>OP ${os.op.numeroOP}</strong>.</p>
+                
+                <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+                    <thead>
+                        <tr style="background-color: #f2f2f2;">
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Código</th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Descrição</th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">Qtd</th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Material</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${pecasTable}
+                    </tbody>
+                </table>
+                
+                <p style="margin-top: 20px;">Os desenhos técnicos seguem em anexo para análise.</p>
+                <p>Ficamos no aguardo de sua proposta técnica e comercial.</p>
+                <br>
+                <p>Atenciosamente,</p>
+                <p><strong>Departamento de Compras/PCP</strong><br>Sistema SOMEH</p>
+            </div>
+        `
+        const finalHtml = overrideHtml || defaultHtml
 
-        // 5. Enviar E-mail
-        const mailOptions = {
-            from: `"${process.env.EMAIL_FROM_NAME || 'Sistema SOMEH'}" <${process.env.EMAIL_USER}>`,
-            to: fornecedor.email,
-            subject: `Solicitação de Orçamento - OS ${os.numero} - OP ${os.op.numeroOP}`,
-            html: `
-                <div style="font-family: Arial, sans-serif; line-height: 1.6;">
-                    <h2>Solicitação de Orçamento</h2>
-                    <p>Olá <strong>${fornecedor.contato || fornecedor.nome}</strong>,</p>
-                    <p>Gostaríamos de solicitar um orçamento para os itens listados abaixo, referentes à <strong>OS ${os.numero}</strong> da <strong>OP ${os.op.numeroOP}</strong>.</p>
-                    
-                    <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
-                        <thead>
-                            <tr style="background-color: #f2f2f2;">
-                                <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Código</th>
-                                <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Descrição</th>
-                                <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">Qtd</th>
-                                <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Material</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${pecasTable}
-                        </tbody>
-                    </table>
-                    
-                    <p style="margin-top: 20px;">Os desenhos técnicos seguem em anexo para análise.</p>
-                    <p>Ficamos no aguardo de sua proposta técnica e comercial.</p>
-                    <br>
-                    <p>Atenciosamente,</p>
-                    <p><strong>Departamento de Compras/PCP</strong><br>Sistema SOMEH</p>
-                </div>
-            `,
-            attachments
+        // Se for apenas PREVIEW, retornar os dados montados
+        if (preview) {
+            return {
+                preview: true,
+                to: fornecedor.email,
+                subject: finalSubject,
+                html: finalHtml,
+                attachmentsCount: attachments.length,
+                attachmentsNames: attachments.map(a => a.filename)
+            }
         }
 
-        await transporter.sendMail(mailOptions)
+        // 6. Configurar Nodemailer (com maior compatibilidade)
+        const nodemailer = await import('nodemailer')
+        const transporter = nodemailer.default.createTransport({
+            host: sender!.mailHost!,
+            port: Number(sender!.mailPort || 587),
+            secure: sender!.mailSecure,
+            auth: {
+                user: sender!.mailUser!,
+                pass: sender!.mailPass!,
+            },
+            tls: {
+                // Necessário para muitos servidores corporativos que usam certificados auto-assinados
+                rejectUnauthorized: false
+            }
+        })
 
-        // 6. Atualizar OS informando que foi enviado para orçamento (opcional)
-        // await prisma.ordemServico.update({ where: { id: os.id }, data: { status: 'EM_ORCAMENTO' } })
+        // 7. Enviar E-mail Real com Tratamento de Erro Específico
+        try {
+            await transporter.sendMail({
+                from: `"${sender!.mailFrom || sender!.name}" <${sender!.mailUser}>`,
+                to: fornecedor.email,
+                subject: finalSubject,
+                html: finalHtml,
+                attachments
+            })
+        } catch (mailError: any) {
+            console.error('❌ Detalhes do erro de SMTP:', mailError)
 
-        return { success: true, message: 'Solicitação enviada com sucesso!' }
+            let userMessage = mailError.message
+            if (mailError.message.includes('wrong version number')) {
+                userMessage = 'Erro de Versão SSL/TLS. Dica: Se usar porta 587, desmarque a opção "Seguro". Se usar porta 465, marque a opção "Seguro".'
+            } else if (mailError.code === 'ECONNREFUSED') {
+                userMessage = 'Não foi possível conectar ao servidor de e-mail. Verifique o endereço do servidor e a porta.'
+            } else if (mailError.code === 'EAUTH') {
+                userMessage = 'Falha na autenticação. Verifique seu usuário e senha de e-mail.'
+            }
+
+            throw new Error(userMessage)
+        }
+        const count = await prisma.compra.count()
+        const numeroReq = `REQ-OS-${os.numero.split('-').pop()}-${(count + 1).toString().padStart(3, '0')}`
+
+        const novaCompra = await prisma.compra.create({
+            data: {
+                numero: numeroReq,
+                opId: os.opId,
+                osId: os.id, // Vínculo formal com a OS
+                fornecedor: fornecedor.nome,
+                status: 'SOLICITADA',
+                itens: {
+                    create: os.itens.map((item: any) => ({
+                        pecaId: item.pecaId,
+                        descricao: `SERVIÇO: ${os.tipo} - Peça: ${item.peca.codigo}`,
+                        quantidade: item.peca.quantidade,
+                        valorUnitario: 0
+                    }))
+                }
+            }
+        })
+
+        // 7. Atualizar OS informando que foi enviado para orçamento e vincular a compra
+        await prisma.ordemServico.update({
+            where: { id: os.id },
+            data: { status: 'EM_ANDAMENTO' } // Corrigido de EM_PRODUCAO para EM_ANDAMENTO
+        })
+
+        return {
+            success: true,
+            message: 'Solicitação enviada com sucesso e requisição de compra gerada!',
+            compraId: novaCompra.id
+        }
 
     } catch (error: any) {
         console.error('❌ Erro ao enviar e-mail de orçamento:', error)

@@ -7,6 +7,21 @@
       icon="mdi-factory"
     />
 
+    <!-- Dashboard Resumo -->
+    <v-row class="mb-4">
+      <v-col cols="12" sm="6" md="3" v-for="card in dashboardCards" :key="card.title">
+        <v-card variant="elevated" :color="card.color" theme="dark" class="pa-4">
+          <div class="d-flex justify-space-between align-center">
+            <div>
+              <div class="text-overline mb-1">{{ card.title }}</div>
+              <div class="text-h4 font-weight-black">{{ card.value }}</div>
+            </div>
+            <v-icon size="48" style="opacity: 0.3">{{ card.icon }}</v-icon>
+          </div>
+        </v-card>
+      </v-col>
+    </v-row>
+
     <!-- Filtros -->
     <v-card variant="outlined" class="mb-4">
       <v-card-text>
@@ -98,13 +113,15 @@
             @click="printOS(item)"
           ></v-btn>
           <v-btn
-            icon="mdi-email-send"
-            variant="text"
+            prepend-icon="mdi-email"
+            variant="tonal"
             size="small"
             color="success"
-            title="Solicitar Orçamento"
+            class="mr-1"
             @click="openBudgetDialog(item)"
-          ></v-btn>
+          >
+            Orçamento
+          </v-btn>
           <v-btn
             icon="mdi-eye"
             variant="text"
@@ -117,12 +134,12 @@
       </v-data-table>
     </v-card>
 
-    <!-- Diálogo de Solicitação de Orçamento -->
+    <!-- Diálogo 1: Seleção de Fornecedor -->
     <v-dialog v-model="dialogBudget.show" max-width="500px">
       <v-card>
-        <v-card-title class="pa-4 bg-success text-white">Solicitar Orçamento</v-card-title>
+        <v-card-title class="pa-4 bg-primary text-white">Solicitar Orçamento</v-card-title>
         <v-card-text class="pa-4">
-          <p class="mb-4">Selecione o fornecedor para enviar a solicitação da <strong>OS {{ dialogBudget.os?.numero }}</strong>.</p>
+          <p class="mb-4">Selecione o fornecedor para a <strong>OS {{ dialogBudget.os?.numero }}</strong>.</p>
           <v-select
             v-model="dialogBudget.fornecedorId"
             :items="suggestedFornecedores"
@@ -131,26 +148,56 @@
             label="Escolha o Fornecedor"
             variant="outlined"
             placeholder="Selecione um fornecedor"
-            :rules="[v => !!v || 'Campo obrigatório']"
-            :hint="dialogBudget.showAll ? 'Mostrando todos os fornecedores' : 'Mostrando apenas fornecedores para ' + dialogBudget.os?.tipo"
-            persistent-hint
-          >
-            <template v-slot:append-item v-if="!dialogBudget.showAll">
-              <v-divider class="mb-2"></v-divider>
-              <v-btn block variant="text" size="small" @click="dialogBudget.showAll = true">
-                Ver todos os fornecedores
-              </v-btn>
-            </template>
-          </v-select>
-          <div v-if="selectedSupplierEmail" class="text-caption text-grey mt-1">
-            <v-icon size="x-small" icon="mdi-email"></v-icon> {{ selectedSupplierEmail }}
-          </div>
+          ></v-select>
         </v-card-text>
         <v-card-actions class="pa-4">
           <v-spacer></v-spacer>
           <v-btn variant="text" @click="dialogBudget.show = false">Cancelar</v-btn>
-          <v-btn color="success" variant="flat" :loading="sendingBudget" :disabled="!dialogBudget.fornecedorId" @click="sendBudgetEmail">
-            Enviar por E-mail
+          <v-btn color="primary" variant="flat" :loading="loadingPreview" :disabled="!dialogBudget.fornecedorId" @click="loadEmailPreview">
+            Gerar Rascunho
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Diálogo 2: Revisão e Edição de E-mail -->
+    <v-dialog v-model="dialogEmail.show" max-width="800px" persistent>
+      <v-card>
+        <v-card-title class="pa-4 bg-success text-white">Revisar e Enviar E-mail</v-card-title>
+        <v-card-text class="pa-4">
+          <v-text-field
+            v-model="dialogEmail.subject"
+            label="Assunto do E-mail"
+            variant="outlined"
+            density="comfortable"
+            class="mb-2"
+          ></v-text-field>
+
+          <v-textarea
+            v-model="dialogEmail.html"
+            label="Corpo do E-mail (HTML)"
+            variant="outlined"
+            rows="12"
+            auto-grow
+            hint="Você pode editar o texto acima. Os anexos serão incluídos automaticamente."
+            persistent-hint
+          ></v-textarea>
+          
+          <v-alert
+            v-if="dialogEmail.attachmentsCount"
+            type="info"
+            variant="tonal"
+            density="compact"
+            class="mt-4"
+          >
+            <strong>{{ dialogEmail.attachmentsCount }} desenhor/anexos</strong> serão enviados automaticamente com este e-mail.
+          </v-alert>
+        </v-card-text>
+        <v-card-actions class="pa-4">
+          <v-btn variant="text" @click="dialogEmail.show = false">Voltar</v-btn>
+          <v-spacer></v-spacer>
+          <v-btn color="success" variant="flat" :loading="sendingEmail" @click="sendFinalEmail">
+            Enviar Agora
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -259,7 +306,18 @@ const dialogOS = ref({
 })
 
 const fornecedores = ref([])
-const sendingBudget = ref(false)
+const loadingPreview = ref(false)
+const sendingEmail = ref(false)
+
+const dialogEmail = ref({
+  show: false,
+  subject: '',
+  html: '',
+  attachmentsCount: 0,
+  osId: null,
+  fornecedorId: null
+})
+
 const snackbar = ref({ show: false, text: '', color: 'success' })
 
 const headers = [
@@ -270,6 +328,20 @@ const headers = [
   { title: 'Volume', key: 'itens', align: 'center' },
   { title: 'Ações', key: 'acoes', align: 'center', sortable: false }
 ]
+
+const dashboardCards = computed(() => {
+  const all = ordens.value
+  const corte = all.filter(o => o.tipo.includes('CORTE')).length
+  const dobra = all.filter(o => o.tipo.includes('DOBRA')).length
+  const cald = all.filter(o => o.tipo.includes('CALDEIRARIA')).length
+
+  return [
+    { title: 'Total de OS', value: all.length, icon: 'mdi-file-tree', color: 'primary' },
+    { title: 'Corte', value: corte, icon: 'mdi-laser-pointer', color: 'indigo' },
+    { title: 'Dobra', value: dobra, icon: 'mdi-angle-acute', color: 'orange' },
+    { title: 'Caldeiraria', value: cald, icon: 'mdi-hammer-wrench', color: 'brown' }
+  ]
+})
 
 const selectedSupplierEmail = computed(() => {
   const f = fornecedores.value.find(forn => forn.id === dialogBudget.value.fornecedorId)
@@ -336,22 +408,54 @@ const openBudgetDialog = (os) => {
   }
 }
 
-const sendBudgetEmail = async () => {
-  sendingBudget.value = true
+const loadEmailPreview = async () => {
+  loadingPreview.value = true
+  try {
+    const data = await $fetch('/api/pcp/budget-email', {
+      method: 'POST',
+      body: {
+        osId: dialogBudget.value.os.id,
+        fornecedorId: dialogBudget.value.fornecedorId,
+        preview: true
+      }
+    })
+    
+    dialogEmail.value = {
+      show: true,
+      subject: data.subject,
+      html: data.html,
+      attachmentsCount: data.attachmentsCount,
+      osId: dialogBudget.value.os.id,
+      fornecedorId: dialogBudget.value.fornecedorId
+    }
+    dialogBudget.value.show = false
+  } catch (error) {
+    showSnackbar('Erro ao gerar rascunho: ' + (error.data?.statusMessage || error.message), 'error')
+  } finally {
+    loadingPreview.value = false
+  }
+}
+
+const sendFinalEmail = async () => {
+  sendingEmail.value = true
   try {
     await $fetch('/api/pcp/budget-email', {
       method: 'POST',
       body: {
-        osId: dialogBudget.value.os.id,
-        fornecedorId: dialogBudget.value.fornecedorId
+        osId: dialogEmail.value.osId,
+        fornecedorId: dialogEmail.value.fornecedorId,
+        subject: dialogEmail.value.subject,
+        html: dialogEmail.value.html,
+        preview: false
       }
     })
-    showSnackbar('Solicitação de orçamento enviada com sucesso!')
-    dialogBudget.value.show = false
+    showSnackbar('E-mail enviado com sucesso!')
+    dialogEmail.value.show = false
+    loadOrdens() // Atualiza status da lista
   } catch (error) {
     showSnackbar('Erro ao enviar e-mail: ' + (error.data?.statusMessage || error.message), 'error')
   } finally {
-    sendingBudget.value = false
+    sendingEmail.value = false
   }
 }
 
