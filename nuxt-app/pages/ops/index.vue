@@ -94,12 +94,24 @@
                 </v-menu>
               </v-col>
               
-              <v-col cols="12" sm="6" md="2" class="d-flex align-center">
+              <v-col cols="12" sm="6" md="2">
+                <v-select
+                  v-model="filters.sortBy"
+                  label="Ordenar por"
+                  :items="sortOptions"
+                  variant="outlined"
+                  density="comfortable"
+                  @update:model-value="loadOPs"
+                />
+              </v-col>
+
+              <v-col cols="12" sm="6" md="1" class="d-flex align-center">
                 <v-btn 
                   variant="text" 
                   color="primary" 
                   @click="clearFilters"
                   prepend-icon="mdi-filter-remove"
+                  block
                 >
                   Limpar
                 </v-btn>
@@ -155,12 +167,42 @@
             <v-table v-else density="comfortable">
               <thead>
                 <tr>
-                  <th class="text-left">OP</th>
-                  <th class="text-left">Descrição</th>
-                  <th class="text-left">Cliente</th>
-                  <th class="text-left">Status</th>
-                  <th class="text-left">Progresso</th>
-                  <th class="text-left">Entrega</th>
+                  <th class="text-left cursor-pointer" @click="toggleSort('numeroOP')">
+                    OP
+                    <v-icon v-if="filters.sortBy === 'numeroOP'" size="14">
+                      {{ filters.sortOrder === 'asc' ? 'mdi-arrow-up' : 'mdi-arrow-down' }}
+                    </v-icon>
+                  </th>
+                  <th class="text-left cursor-pointer" @click="toggleSort('descricao')">
+                    Descrição
+                    <v-icon v-if="filters.sortBy === 'descricao'" size="14">
+                      {{ filters.sortOrder === 'asc' ? 'mdi-arrow-up' : 'mdi-arrow-down' }}
+                    </v-icon>
+                  </th>
+                  <th class="text-left cursor-pointer" @click="toggleSort('cliente')">
+                    Cliente
+                    <v-icon v-if="filters.sortBy === 'cliente'" size="14">
+                      {{ filters.sortOrder === 'asc' ? 'mdi-arrow-up' : 'mdi-arrow-down' }}
+                    </v-icon>
+                  </th>
+                  <th class="text-left cursor-pointer" @click="toggleSort('status')">
+                    Status
+                    <v-icon v-if="filters.sortBy === 'status'" size="14">
+                      {{ filters.sortOrder === 'asc' ? 'mdi-arrow-up' : 'mdi-arrow-down' }}
+                    </v-icon>
+                  </th>
+                  <th class="text-left cursor-pointer" @click="toggleSort('progresso')">
+                    Progresso
+                    <v-icon v-if="filters.sortBy === 'progresso'" size="14">
+                      {{ filters.sortOrder === 'asc' ? 'mdi-arrow-up' : 'mdi-arrow-down' }}
+                    </v-icon>
+                  </th>
+                  <th class="text-left cursor-pointer" @click="toggleSort('dataEntrega')">
+                    Entrega
+                    <v-icon v-if="filters.sortBy === 'dataEntrega'" size="14">
+                      {{ filters.sortOrder === 'asc' ? 'mdi-arrow-up' : 'mdi-arrow-down' }}
+                    </v-icon>
+                  </th>
                   <th class="text-left">Ações</th>
                 </tr>
               </thead>
@@ -449,8 +491,30 @@ const filters = ref({
   status: null,
   atrasada: null,
   dataInicio: null,
-  dataFim: null
+  dataFim: null,
+  sortBy: 'dataCriacao',
+  sortOrder: 'desc'
 })
+
+const sortOptions = [
+  { title: 'Data de Criação', value: 'dataCriacao' },
+  { title: 'Número da OP', value: 'numeroOP' },
+  { title: 'Cliente', value: 'cliente' },
+  { title: 'Descrição', value: 'descricao' },
+  { title: 'Status', value: 'status' },
+  { title: 'Progresso', value: 'progresso' },
+  { title: 'Data de Entrega', value: 'dataEntrega' }
+]
+
+const toggleSort = (field) => {
+  if (filters.value.sortBy === field) {
+    filters.value.sortOrder = filters.value.sortOrder === 'asc' ? 'desc' : 'asc'
+  } else {
+    filters.value.sortBy = field
+    filters.value.sortOrder = 'asc'
+  }
+  loadOPs()
+}
 
 // Debounce manual
 let searchTimeout = null
@@ -539,7 +603,9 @@ const loadOPs = async () => {
         search: filters.value.search,
         atrasada: filters.value.atrasada,
         dataInicio: filters.value.dataInicio,
-        dataFim: filters.value.dataFim
+        dataFim: filters.value.dataFim,
+        sortBy: filters.value.sortBy,
+        sortOrder: filters.value.sortOrder
       },
       headers: authHeaders.value
     })
@@ -661,10 +727,11 @@ const closeDialog = () => {
 
 const clearFilters = () => {
   filters.value = {
-    search: '',
     status: null,
     dataInicio: null,
-    dataFim: null
+    dataFim: null,
+    sortBy: 'dataCriacao',
+    sortOrder: 'desc'
   }
   // Navegar para limpar query da URL
   navigateTo('/ops')

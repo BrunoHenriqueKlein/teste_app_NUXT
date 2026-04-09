@@ -5,7 +5,7 @@ const prisma = new PrismaClient()
 export default defineEventHandler(async (event) => {
   try {
     const query = getQuery(event)
-    const { status, search, atrasada, dataInicio, dataFim } = query
+    const { status, search, atrasada, dataInicio, dataFim, sortBy, sortOrder } = query
 
     const where: any = {}
 
@@ -40,6 +40,28 @@ export default defineEventHandler(async (event) => {
       ]
     }
 
+    // Lógica de Ordenação
+    let orderBy: any = { dataCriacao: 'desc' }
+    if (sortBy) {
+      const order = sortOrder === 'asc' ? 'asc' : 'desc'
+
+      // Mapeamento de campos de ordenação
+      const fieldMap: Record<string, string> = {
+        'numeroOP': 'numeroOP',
+        'descricao': 'descricaoMaquina',
+        'cliente': 'cliente',
+        'status': 'status',
+        'progresso': 'progresso',
+        'dataEntrega': 'dataEntrega',
+        'dataCriacao': 'dataCriacao'
+      }
+
+      const dbField = fieldMap[String(sortBy)]
+      if (dbField) {
+        orderBy = { [dbField]: order }
+      }
+    }
+
     const ops = await prisma.oP.findMany({
       where,
       include: {
@@ -58,9 +80,7 @@ export default defineEventHandler(async (event) => {
           }
         }
       },
-      orderBy: {
-        dataCriacao: 'desc'
-      }
+      orderBy
     })
 
     return ops
