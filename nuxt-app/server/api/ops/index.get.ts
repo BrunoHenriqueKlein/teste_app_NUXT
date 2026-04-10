@@ -10,7 +10,17 @@ export default defineEventHandler(async (event) => {
     const where: any = {}
 
     if (status) {
-      where.status = status
+      if (status === 'IN_PRODUCTION') {
+        where.status = {
+          in: [
+            'EM_ENGENHARIA', 'EM_COMPRAS', 'EM_FABRICACAO', 'EM_AUTOMACAO',
+            'EM_PROJETO_ELETRICO', 'EM_CALIBRACAO', 'EM_MONTAGEM', 'EM_TESTES',
+            'EM_DOCUMENTACAO', 'EM_EXPEDICAO'
+          ]
+        }
+      } else {
+        where.status = status
+      }
     }
 
     if (atrasada === 'true') {

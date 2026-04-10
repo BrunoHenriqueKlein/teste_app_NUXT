@@ -69,6 +69,8 @@
             <v-select
               v-model="filters.status"
               :items="statusOptions"
+              item-title="title"
+              item-value="value"
               label="Status"
               variant="outlined"
               density="comfortable"
@@ -261,7 +263,7 @@ const stats = computed(() => [
     icon: 'mdi-cog-sync', 
     color: 'blue-darken-2',
     action: () => {
-      filters.value.status = 'EM_FABRICACAO'
+      filters.value.status = 'IN_PRODUCTION'
       loadDashboardData()
     }
   },
@@ -303,9 +305,13 @@ const filters = ref({
 })
 
 const statusOptions = [
-  'AGUARDANDO', 'EM_ENGENHARIA', 'EM_COMPRAS', 'EM_FABRICACAO', 'EM_AUTOMACAO', 
-  'EM_PROJETO_ELETRICO', 'EM_CALIBRACAO', 'EM_MONTAGEM', 'EM_TESTES', 
-  'EM_DOCUMENTACAO', 'EM_EXPEDICAO', 'AGUARDANDO_ENTREGA', 'CONCLUIDA'
+  { title: 'EM PRODUÇÃO (GERAL)', value: 'IN_PRODUCTION' },
+  { title: 'AGUARDANDO', value: 'AGUARDANDO' },
+  { title: 'EM ENGENHARIA', value: 'EM_ENGENHARIA' },
+  { title: 'EM COMPRAS', value: 'EM_COMPRAS' },
+  { title: 'EM FABRICAÇÃO', value: 'EM_FABRICACAO' },
+  { title: 'EM MONTAGEM', value: 'EM_MONTAGEM' },
+  { title: 'CONCLUIDA', value: 'CONCLUIDA' }
 ]
 
 const sortOptions = [
