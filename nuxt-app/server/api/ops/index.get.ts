@@ -46,7 +46,8 @@ export default defineEventHandler(async (event) => {
       where.OR = [
         { numeroOP: { contains: String(search), mode: 'insensitive' } },
         { cliente: { contains: String(search), mode: 'insensitive' } },
-        { descricaoMaquina: { contains: String(search), mode: 'insensitive' } }
+        { descricaoMaquina: { contains: String(search), mode: 'insensitive' } },
+        { codigoMaquina: { contains: String(search), mode: 'insensitive' } }
       ]
     }
 

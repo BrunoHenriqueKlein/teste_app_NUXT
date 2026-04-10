@@ -55,7 +55,7 @@
           <v-col cols="12" md="3">
             <v-text-field
               v-model="filters.search"
-              label="Buscar por OP, Cliente ou Máquina"
+              label="Buscar por OP, Cliente, Máquina ou Código"
               prepend-inner-icon="mdi-magnify"
               variant="outlined"
               density="comfortable"

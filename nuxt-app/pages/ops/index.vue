@@ -29,7 +29,7 @@
                 <v-text-field
                   v-model="filters.search"
                   label="Buscar OPs..."
-                  placeholder="Número, cliente, máquina..."
+                  placeholder="Número, cliente, máquina ou código..."
                   prepend-inner-icon="mdi-magnify"
                   variant="outlined"
                   density="comfortable"
