@@ -6,14 +6,14 @@ const prisma = new PrismaClient()
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
-  
-  console.log('📝 Tentativa de registro:', { 
+
+  console.log('📝 Tentativa de registro:', {
     email: body.email,
     name: body.name,
     department: body.department,
     role: body.role
   })
-  
+
   try {
     // Verificar se usuário já existe
     const existingUser = await prisma.user.findUnique({
@@ -40,7 +40,7 @@ export default defineEventHandler(async (event) => {
         email: body.email,
         password: hashedPassword,
         department: body.department || 'ADMINISTRATIVO',
-        role: body.role || 'USER'
+        role: 'USER' // Forçamos USER. Somente Admin Mestre pode elevar cargos via painel.
       }
     })
 
@@ -58,7 +58,7 @@ export default defineEventHandler(async (event) => {
     }
   } catch (error: any) {
     console.error('❌ Erro ao criar usuário:', error)
-    
+
     // Verificar se é erro do Prisma
     if (error.code === 'P2002') {
       throw createError({
@@ -66,7 +66,7 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'E-mail já cadastrado'
       })
     }
-    
+
     throw createError({
       statusCode: 500,
       statusMessage: `Erro ao criar usuário: ${error.message}`

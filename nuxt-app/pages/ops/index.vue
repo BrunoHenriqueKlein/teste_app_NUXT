@@ -8,6 +8,7 @@
     >
       <template #actions>
         <v-btn 
+          v-if="hasPermission('Ordens de Produção', 'canEdit')"
           color="white" 
           variant="outlined" 
           prepend-icon="mdi-plus"
@@ -158,7 +159,12 @@
             <div v-else-if="ops.length === 0" class="text-center py-8">
               <v-icon size="64" color="grey-lighten-1" class="mb-2">mdi-clipboard-text-off</v-icon>
               <div class="text-h6 text-grey">Nenhuma ordem de produção encontrada</div>
-              <v-btn color="primary" class="mt-4" @click="openCreateDialog">
+              <v-btn 
+                v-if="hasPermission('Ordens de Produção', 'canEdit')"
+                color="primary" 
+                class="mt-4" 
+                @click="openCreateDialog"
+              >
                 Criar Primeira OP
               </v-btn>
             </div>
@@ -271,6 +277,7 @@
                       </v-btn>
                       
                       <v-btn 
+                        v-if="hasPermission('Ordens de Produção', 'canEdit')"
                         icon 
                         size="small" 
                         variant="text" 
@@ -293,6 +300,7 @@
                       </v-btn>
                       
                       <v-btn 
+                        v-if="hasPermission('Ordens de Produção', 'canDelete')"
                         icon 
                         size="small" 
                         variant="text" 
@@ -443,6 +451,7 @@
           <v-spacer />
           <v-btn variant="outlined" @click="closeDialog">Cancelar</v-btn>
           <v-btn 
+            v-if="hasPermission('Ordens de Produção', 'canEdit')"
             color="primary" 
             @click="saveOP" 
             :loading="saving"
@@ -552,7 +561,7 @@ const formOP = ref({
   templateId: null
 })
 
-const { authHeaders } = useAuth()
+const { authHeaders, hasPermission } = useAuth()
 const router = useRouter()
 
 // Route

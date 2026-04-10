@@ -157,7 +157,7 @@
 <script setup>
 import { useTheme } from 'vuetify'
 
-const { user, userName, userRole, userDepartment, logout, hasPermission, isAdmin, authHeaders } = useAuth()
+const { user, userName, userRole, userDepartment, logout, refreshUser, hasPermission, isAdmin, authHeaders } = useAuth()
 const router = useRouter()
 const route = useRoute()
 const theme = useTheme()
@@ -208,10 +208,18 @@ const adminNavigation = [
 ]
 
 // Carregar dados
-onMounted(() => {
+onMounted(async () => {
   updateTime()
   const timer = setInterval(updateTime, 60000)
-  onUnmounted(() => clearInterval(timer))
+  
+  // Sincronizar dados do usuário e permissões ao carregar e a cada 2 minutos
+  await refreshUser()
+  const refreshTimer = setInterval(() => refreshUser(), 120000)
+  
+  onUnmounted(() => {
+    clearInterval(timer)
+    clearInterval(refreshTimer)
+  })
 })
 
 const updateTime = () => {

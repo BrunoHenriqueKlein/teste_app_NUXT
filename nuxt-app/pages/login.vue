@@ -344,8 +344,7 @@ const roles = [
   { title: 'PCP', value: 'PCP' },
   { title: 'Qualidade', value: 'QUALIDADE' },
   { title: 'Estoque', value: 'ESTOQUE' },
-  { title: 'Gerente', value: 'GERENTE' },
-  { title: 'Administrador', value: 'ADMIN' }
+  { title: 'Gerente', value: 'GERENTE' }
 ]
 
 // Função de login

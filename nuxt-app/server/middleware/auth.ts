@@ -6,8 +6,8 @@ const jwtSecret = process.env.JWT_SECRET || 'your-secret-key-change-in-productio
 export default defineEventHandler(async (event) => {
     const authHeader = getHeader(event, 'Authorization')
 
-    // Pular verificação para rotas de auth
-    if (event.path.startsWith('/api/auth/')) {
+    // Pular verificação para rotas de auth (EXCETO /api/auth/me que precisa do JWT para retornar permissões)
+    if (event.path.startsWith('/api/auth/') && !event.path.includes('/api/auth/me')) {
         return
     }
 

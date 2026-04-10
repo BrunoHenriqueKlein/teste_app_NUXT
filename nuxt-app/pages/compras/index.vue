@@ -8,6 +8,7 @@
     >
       <template #actions>
         <v-btn
+          v-if="hasPermission('Compras', 'canEdit')"
           color="white"
           variant="outlined"
           prepend-icon="mdi-plus"
@@ -479,6 +480,7 @@ const loadingDemandas = ref(false)
 const fornecedores = ref([])
 const compras = ref([])
 const ops = ref([])
+const { authHeaders, hasPermission } = useAuth()
 const loading = ref(false)
 const saving = ref(false)
 

@@ -1,10 +1,11 @@
 export default defineNuxtRouteMiddleware((to, from) => {
     const { isLoggedIn, init } = useAuth()
 
+    // No lado do servidor, não temos localStorage, então pulamos a verificação para evitar loop de redirecionamento
+    if (process.server) return
+
     // No lado do cliente, garantir que o estado do usuário esteja carregado
-    if (process.client) {
-        init()
-    }
+    init()
 
     // Rotas públicas que não requerem login
     const publicRoutes = ['/login', '/reset-password']

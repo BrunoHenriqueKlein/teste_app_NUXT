@@ -22,6 +22,7 @@
           <v-icon>mdi-chart-timeline</v-icon>
         </v-btn>
         <v-btn 
+          v-if="hasPermission('Processos', 'canEdit')"
           color="white" 
           variant="outlined" 
           prepend-icon="mdi-plus"
@@ -30,6 +31,7 @@
           Novo Processo
         </v-btn>
         <v-btn 
+          v-if="hasPermission('Processos', 'canEdit')"
           color="white" 
           variant="outlined" 
           prepend-icon="mdi-playlist-plus"
@@ -242,7 +244,7 @@
                     color="success"
                     prepend-icon="mdi-play"
                     @click="iniciarProcesso(processo)"
-                    v-if="processo.status === 'NAO_INICIADO'"
+                    v-if="processo.status === 'NAO_INICIADO' && hasPermission('Processos', 'canEdit')"
                     class="font-weight-bold"
                   >
                     Iniciar
@@ -254,7 +256,7 @@
                     color="success"
                     prepend-icon="mdi-check"
                     @click="concluirProcesso(processo)"
-                    v-if="processo.status === 'EM_ANDAMENTO'"
+                    v-if="processo.status === 'EM_ANDAMENTO' && hasPermission('Processos', 'canEdit')"
                     class="font-weight-bold"
                   >
                     Finalizar
@@ -273,6 +275,7 @@
 
                   <!-- Ações de Gestão (Ícones) -->
                   <v-btn
+                    v-if="hasPermission('Processos', 'canEdit')"
                     icon="mdi-pencil"
                     variant="text"
                     size="x-small"
@@ -283,6 +286,7 @@
                   ></v-btn>
                   
                   <v-btn
+                    v-if="hasPermission('Processos', 'canDelete')"
                     icon="mdi-delete"
                     variant="text"
                     size="x-small"
@@ -594,7 +598,7 @@ const useProcessosTemplates = () => {
 const { getTemplate, getTemplateNames } = useProcessosTemplates()
 
 // Estado
-const { authHeaders } = useAuth()
+const { authHeaders, hasPermission } = useAuth()
 const route = useRoute()
 const op = ref(null)
 const processos = ref([])

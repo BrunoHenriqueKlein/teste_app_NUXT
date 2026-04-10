@@ -11,6 +11,7 @@
     >
       <template #actions>
           <v-btn
+            v-if="hasPermission('PCP', 'canEdit')"
             color="white"
             variant="flat"
             prepend-icon="mdi-factory"
@@ -20,6 +21,7 @@
             Gerar PCP
           </v-btn>
           <v-btn
+            v-if="hasPermission('Peças', 'canEdit')"
             color="success"
             variant="flat"
             prepend-icon="mdi-cart-arrow-down"
@@ -30,6 +32,7 @@
             Liberar p/ Compra ({{ selected.length }})
           </v-btn>
           <v-btn
+            v-if="hasPermission('Peças', 'canEdit')"
             color="white"
             variant="tonal"
             prepend-icon="mdi-plus"
@@ -38,6 +41,7 @@
             Peça
           </v-btn>
           <v-btn
+            v-if="hasPermission('Peças', 'canEdit')"
             color="white"
             variant="outlined"
             prepend-icon="mdi-file-excel"
@@ -148,7 +152,7 @@
             </v-chip>
 
             <v-btn
-              v-if="item.temNoEstoque && item.status !== 'EM_ESTOQUE' && item.status !== 'CONCLUIDA'"
+              v-if="item.temNoEstoque && item.status !== 'EM_ESTOQUE' && item.status !== 'CONCLUIDA' && hasPermission('Peças', 'canEdit')"
               size="x-small"
               color="success"
               variant="elevated"
@@ -180,6 +184,7 @@
             </div>
             
             <v-btn
+              v-if="hasPermission('Peças', 'canEdit')"
               icon="mdi-plus-circle"
               variant="tonal"
               size="small"
@@ -195,6 +200,7 @@
         <template v-slot:item.processos="{ item }">
           <div class="d-flex justify-center">
             <v-btn
+              v-if="hasPermission('Peças', 'canEdit')"
               icon="mdi-format-list-bulleted-type"
               variant="tonal"
               size="small"
@@ -252,6 +258,7 @@
                   <v-list-item-title>{{ truncateName(anexo.nome) }}</v-list-item-title>
                   <template v-slot:append>
                     <v-btn
+                      v-if="hasPermission('Peças', 'canDelete')"
                       icon="mdi-delete"
                       variant="text"
                       size="x-small"
@@ -262,6 +269,7 @@
                 </v-list-item>
                 <v-divider v-if="item.anexos?.length"></v-divider>
                 <v-list-item
+                  v-if="hasPermission('Peças', 'canEdit')"
                   prepend-icon="mdi-plus"
                   title="Adicionar Anexo"
                   @click="triggerDrawingUpload(item)"
@@ -270,6 +278,7 @@
             </v-menu>
 
             <v-btn
+              v-if="hasPermission('Peças', 'canEdit')"
               icon="mdi-pencil"
               variant="text"
               size="small"
@@ -278,6 +287,7 @@
               @click="openEditPeca(item)"
             ></v-btn>
             <v-btn
+              v-if="hasPermission('Peças', 'canDelete')"
               icon="mdi-delete"
               variant="text"
               size="small"
@@ -409,7 +419,15 @@
         <v-card-actions>
           <v-spacer></v-spacer>
           <v-btn variant="text" @click="dialogPeca.show = false">Cancelar</v-btn>
-          <v-btn color="primary" variant="flat" :loading="savingPeca" @click="savePecaManual">Salvar Peça</v-btn>
+          <v-btn
+            v-if="hasPermission('Peças', 'canEdit')"
+            color="primary"
+            variant="flat"
+            :loading="savingPeca"
+            @click="savePecaManual"
+          >
+            Salvar Peça
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -469,6 +487,7 @@
           </v-list>
 
           <v-btn
+            v-if="hasPermission('Peças', 'canEdit')"
             prepend-icon="mdi-plus"
             variant="text"
             color="primary"
@@ -481,7 +500,15 @@
         <v-card-actions class="pa-4">
           <v-spacer></v-spacer>
           <v-btn variant="text" @click="dialogProcessos.show = false">Cancelar</v-btn>
-          <v-btn color="primary" variant="flat" :loading="savingProcessos" @click="saveProcessos">Salvar Processos</v-btn>
+          <v-btn
+            v-if="hasPermission('Peças', 'canEdit')"
+            color="primary"
+            variant="flat"
+            :loading="savingProcessos"
+            @click="saveProcessos"
+          >
+            Salvar Processos
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -510,6 +537,7 @@ const pecas = ref([])
 const fornecedores = ref([])
 const processosDisponiveis = ref([])
 const categoriasDisponiveis = ref([])
+const { authHeaders, hasPermission } = useAuth()
 const loading = ref(false)
 const loadingImport = ref(false)
 const savingProcessos = ref(false)

@@ -31,7 +31,16 @@
           class="mx-4"
           style="max-width: 400px"
         ></v-text-field>
-        <v-spacer></v-spacer>
+        <v-btn
+          variant="outlined"
+          color="secondary"
+          prepend-icon="mdi-sync"
+          @click="syncModules"
+          :loading="loadingSync"
+          class="mr-2"
+        >
+          Sincronizar Módulos
+        </v-btn>
         <v-btn
           color="primary"
           prepend-icon="mdi-refresh"
@@ -246,6 +255,7 @@ onMounted(() => {
 })
 
 const loading = ref(false)
+const loadingSync = ref(false)
 const saving = ref(false)
 const search = ref('')
 const users = ref([])
@@ -300,6 +310,21 @@ const fetchModules = async () => {
     allModules.value = data
   } catch (err) {
     showError('Erro ao carregar módulos')
+  }
+}
+
+const syncModules = async () => {
+  loadingSync.value = true
+  try {
+    await $fetch('/api/admin/system/sync-modules', { method: 'POST' })
+    await fetchModules()
+    showSuccess('Módulos sincronizados com o banco de dados')
+  } catch (err) {
+    showError('Erro ao sincronizar módulos')
+  } finally {
+    loadingSync.value = true
+    // Pequeno delay para UX
+    setTimeout(() => { loadingSync.value = false }, 500)
   }
 }
 

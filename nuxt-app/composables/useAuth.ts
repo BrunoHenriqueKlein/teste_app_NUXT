@@ -120,7 +120,36 @@ export const useAuth = () => {
         if (!user.value || !user.value.userModules) return false
 
         const module = user.value.userModules.find(m => m.module.nome === moduleName)
-        return module ? !!module[permissionType] : false
+        if (!module) return false
+
+        // Hierarquia lógica: Se pode editar ou excluir, certamente pode ver
+        if (permissionType === 'canView') {
+            return !!module.canView || !!module.canEdit || !!module.canDelete
+        }
+
+        return !!module[permissionType]
+    }
+
+    const refreshUser = async () => {
+        if (!token.value) return false
+        try {
+            const response = await $fetch('/api/auth/me', {
+                headers: {
+                    Authorization: `Bearer ${token.value}`
+                }
+            })
+
+            if (response.success) {
+                user.value = response.user
+                if (process.client) {
+                    localStorage.setItem('user', JSON.stringify(response.user))
+                }
+                return true
+            }
+        } catch (err) {
+            console.error('Erro ao atualizar perfil:', err)
+            return false
+        }
     }
 
     return {
@@ -139,6 +168,7 @@ export const useAuth = () => {
         logout,
         register,
         updateProfile,
+        refreshUser,
         hasPermission
     }
 }
