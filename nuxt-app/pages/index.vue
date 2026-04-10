@@ -48,18 +48,89 @@
       </v-col>
     </v-row>
 
-    <!-- Filtros de Visualização -->
-    <v-row class="mb-4">
-      <v-col cols="12" class="d-flex align-center flex-wrap gap-2">
-        <span class="text-subtitle-1 font-weight-bold mr-4">Ver OPs:</span>
-        <v-btn-toggle v-model="filterType" mandatory color="primary" variant="outlined" density="comfortable">
-          <v-btn value="RECENTES">Recentes</v-btn>
-          <v-btn value="PRODUCAO">Em Produção</v-btn>
-          <v-btn value="ATRASADAS">Atrasadas</v-btn>
-          <v-btn value="AGUARDANDO">Aguardando</v-btn>
-        </v-btn-toggle>
-      </v-col>
-    </v-row>
+    <!-- Filtros Progressivos -->
+    <v-card variant="outlined" class="mb-6">
+      <v-card-text class="pa-4">
+        <v-row dense>
+          <v-col cols="12" md="3">
+            <v-text-field
+              v-model="filters.search"
+              label="Buscar por OP, Cliente ou Máquina"
+              prepend-inner-icon="mdi-magnify"
+              variant="outlined"
+              density="comfortable"
+              clearable
+              hide-details
+              @update:model-value="loadDashboardData"
+            />
+          </v-col>
+          
+          <v-col cols="12" sm="6" md="2">
+            <v-select
+              v-model="filters.status"
+              :items="statusOptions"
+              label="Status"
+              variant="outlined"
+              density="comfortable"
+              clearable
+              hide-details
+              @update:model-value="loadDashboardData"
+            />
+          </v-col>
+
+          <v-col cols="12" sm="6" md="2">
+            <v-menu :close-on-content-click="false">
+              <template v-slot:activator="{ props }">
+                <v-text-field
+                  v-bind="props"
+                  v-model="filters.dataEntrega"
+                  label="Prazo de Entrega"
+                  variant="outlined"
+                  density="comfortable"
+                  readonly
+                  prepend-inner-icon="mdi-calendar"
+                  clearable
+                  hide-details
+                  @click:clear="filters.dataEntrega = null; loadDashboardData()"
+                />
+              </template>
+              <v-date-picker 
+                v-model="filters.dataEntrega" 
+                @update:model-value="loadDashboardData" 
+                hide-header
+              />
+            </v-menu>
+          </v-col>
+
+          <v-col cols="12" sm="6" md="2">
+            <v-select
+              v-model="filters.sortBy"
+              label="Ordenar por"
+              :items="sortOptions"
+              variant="outlined"
+              density="comfortable"
+              hide-details
+              @update:model-value="loadDashboardData"
+            />
+          </v-col>
+
+          <v-col cols="12" md="3" class="d-flex align-center gap-2">
+            <v-btn-toggle v-model="filters.sortOrder" mandatory color="primary" variant="outlined" density="comfortable" @update:model-value="loadDashboardData">
+              <v-btn value="asc" icon="mdi-sort-ascending" />
+              <v-btn value="desc" icon="mdi-sort-descending" />
+            </v-btn-toggle>
+            
+            <v-btn 
+              variant="text" 
+              color="primary" 
+              icon="mdi-filter-remove" 
+              title="Limpar Filtros"
+              @click="clearFilters"
+            />
+          </v-col>
+        </v-row>
+      </v-card-text>
+    </v-card>
 
     <!-- Conteúdo Principal -->
     <v-row>
@@ -69,7 +140,7 @@
           <v-card-title class="d-flex justify-space-between align-center pa-4">
             <div class="d-flex align-center">
               <v-icon color="primary" class="mr-2">mdi-factory</v-icon>
-              <span class="text-h5 font-weight-bold">{{ listTitle }}</span>
+              <span class="text-h5 font-weight-bold">Ordens de Produção</span>
             </div>
             <v-btn 
               color="primary" 
@@ -91,9 +162,9 @@
               color="primary"
             ></v-progress-linear>
 
-            <div v-if="!loading && filteredOps.length === 0" class="pa-10 text-center">
+            <div v-if="!loading && allOps.length === 0" class="pa-10 text-center">
               <v-icon size="64" color="grey-lighten-1">mdi-clipboard-text-search-outline</v-icon>
-              <div class="text-h6 text-grey-darken-1 mt-4">Nenhuma OP encontrada nesta categoria.</div>
+              <div class="text-h6 text-grey-darken-1 mt-4">Nenhuma OP encontrada com estes filtros.</div>
             </div>
 
             <v-table v-else class="ops-table">
@@ -108,9 +179,10 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="op in filteredOps" :key="op.id" @click="viewOP(op)" class="clickable-row">
+                <tr v-for="op in allOps" :key="op.id" @click="viewOP(op)" class="clickable-row">
                   <td>
                     <div class="font-weight-bold text-primary">{{ op.numeroOP }}</div>
+                    <div class="text-caption text-blue-darken-3 font-weight-bold">{{ op.codigoMaquina }}</div>
                     <div class="text-caption text-grey">{{ op.descricaoMaquina }}</div>
                   </td>
                   <td>{{ op.cliente }}</td>
@@ -178,60 +250,73 @@ const stats = computed(() => [
     value: dashboardStats.value?.opsAbertas || 0, 
     icon: 'mdi-clock-outline', 
     color: 'grey-darken-1',
-    action: () => filterType.value = 'AGUARDANDO'
+    action: () => {
+      filters.value.status = 'AGUARDANDO'
+      loadDashboardData()
+    }
   },
   { 
     title: 'Em Produção', 
     value: dashboardStats.value?.opsProducao || 0, 
     icon: 'mdi-cog-sync', 
     color: 'blue-darken-2',
-    action: () => filterType.value = 'PRODUCAO'
+    action: () => {
+      filters.value.status = 'EM_FABRICACAO'
+      loadDashboardData()
+    }
   },
   { 
     title: 'Atrasadas', 
     value: dashboardStats.value?.opsAtrasadas || 0, 
     icon: 'mdi-alert-decagram', 
     color: 'red-darken-1',
-    action: () => filterType.value = 'ATRASADAS'
+    action: () => {
+      // Para atrasadas, limpamos o status e deixamos o usuário ver todas ou aplicamos um filtro de data se necessário
+      // Por enquanto, apenas removemos filtros de status para mostrar todas
+      filters.value.status = null
+      filters.value.sortBy = 'dataEntrega'
+      filters.value.sortOrder = 'asc'
+      loadDashboardData()
+    }
   },
   { 
     title: 'Concluídas', 
     value: dashboardStats.value?.opsConcluidas || 0, 
     icon: 'mdi-check-decagram', 
     color: 'green-darken-2',
-    action: () => filterType.value = 'RECENTES' // Mostra recentes por padrão
+    action: () => {
+      filters.value.status = 'CONCLUIDA'
+      loadDashboardData()
+    }
   }
 ])
 
 const allOps = ref([])
 const loading = ref(false)
-const filterType = ref('PRODUCAO') // Inicia mostrando o que está em produção
 
-const listTitle = computed(() => {
-  const titles = {
-    'RECENTES': 'Ordens de Produção Recentes',
-    'PRODUCAO': 'Fluxo em Produção Ativa',
-    'ATRASADAS': '⚠️ OPs com Entrega Atrasada',
-    'AGUARDANDO': 'OPs Aguardando Início'
-  }
-  return titles[filterType.value] || 'Ordens de Produção'
+const filters = ref({
+  search: '',
+  status: null,
+  dataEntrega: null,
+  sortBy: 'dataCriacao',
+  sortOrder: 'desc'
 })
 
-const filteredOps = computed(() => {
-  if (filterType.value === 'RECENTES') {
-    return allOps.value.slice(0, 5)
-  }
-  if (filterType.value === 'PRODUCAO') {
-    return allOps.value.filter(op => op.status.startsWith('EM_'))
-  }
-  if (filterType.value === 'ATRASADAS') {
-    return allOps.value.filter(op => isAtrasada(op.dataEntrega) && op.status !== 'CONCLUIDA' && op.status !== 'CANCELADA')
-  }
-  if (filterType.value === 'AGUARDANDO') {
-    return allOps.value.filter(op => op.status === 'AGUARDANDO')
-  }
-  return allOps.value
-})
+const statusOptions = [
+  'AGUARDANDO', 'EM_ENGENHARIA', 'EM_COMPRAS', 'EM_FABRICACAO', 'EM_AUTOMACAO', 
+  'EM_PROJETO_ELETRICO', 'EM_CALIBRACAO', 'EM_MONTAGEM', 'EM_TESTES', 
+  'EM_DOCUMENTACAO', 'EM_EXPEDICAO', 'AGUARDANDO_ENTREGA', 'CONCLUIDA'
+]
+
+const sortOptions = [
+  { title: 'Criação', value: 'dataCriacao' },
+  { title: 'OP', value: 'numeroOP' },
+  { title: 'Entrega', value: 'dataEntrega' },
+  { title: 'Status', value: 'status' },
+  { title: 'Progresso', value: 'progresso' },
+  { title: 'Cliente', value: 'cliente' }
+]
+
 
 
 // Carregar dados do dashboard
@@ -243,16 +328,39 @@ onMounted(async () => {
 const loadDashboardData = async () => {
   loading.value = true
   try {
-    const data = await $fetch('/api/ops', {
+    const params = {
+      search: filters.value.search,
+      status: filters.value.status,
+      sortBy: filters.value.sortBy,
+      sortOrder: filters.value.sortOrder
+    }
+    
+    if (filters.value.dataEntrega) {
+      params.dataInicio = filters.value.dataEntrega
+      params.dataFim = filters.value.dataEntrega
+    }
+
+    allOps.value = await $fetch('/api/ops', {
+      params,
       headers: authHeaders.value
     })
-    allOps.value = Array.isArray(data) ? data : []
   } catch (error) {
     console.error('Erro ao carregar dados do dashboard:', error)
     allOps.value = []
   } finally {
     loading.value = false
   }
+}
+
+const clearFilters = () => {
+  filters.value = {
+    search: '',
+    status: null,
+    dataEntrega: null,
+    sortBy: 'dataCriacao',
+    sortOrder: 'desc'
+  }
+  loadDashboardData()
 }
 
 // Utilitários
