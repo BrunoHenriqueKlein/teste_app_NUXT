@@ -46,6 +46,25 @@
           </v-card-text>
         </v-card>
       </v-col>
+
+      <!-- Card de Carga de Trabalho (Workload) -->
+      <v-col cols="12" sm="6" md="3">
+        <v-card 
+          class="stat-card pa-3 h-100 bg-teal-darken-3" 
+          elevation="4"
+          @click="navigateTo('/workload')"
+        >
+          <v-card-text class="d-flex align-center text-white py-2">
+            <div>
+              <div class="text-overline mb-0">Carga de Trabalho</div>
+              <div class="text-h5 font-weight-bold">Visualizar Workload</div>
+              <div class="text-caption opacity-80">Gestão de ocupação da equipe</div>
+            </div>
+            <v-spacer />
+            <v-icon size="48" class="opacity-30">mdi-chart-timeline-variant</v-icon>
+          </v-card-text>
+        </v-card>
+      </v-col>
     </v-row>
 
     <!-- Filtros Progressivos -->

@@ -785,15 +785,15 @@ const loadOP = async () => {
     })
     op.value = data
     
-    // ✅ DEFINIR DATA DE INÍCIO DA OP
-    dataInicioOP.value = op.value.dataInicio || 
+    // ✅ DEFINIR DATA DE INÍCIO DA OP (Âncora fixa do cronograma: Prevista > Pedido)
+    dataInicioOP.value = op.value.dataInicioPrevista || 
                         op.value.dataPedido || 
                         new Date().toISOString().split('T')[0]
     
-    console.log('✅ OP carregada:', {
-      numeroOP: op.value?.numeroOP,
-      dataInicio: dataInicioOP.value
-    })
+    // Garantir formato YYYY-MM-DD para o v-model="date"
+    if (dataInicioOP.value.includes('T')) {
+      dataInicioOP.value = dataInicioOP.value.split('T')[0]
+    }
     
   } catch (error) {
     console.error('❌ Erro ao carregar OP:', error)
@@ -1047,7 +1047,9 @@ const salvarProcesso = async () => {
       prazoEstimado: parseInt(formProcesso.value.prazoEstimado),
       // ✅ ENVIAR DATAS CALCULADAS PARA A API
       dataInicioPrevista: dataInicioCalculada,
-      dataTerminoPrevista: dataTerminoCalculada
+      dataTerminoPrevista: dataTerminoCalculada,
+      // ✅ SE FOR O PRIMEIRO PROCESSO E TIVERMOS UMA NOVA DATA DE INÍCIO DA OP, ENVIAR TAMBÉM O CAMPO DA OP
+      dataInicioOPPrevista: dataInicioOP.value 
     }
 
     console.log('💾 Salvando processo com datas:', dadosEnvio)
@@ -1124,6 +1126,7 @@ const recalcularDatasCascata = async () => {
           await $fetch(`/api/ops/${route.params.id}/processos/${processo.id}`, {
             method: 'PUT',
             body: {
+              ...processo, // Enviar todos os dados necessários (nome, sequencia, etc)
               dataInicioPrevista: processo.dataInicioPrevista,
               dataTerminoPrevista: processo.dataTerminoPrevista
             },

@@ -198,6 +198,7 @@ const navigation = [
   { title: 'Estoque', icon: 'mdi-warehouse', route: '/estoque', moduleName: 'Estoque' },
   { title: 'Fornecedores', icon: 'mdi-account-group', route: '/fornecedores', moduleName: 'Fornecedores' },
   { title: 'Compras', icon: 'mdi-cart', route: '/compras', moduleName: 'Compras' },
+  { title: 'Workload', icon: 'mdi-chart-timeline-variant', route: '/workload', moduleName: 'Workload' },
   { title: 'Relatórios', icon: 'mdi-chart-bar', route: '/relatorios', moduleName: 'Relatórios' },
 ]
 

@@ -557,12 +557,14 @@ const processosOrdenados = computed(() => {
   const processosCalculados = JSON.parse(JSON.stringify(processos.value))
   processosCalculados.sort((a, b) => (a.sequencia || 0) - (b.sequencia || 0))
   
+  // ✅ USAR A DATA DE INÍCIO DA OP COMO BASE
   let dataInicioAtual = new Date(dataInicioOP.value)
   
   for (let i = 0; i < processosCalculados.length; i++) {
     const processo = processosCalculados[i]
     
-    // Calcular em cascata para garantir consistência com a página de processos
+    // Se o processo já tem data no banco, e não estamos em modo de "recalculo total",
+    // poderíamos usar a do banco. Mas para manter o Gantt "vivo" e reativo a mudanças no prazo:
     if (i === 0) {
       processo.dataInicioPrevista = dataInicioOP.value
     } else {
@@ -794,9 +796,15 @@ const carregarDadosGantt = async () => {
       status: p.status
     })))
 
-    // ✅ DEFINIR DATA DE INÍCIO DA OP
-    // Priorizamos Data de Início Real -> Data do Pedido (Compra) -> Hoje
-    dataInicioOP.value = opData.value?.dataInicio || opData.value?.dataPedido || new Date().toISOString().split('T')[0]
+    // ✅ DEFINIR DATA DE INÍCIO DA OP - ALINHADO COM A PÁGINA DE PROCESSOS
+    // Priorizamos Data de Início Prevista -> Data do Pedido (Compra) -> Hoje
+    dataInicioOP.value = opData.value?.dataInicioPrevista || 
+                        opData.value?.dataPedido || 
+                        new Date().toISOString().split('T')[0]
+    
+    if (dataInicioOP.value && dataInicioOP.value.includes('T')) {
+      dataInicioOP.value = dataInicioOP.value.split('T')[0]
+    }
     
     console.log('✅ Dados carregados:', {
       op: opData.value?.numeroOP,

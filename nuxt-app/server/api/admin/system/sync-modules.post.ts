@@ -14,9 +14,11 @@ export default defineEventHandler(async (event) => {
             { nome: 'Fornecedores', descricao: 'Gestão de fornecedores', icon: 'mdi-account-group', path: '/fornecedores', order: 6.5 },
             { nome: 'Compras', descricao: 'Solicitações de compra', icon: 'mdi-cart', path: '/compras', order: 7 },
             { nome: 'Relatórios', descricao: 'Dashboards e relatórios', icon: 'mdi-chart-bar', path: '/relatorios', order: 8 },
+            { nome: 'Workload', descricao: 'Carga de trabalho e ocupação', icon: 'mdi-chart-timeline-variant', path: '/workload', order: 8.5 },
             { nome: 'Administração', descricao: 'Configurações do sistema', icon: 'mdi-cog', path: '/admin', order: 9 },
         ]
 
+        const prisma = event.context.prisma
         for (const m of modules) {
             await prisma.module.upsert({
                 where: { nome: m.nome },
@@ -24,9 +26,13 @@ export default defineEventHandler(async (event) => {
                     descricao: m.descricao,
                     icon: m.icon,
                     path: m.path,
-                    order: m.order
+                    order: m.order,
+                    isActive: true
                 },
-                create: m
+                create: {
+                    ...m,
+                    isActive: true
+                }
             })
         }
 

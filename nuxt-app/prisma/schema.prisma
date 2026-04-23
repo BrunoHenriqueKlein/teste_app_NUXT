@@ -160,6 +160,7 @@ model OP {
   dataEntrega      DateTime
   dataCriacao      DateTime              @default(now())
   dataInicio       DateTime?
+  dataInicioPrevista DateTime?           @map("data_inicio_prevista")
   dataFinalizacao  DateTime?
   status           OPStatus              @default(AGUARDANDO)
   progresso        Int                   @default(0)

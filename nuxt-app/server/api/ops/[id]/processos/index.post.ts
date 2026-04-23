@@ -114,8 +114,8 @@ export default defineEventHandler(async (event) => {
         // Usar dataPrevista como fallback
         dataInicioCalculada = dataPrevista
       } else {
-        // Tentar buscar a data de início da OP
-        dataInicioCalculada = opExistente.dataInicio || null
+        // Tentar buscar a data de início da OP (Prioridade: Prevista > Pedido)
+        dataInicioCalculada = opExistente.dataInicioPrevista || opExistente.dataPedido || null
       }
     }
 
@@ -193,9 +193,16 @@ export default defineEventHandler(async (event) => {
       ? Math.round(processosOP.reduce((sum, p) => sum + p.progresso, 0) / processosOP.length)
       : 0
 
+    const updateData: any = { progresso: progressoMedio }
+
+    // ✅ ATUALIZAR DATA INICIAL DA OP SE ENVIADO (Mudança no planejamento global)
+    if (body.dataInicioOPPrevista) {
+      updateData.dataInicioPrevista = new Date(body.dataInicioOPPrevista)
+    }
+
     await prisma.oP.update({
       where: { id: parseInt(opId) },
-      data: { progresso: progressoMedio }
+      data: updateData
     })
 
     console.log('📊 Progresso da OP atualizado para:', progressoMedio + '%')

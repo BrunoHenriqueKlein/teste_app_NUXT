@@ -56,7 +56,9 @@ export default defineEventHandler(async (event) => {
           valorVenda: body.valorVenda ? parseFloat(body.valorVenda) : null,
           status: body.status || 'AGUARDANDO',
           progresso: (body.progresso ? parseInt(body.progresso) : 0) as number,
-          criadoPorId: primeiroUsuario.id
+          criadoPorId: primeiroUsuario.id,
+          // ✅ INICIALIZAR DATA PREVISTA
+          dataInicioPrevista: body.dataPedido ? new Date(body.dataPedido) : new Date()
         },
         include: {
           criadoPor: { select: { id: true, name: true, email: true } }

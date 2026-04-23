@@ -73,6 +73,8 @@ export default defineEventHandler(async (event) => {
         progresso: body.progresso !== undefined ? body.progresso : processoExistente.progresso,
         prazoEstimado: body.prazoEstimado,
         dataPrevista: body.dataPrevista ? new Date(body.dataPrevista) : null,
+        dataInicioPrevista: body.dataInicioPrevista ? new Date(body.dataInicioPrevista) : null,
+        dataTerminoPrevista: body.dataTerminoPrevista ? new Date(body.dataTerminoPrevista) : null,
         responsavelId: body.responsavelId
       },
       include: {
@@ -98,6 +100,14 @@ export default defineEventHandler(async (event) => {
 
     // Atualizar OP (Status e Progresso) de forma inteligente
     await updateOPStatus(parseInt(opId))
+
+    // ✅ ATUALIZAR DATA INICIAL DA OP SE ENVIADO (Mudança no planejamento global)
+    if (body.dataInicioOPPrevista) {
+      await prisma.oP.update({
+        where: { id: parseInt(opId) },
+        data: { dataInicioPrevista: new Date(body.dataInicioOPPrevista) }
+      })
+    }
 
     console.log('✅ Processo atualizado com sucesso')
     return { success: true, processo }

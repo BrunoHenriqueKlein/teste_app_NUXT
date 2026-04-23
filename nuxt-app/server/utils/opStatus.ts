@@ -50,15 +50,22 @@ export async function updateOPStatus(opId: number) {
             dataUpdate.status = novoStatusOP
         }
 
-        // Se for o início do primeiro processo, garantir data de início da OP
+        // Se for o início do primeiro processo, garantir data de início real da OP
         const op = await prisma.oP.findUnique({
             where: { id: opId },
-            select: { dataInicio: true }
+            select: { dataInicio: true, dataInicioPrevista: true, dataPedido: true }
         })
 
         const algumIniciado = processos.some(p => p.status !== 'NAO_INICIADO')
+
+        // Registrar início real se ainda não tiver e houver algo iniciado
         if (algumIniciado && op && !op.dataInicio) {
             dataUpdate.dataInicio = new Date()
+        }
+
+        // Se ainda não houver data_inicio_prevista, inicializá-la com dataPedido para evitar cronograma flutuante
+        if (op && !op.dataInicioPrevista) {
+            dataUpdate.dataInicioPrevista = op.dataPedido
         }
 
         // 5. Executar atualização
