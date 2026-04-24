@@ -20,6 +20,7 @@ export default defineEventHandler(async (event) => {
                             }
                         }
                     },
+                    anexos: true,
                     _count: {
                         select: { itens: true }
                     }
@@ -123,6 +124,24 @@ export default defineEventHandler(async (event) => {
                 finalNumero = `OC-${year}-${nextNum.toString().padStart(4, '0')}`
             }
 
+            if (data.itens && Array.isArray(data.itens)) {
+                for (const item of data.itens) {
+                    if (item.id) {
+                        await prisma.compraItem.update({
+                            where: { id: Number(item.id) },
+                            data: {
+                                valorUnitario: Number(item.valorUnitario) || 0,
+                                aliqIPI: Number(item.aliqIPI) || 0,
+                                aliqICMS: Number(item.aliqICMS) || 0,
+                                valorIPI: Number(item.valorIPI) || 0,
+                                valorICMS: Number(item.valorICMS) || 0,
+                                custoLiquido: Number(item.custoLiquido) || 0
+                            }
+                        })
+                    }
+                }
+            }
+
             const updatedCompra = await prisma.compra.update({
                 where: { id: Number(id) },
                 data: {
@@ -142,20 +161,67 @@ export default defineEventHandler(async (event) => {
 
             // Atualização de status em massa para as peças e OS vinculada
             if (data.status === 'PEDIDO_EMITIDO' || data.status === 'APROVADA') {
-                // Se houver OS vinculada, atualizar o status dela
                 if (updatedCompra.osId) {
                     await prisma.ordemServico.update({
                         where: { id: updatedCompra.osId },
                         data: { status: 'EM_ANDAMENTO' }
                     })
-                }
 
-                for (const item of updatedCompra.itens) {
-                    if (item.pecaId) {
-                        await prisma.peca.update({
-                            where: { id: item.pecaId },
-                            data: { statusSuprimento: 'COMPRADO' }
-                        })
+                    // Tratar Ordem de Serviço (Retroalimentação do PCP)
+                    for (const item of updatedCompra.itens) {
+                        if (item.pecaId) {
+                            const processo = await prisma.processoPeca.findFirst({
+                                where: { osId: updatedCompra.osId, pecaId: item.pecaId }
+                            })
+                            if (processo && item.valorUnitario > 0) {
+                                await prisma.processoPeca.update({
+                                    where: { id: processo.id },
+                                    data: { valorCusto: item.valorUnitario }
+                                })
+                                
+                                // Recalcula Peca (BOM)
+                                const pecaAtual = await prisma.peca.findUnique({
+                                    where: { id: item.pecaId },
+                                    include: { processos: true }
+                                })
+                                if (pecaAtual) {
+                                    const custoTotalProc = pecaAtual.processos.reduce((sum, p) => sum + (p.valorCusto || 0), 0)
+                                    await prisma.peca.update({
+                                        where: { id: pecaAtual.id },
+                                        data: {
+                                            valorUnitario: custoTotalProc,
+                                            custoTotal: custoTotalProc * pecaAtual.quantidade,
+                                            statusSuprimento: 'COMPRADO'
+                                        }
+                                    })
+                                }
+                            } else {
+                                // Peca está em OS mas sem vínculo claro com Processo, só atualiza status
+                                await prisma.peca.update({
+                                    where: { id: item.pecaId },
+                                    data: { statusSuprimento: 'COMPRADO' }
+                                })
+                            }
+                        }
+                    }
+                } else {
+                    // Sem O.S (Trata-se de Componente/Matéria-Prima comprada individualmente)
+                    for (const item of updatedCompra.itens) {
+                        if (item.pecaId) {
+                            const pecaAtual = await prisma.peca.findUnique({
+                                where: { id: item.pecaId }
+                            })
+                            if (pecaAtual) {
+                                await prisma.peca.update({
+                                    where: { id: item.pecaId },
+                                    data: { 
+                                        statusSuprimento: 'COMPRADO',
+                                        valorUnitario: item.valorUnitario,
+                                        custoTotal: item.valorUnitario * pecaAtual.quantidade
+                                    }
+                                })
+                            }
+                        }
                     }
                 }
             }

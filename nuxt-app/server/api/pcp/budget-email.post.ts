@@ -1,3 +1,7 @@
+import { defineEventHandler, createError, readBody } from 'h3'
+import path from 'path'
+import fs from 'fs'
+
 export default defineEventHandler(async (event) => {
     const prisma = event.context.prisma
     const body = await readBody(event)
@@ -49,9 +53,7 @@ export default defineEventHandler(async (event) => {
             where: { id: userId }
         })
 
-        if (!preview && (!sender?.mailHost || !sender?.mailUser || !sender?.mailPass)) {
-            throw new Error('Suas configurações de e-mail (SMTP) estão incompletas. Acesse "Meu Perfil" para configurar seu servidor de e-mail.')
-        }
+        // Validação removida daqui para permitir a criação da Requisição mesmo sem SMTP
 
         // 3. Preparar lista de peças e anexos
         const pecasTable = os.itens.map((item: any) => `
@@ -121,45 +123,7 @@ export default defineEventHandler(async (event) => {
             }
         }
 
-        // 6. Configurar Nodemailer (com maior compatibilidade)
-        const nodemailer = await import('nodemailer')
-        const transporter = nodemailer.default.createTransport({
-            host: sender!.mailHost!,
-            port: Number(sender!.mailPort || 587),
-            secure: sender!.mailSecure,
-            auth: {
-                user: sender!.mailUser!,
-                pass: sender!.mailPass!,
-            },
-            tls: {
-                // Necessário para muitos servidores corporativos que usam certificados auto-assinados
-                rejectUnauthorized: false
-            }
-        })
-
-        // 7. Enviar E-mail Real com Tratamento de Erro Específico
-        try {
-            await transporter.sendMail({
-                from: `"${sender!.mailFrom || sender!.name}" <${sender!.mailUser}>`,
-                to: fornecedor.email,
-                subject: finalSubject,
-                html: finalHtml,
-                attachments
-            })
-        } catch (mailError: any) {
-            console.error('❌ Detalhes do erro de SMTP:', mailError)
-
-            let userMessage = mailError.message
-            if (mailError.message.includes('wrong version number')) {
-                userMessage = 'Erro de Versão SSL/TLS. Dica: Se usar porta 587, desmarque a opção "Seguro". Se usar porta 465, marque a opção "Seguro".'
-            } else if (mailError.code === 'ECONNREFUSED') {
-                userMessage = 'Não foi possível conectar ao servidor de e-mail. Verifique o endereço do servidor e a porta.'
-            } else if (mailError.code === 'EAUTH') {
-                userMessage = 'Falha na autenticação. Verifique seu usuário e senha de e-mail.'
-            }
-
-            throw new Error(userMessage)
-        }
+        // 6. Criar Requisição de Compras no Banco (Sempre garante o fluxo de suprimentos!)
         const count = await prisma.compra.count()
         const numeroReq = `REQ-OS-${os.numero.split('-').pop()}-${(count + 1).toString().padStart(3, '0')}`
 
@@ -167,7 +131,7 @@ export default defineEventHandler(async (event) => {
             data: {
                 numero: numeroReq,
                 opId: os.opId,
-                osId: os.id, // Vínculo formal com a OS
+                osId: os.id,
                 fornecedor: fornecedor.nome,
                 status: 'SOLICITADA',
                 itens: {
@@ -181,15 +145,53 @@ export default defineEventHandler(async (event) => {
             }
         })
 
-        // 7. Atualizar OS informando que foi enviado para orçamento e vincular a compra
+        // 7. Atualizar OS informando que está Aguardando (Orçamento)
         await prisma.ordemServico.update({
             where: { id: os.id },
-            data: { status: 'EM_ANDAMENTO' } // Corrigido de EM_PRODUCAO para EM_ANDAMENTO
+            data: { status: 'AGUARDANDO' } 
         })
+
+        let emailOk = false
+        let userMessage = ''
+
+        // 8. Tentar enviar e-mail se as credenciais estiverem disponíveis
+        if (sender?.mailHost && sender?.mailUser && sender?.mailPass) {
+            const nodemailer = await import('nodemailer')
+            const transporter = nodemailer.default.createTransport({
+                host: sender.mailHost,
+                port: Number(sender.mailPort || 587),
+                secure: sender.mailSecure,
+                auth: {
+                    user: sender.mailUser,
+                    pass: sender.mailPass,
+                },
+                tls: { rejectUnauthorized: false }
+            })
+
+            try {
+                await transporter.sendMail({
+                    from: `"${sender.mailFrom || sender.name}" <${sender.mailUser}>`,
+                    to: fornecedor.email,
+                    subject: finalSubject,
+                    html: finalHtml,
+                    attachments
+                })
+                emailOk = true
+                userMessage = 'E-mail enviado e Requisição gerada.'
+            } catch (mailError: any) {
+                console.error('❌ Erro no disparo SMTP:', mailError)
+                emailOk = false
+                userMessage = `Requisição gerada! Porém Falha no E-mail SMTP: ${mailError.message}`
+            }
+        } else {
+            emailOk = false
+            userMessage = 'Requisição no sistema gerada com sucesso! (E-mail não disparado pois as credenciais de SMTP não estão configuradas no seu perfil)'
+        }
 
         return {
             success: true,
-            message: 'Solicitação enviada com sucesso e requisição de compra gerada!',
+            emailEnviado: emailOk,
+            message: userMessage,
             compraId: novaCompra.id
         }
 

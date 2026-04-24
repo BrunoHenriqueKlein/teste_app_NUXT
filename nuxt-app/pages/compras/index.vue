@@ -265,6 +265,39 @@
 
           <v-divider class="my-4"></v-divider>
 
+          <!-- Gestão de Orçamentos Anexos -->
+          <div class="mb-4">
+            <div class="text-subtitle-1 font-weight-bold d-flex justify-space-between align-center mb-2">
+              Orçamentos Recebidos (Anexos)
+              <v-btn size="small" variant="tonal" prepend-icon="mdi-upload" @click="$refs.anexoInput.click()" :loading="uploading">
+                Anexar PDF / Imagem
+              </v-btn>
+              <input type="file" ref="anexoInput" class="d-none" @change="uploadAnexo" accept=".pdf,.png,.jpg,.jpeg">
+            </div>
+            
+            <div v-if="dialogDetalhes.requisicao.anexos && dialogDetalhes.requisicao.anexos.length > 0">
+              <v-list density="compact" class="bg-grey-lighten-4 rounded" border>
+                <v-list-item v-for="anexo in dialogDetalhes.requisicao.anexos" :key="anexo.id">
+                  <template v-slot:prepend>
+                    <v-icon color="error" v-if="anexo.url.endsWith('.pdf')">mdi-file-pdf-box</v-icon>
+                    <v-icon color="primary" v-else>mdi-file-image</v-icon>
+                  </template>
+                  <v-list-item-title class="text-caption font-weight-bold">{{ anexo.nome }}</v-list-item-title>
+                  <template v-slot:append>
+                    <v-btn icon="mdi-eye" size="small" variant="text" color="primary" @click="visualizarAnexo(anexo)" title="Visualizar Orçamento Inline"></v-btn>
+                    <v-btn icon="mdi-delete" size="small" variant="text" color="error" @click="excluirAnexo(dialogDetalhes.requisicao.id, anexo.id)"></v-btn>
+                  </template>
+                </v-list-item>
+              </v-list>
+            </div>
+            <div v-else class="text-caption text-grey text-center py-4 bg-grey-lighten-4 rounded border">
+              <v-icon size="24" color="grey-lighten-1" class="mb-2">mdi-file-hidden</v-icon><br>
+              Nenhum orçamento anexado. Insira a proposta do fornecedor para auditar a compra.
+            </div>
+          </div>
+
+          <v-divider class="my-4"></v-divider>
+
           <v-row dense>
             <v-col cols="12" md="3">
               <v-text-field
@@ -466,6 +499,37 @@
           <v-btn variant="text" @click="dialogDemanda.show = false">Cancelar</v-btn>
           <v-btn color="indigo" variant="flat" :loading="saving" @click="saveDemanda">Salvar Alterações</v-btn>
         </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Visualizador de Arquivos (PDF e Imagens) -->
+    <v-dialog v-model="dialogVisualizador.show" max-width="1000px" height="90vh">
+      <v-card class="h-100 d-flex flex-column">
+        <v-card-title class="d-flex justify-space-between align-center bg-grey-lighten-3">
+          <div class="text-subtitle-1 font-weight-bold">
+            <v-icon class="mr-2">{{ dialogVisualizador.anexo?.url?.endsWith('.pdf') ? 'mdi-file-pdf-box' : 'mdi-file-image' }}</v-icon>
+            {{ dialogVisualizador.anexo?.nome }}
+          </div>
+          <div>
+            <v-btn icon="mdi-download" variant="text" color="primary" :href="dialogVisualizador.anexo?.url" target="_blank" title="Baixar Original" class="mr-2"></v-btn>
+            <v-btn icon="mdi-close" variant="text" @click="dialogVisualizador.show = false" title="Fechar"></v-btn>
+          </div>
+        </v-card-title>
+        <v-card-text class="pa-0 flex-grow-1 bg-grey-darken-3 d-flex justify-center align-center" style="height: calc(90vh - 64px); min-height: 500px;">
+          <iframe 
+            v-if="dialogVisualizador.anexo?.url?.endsWith('.pdf')"
+            :src="dialogVisualizador.anexo?.url" 
+            width="100%" 
+            height="100%" 
+            style="border: none; min-height: 500px;"
+          ></iframe>
+          <v-img
+            v-else-if="dialogVisualizador.anexo"
+            :src="dialogVisualizador.anexo?.url"
+            max-height="100%"
+            contain
+          ></v-img>
+        </v-card-text>
       </v-card>
     </v-dialog>
 
@@ -687,6 +751,64 @@ const dialogDetalhes = ref({
   valorDesconto: 0,
   observacoes: ''
 })
+
+const dialogVisualizador = ref({
+  show: false,
+  anexo: null
+})
+
+const visualizarAnexo = (anexo) => {
+  dialogVisualizador.value = {
+    show: true,
+    anexo
+  }
+}
+
+const uploading = ref(false)
+
+const uploadAnexo = async (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+
+  uploading.value = true
+  const formData = new FormData()
+  formData.append('file', file)
+
+  try {
+    const res = await $fetch(`/api/compras/${dialogDetalhes.value.requisicao.id}/anexos`, {
+      method: 'POST',
+      body: formData
+    })
+
+    if (!dialogDetalhes.value.requisicao.anexos) {
+      dialogDetalhes.value.requisicao.anexos = []
+    }
+    dialogDetalhes.value.requisicao.anexos.push(...res.anexos)
+    
+    showSnackbar('Orçamento anexado com sucesso!')
+    await loadCompras() // Recarregar base
+  } catch (error) {
+    showSnackbar('Erro ao enviar o anexo', 'error')
+  } finally {
+    uploading.value = false
+    event.target.value = '' // reset input
+  }
+}
+
+const excluirAnexo = async (compraId, anexoId) => {
+  if (!confirm('Deseja realmente remover este orçamento?')) return
+  
+  try {
+    await $fetch(`/api/compras/${compraId}/anexos/${anexoId}`, {
+      method: 'DELETE'
+    })
+    
+    dialogDetalhes.value.requisicao.anexos = dialogDetalhes.value.requisicao.anexos.filter(a => a.id !== anexoId)
+    showSnackbar('Anexo removido.')
+  } catch (error) {
+    showSnackbar('Erro ao remover anexo', 'error')
+  }
+}
 
 const verDetalhesRequisicao = (req) => {
   dialogDetalhes.value = {

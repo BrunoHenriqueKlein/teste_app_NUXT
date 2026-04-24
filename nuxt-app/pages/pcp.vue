@@ -439,7 +439,7 @@ const loadEmailPreview = async () => {
 const sendFinalEmail = async () => {
   sendingEmail.value = true
   try {
-    await $fetch('/api/pcp/budget-email', {
+    const res = await $fetch('/api/pcp/budget-email', {
       method: 'POST',
       body: {
         osId: dialogEmail.value.osId,
@@ -449,11 +449,17 @@ const sendFinalEmail = async () => {
         preview: false
       }
     })
-    showSnackbar('E-mail enviado com sucesso!')
+    
+    if (res.emailEnviado) {
+      showSnackbar(res.message || 'E-mail enviado e Pedido de Compra gerado!', 'success')
+    } else {
+      showSnackbar(res.message || 'Pedido gerado, mas ocorreu erro no SMTP!', 'warning')
+    }
+    
     dialogEmail.value.show = false
-    loadOrdens() // Atualiza status da lista
+    loadOrdens() // recarregar
   } catch (error) {
-    showSnackbar('Erro ao enviar e-mail: ' + (error.data?.statusMessage || error.message), 'error')
+    showSnackbar('Erro ao enviar: ' + (error.data?.statusMessage || error.data?.message || error.message), 'error')
   } finally {
     sendingEmail.value = false
   }

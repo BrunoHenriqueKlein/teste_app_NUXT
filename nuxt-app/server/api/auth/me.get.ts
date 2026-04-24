@@ -38,7 +38,15 @@ export default defineEventHandler(async (event) => {
                 email: user.email,
                 role: user.role,
                 department: user.department,
-                userModules: user.userModules
+                userModules: user.userModules,
+                mailHost: user.mailHost,
+                mailPort: user.mailPort,
+                mailUser: user.mailUser,
+                mailPass: user.mailPass,
+                mailSecure: user.mailSecure,
+                mailFrom: user.mailFrom,
+                imapHost: user.imapHost,
+                popHost: user.popHost
             }
         }
     } catch (error: any) {

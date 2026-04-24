@@ -357,6 +357,7 @@ model Compra {
   dataEntregaReal     DateTime?    @map("data_entrega_real")
   numeroNF            String?      @map("numero_nf")
   itens               CompraItem[]
+  anexos              CompraAnexo[]
   op                  OP           @relation(fields: [opId], references: [id], onDelete: Cascade)
   os                  OrdemServico? @relation(fields: [osId], references: [id], onDelete: SetNull)
 
@@ -379,6 +380,16 @@ model CompraItem {
   peca          Peca?  @relation(fields: [pecaId], references: [id], onDelete: SetNull)
 
   @@map("compra_itens")
+}
+
+model CompraAnexo {
+  id       Int    @id @default(autoincrement())
+  compraId Int    @map("compra_id")
+  nome     String
+  url      String
+  compra   Compra @relation(fields: [compraId], references: [id], onDelete: Cascade)
+
+  @@map("compra_anexos")
 }
 
 model Empresa {
