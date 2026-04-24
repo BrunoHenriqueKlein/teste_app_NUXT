@@ -221,6 +221,18 @@
           </div>
         </template>
 
+        <template v-slot:item.valorUnitario="{ item }">
+          <div :class="item.categoria === 'FABRICADO' ? 'text-primary' : ''">
+            {{ item.valorUnitario ? (item.valorUnitario).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '-' }}
+          </div>
+        </template>
+
+        <template v-slot:item.custoTotal="{ item }">
+          <div :class="item.categoria === 'FABRICADO' ? 'text-primary font-weight-bold' : ''">
+            {{ item.custoTotal ? (item.custoTotal).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '-' }}
+          </div>
+        </template>
+
         <template v-slot:item.acoes="{ item }">
           <div class="d-flex gap-1 align-center">
             <!-- Botão de Desenho/Anexos (Consolidador) -->
@@ -445,7 +457,7 @@
           <v-list density="compact">
             <v-list-item v-for="(proc, index) in dialogProcessos.items" :key="index" class="pa-0 mb-2">
               <v-row dense align="center">
-                <v-col cols="5">
+                <v-col cols="4">
                   <v-combobox
                     v-model="proc.nome"
                     :items="processosDisponiveis"
@@ -456,7 +468,7 @@
                     hide-details
                   ></v-combobox>
                 </v-col>
-                <v-col cols="3">
+                <v-col cols="2">
                   <v-select
                     v-model="proc.status"
                     :items="['NAO_INICIADO', 'EM_PRODUCAO', 'CONCLUIDA']"
@@ -478,6 +490,16 @@
                     hide-details
                     clearable
                   ></v-select>
+                </v-col>
+                <v-col cols="2">
+                  <v-text-field
+                    v-model.number="proc.valorCusto"
+                    label="Custo (R$)"
+                    type="number"
+                    variant="outlined"
+                    density="compact"
+                    hide-details
+                  ></v-text-field>
                 </v-col>
                 <v-col cols="1" class="text-right">
                   <v-btn icon="mdi-delete" color="error" variant="text" size="small" @click="removeProcess(index)"></v-btn>
@@ -642,6 +664,8 @@ const headers = [
   { title: 'Processos', key: 'processos', align: 'center', sortable: false },
   { title: 'Suprimento', key: 'statusSuprimento', align: 'center' },
   { title: 'Qtd', key: 'quantidade', align: 'end' },
+  { title: 'Valor Unit.', key: 'valorUnitario', align: 'end' },
+  { title: 'Custo Total', key: 'custoTotal', align: 'end' },
   { title: 'Material', key: 'material' },
   { title: 'Status', key: 'status', align: 'center' },
   { title: 'Ações', key: 'acoes', align: 'center', sortable: false }
@@ -788,7 +812,8 @@ const addProcess = () => {
   dialogProcessos.value.items.push({
     nome: '',
     status: 'NAO_INICIADO',
-    fornecedorId: null
+    fornecedorId: null,
+    valorCusto: null
   })
 }
 

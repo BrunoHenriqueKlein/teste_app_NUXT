@@ -59,6 +59,17 @@ export default defineEventHandler(async (event) => {
                     if (fId === '' || fId === undefined) fId = null
                     if (fId !== null) fId = parseInt(fId)
 
+                    // Sanitizar valorCusto
+                    let vCusto = p.valorCusto
+                    if (vCusto === '' || vCusto === undefined || vCusto === null) {
+                        vCusto = null
+                    } else if (typeof vCusto === 'string') {
+                        vCusto = parseFloat(vCusto.replace(',', '.'))
+                        if (isNaN(vCusto)) vCusto = null
+                    } else {
+                        vCusto = parseFloat(vCusto)
+                    }
+
                     const proc = await tx.processoPeca.upsert({
                         where: { id: p.id || -1 },
                         update: {
@@ -66,7 +77,8 @@ export default defineEventHandler(async (event) => {
                             sequencia: i + 1,
                             status: p.status || 'NAO_INICIADO',
                             fornecedorId: fId,
-                            tempoEstimado: p.tempoEstimado ? parseInt(p.tempoEstimado) : null
+                            tempoEstimado: p.tempoEstimado ? parseInt(p.tempoEstimado) : null,
+                            valorCusto: vCusto
                         },
                         create: {
                             pecaId: parseInt(id),
@@ -74,11 +86,29 @@ export default defineEventHandler(async (event) => {
                             sequencia: i + 1,
                             status: p.status || 'NAO_INICIADO',
                             fornecedorId: fId,
-                            tempoEstimado: p.tempoEstimado ? parseInt(p.tempoEstimado) : null
+                            tempoEstimado: p.tempoEstimado ? parseInt(p.tempoEstimado) : null,
+                            valorCusto: vCusto
                         }
                     })
                     results.push(proc)
                 }
+
+                // 4. Somar todos os custos e atualizar a Peça pai
+                const pecaAtual = await tx.peca.findUnique({
+                    where: { id: parseInt(id) },
+                    select: { quantidade: true }
+                });
+                const qty = pecaAtual?.quantidade || 1;
+
+                const totalProcessos = results.reduce((sum, p) => sum + (p.valorCusto || 0), 0)
+                await tx.peca.update({
+                    where: { id: parseInt(id) },
+                    data: { 
+                        valorUnitario: totalProcessos,
+                        custoTotal: totalProcessos * qty
+                    }
+                })
+
                 return results
             })
         } catch (error) {

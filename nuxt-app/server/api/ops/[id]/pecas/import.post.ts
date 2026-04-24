@@ -63,6 +63,10 @@ export default defineEventHandler(async (event) => {
                     where: { codigo }
                 })
 
+                // Obter valor unitário se houver
+                const rawValor = row.ValorUnitario || row.valorUnitario || row.Valor || row.valor || row.VALOR || row.Custo || null
+                const vUnit = rawValor ? parseFloat(String(rawValor).replace(',', '.')) : null
+
                 // 2. Criar ou atualizar a peça na OP
                 const peca = await prisma.peca.upsert({
                     where: {
@@ -77,6 +81,7 @@ export default defineEventHandler(async (event) => {
                         material,
                         categoria,
                         subcategoria
+                        // Não sobrescrevemos valorUnitario e custoTotal no update para não apagar custos manuais já definidos
                     },
                     create: {
                         opId: parseInt(opId),
@@ -86,6 +91,8 @@ export default defineEventHandler(async (event) => {
                         material,
                         categoria,
                         subcategoria,
+                        valorUnitario: vUnit,
+                        custoTotal: vUnit ? vUnit * quantidade : null,
                         status: itemEstoque ? 'EM_ESTOQUE' : 'NAO_INICIADA'
                     }
                 })

@@ -185,6 +185,13 @@
                 <v-card-text>
                   <div class="text-caption text-grey">Valor de Venda</div>
                   <div class="text-h6">R$ {{ custos.op.valorVenda?.toFixed(2) || '0.00' }}</div>
+                  <div v-if="custos.op.valorVenda" class="text-caption mt-1 font-weight-medium">
+                    Lucro Global: 
+                    <span :class="custos.resumo.financeiro.lucroPrejuizoGlobal >= 0 ? 'text-success' : 'text-error'">
+                      {{ custos.resumo.financeiro.margemGlobalPercentual.toFixed(1) }}% 
+                      (R$ {{ custos.resumo.financeiro.lucroPrejuizoGlobal.toFixed(2) }})
+                    </span>
+                  </div>
                 </v-card-text>
               </v-card>
             </v-col>

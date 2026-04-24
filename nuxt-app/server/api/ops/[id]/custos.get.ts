@@ -63,8 +63,11 @@ export default defineEventHandler(async (event) => {
         const custoTotalBruto = custoBrutoMateriais + custoBrutoServicos
         const custoLiquidoTotal = custoTotalBruto - totalCreditos
 
-        const lucroPrejuizo = (op.valorVenda || 0) - custoLiquidoTotal
-        const margem = op.valorVenda ? (lucroPrejuizo / op.valorVenda) * 100 : 0
+        const lucroPrejuizo = (op.orcamentoPrevisto || 0) - custoLiquidoTotal
+        const margem = op.orcamentoPrevisto ? (lucroPrejuizo / op.orcamentoPrevisto) * 100 : 0
+
+        const lucroPrejuizoGlobal = (op.valorVenda || 0) - custoLiquidoTotal
+        const margemGlobal = op.valorVenda ? (lucroPrejuizoGlobal / op.valorVenda) * 100 : 0
 
         return {
             op: {
@@ -94,6 +97,8 @@ export default defineEventHandler(async (event) => {
                 financeiro: {
                     lucroPrejuizo,
                     margemPercentual: margem,
+                    lucroPrejuizoGlobal,
+                    margemGlobalPercentual: margemGlobal,
                     statusOrcamento: op.orcamentoPrevisto ? (custoLiquidoTotal <= op.orcamentoPrevisto ? 'DENTRO' : 'EXCEDIDO') : 'N/A'
                 }
             }

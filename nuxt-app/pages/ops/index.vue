@@ -410,6 +410,26 @@
                   variant="outlined"
                 />
               </v-col>
+
+              <!-- CAMPOS FINANCEIROS: ORÇAMENTO E VALOR DE VENDA -->
+              <v-col cols="12" sm="6">
+                <v-text-field
+                  v-model.number="formOP.orcamentoPrevisto"
+                  label="Orçamento Disponível (R$)"
+                  type="number"
+                  variant="outlined"
+                  hint="Orçamento reservado para gastos no projeto"
+                />
+              </v-col>
+              <v-col cols="12" sm="6">
+                <v-text-field
+                  v-model.number="formOP.valorVenda"
+                  label="Valor de Venda (R$)"
+                  type="number"
+                  variant="outlined"
+                  hint="Receita base faturável ao cliente"
+                />
+              </v-col>
               
               <v-col cols="12" sm="6" v-if="editingOP">
                 <v-select
@@ -556,6 +576,8 @@ const formOP = ref({
   cnpjCliente: '',
   enderecoCliente: '',
   observacoes: '',
+  orcamentoPrevisto: null,
+  valorVenda: null,
   status: 'AGUARDANDO',
   progresso: 0,
   templateId: null
@@ -700,6 +722,8 @@ const openCreateDialog = () => {
     cnpjCliente: '',
     enderecoCliente: '',
     observacoes: '',
+    orcamentoPrevisto: null,
+    valorVenda: null,
     status: 'AGUARDANDO',
     progresso: 0,
     templateId: null

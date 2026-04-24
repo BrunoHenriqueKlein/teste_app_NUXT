@@ -35,17 +35,21 @@ export default defineEventHandler(async (event) => {
             where: { codigo: body.codigo }
         })
 
+        const qtd = body.quantidade || 1
+        const vUnit = body.valorUnitario ? parseFloat(body.valorUnitario) : null
+
         const peca = await prisma.peca.create({
             data: {
                 opId: parseInt(opId),
                 codigo: body.codigo,
                 descricao: body.descricao,
-                quantidade: body.quantidade || 1,
+                quantidade: qtd,
                 material: body.material,
                 categoria: body.categoria || 'FABRICADO',
                 subcategoria: body.subcategoria,
                 statusSuprimento: body.statusSuprimento || 'NAO_SOLICITADO',
-                valorUnitario: body.valorUnitario ? parseFloat(body.valorUnitario) : null,
+                valorUnitario: vUnit,
+                custoTotal: vUnit ? vUnit * qtd : null,
                 fornecedorId: body.fornecedorId ? parseInt(body.fornecedorId) : null,
                 status: estoqueItem ? 'EM_ESTOQUE' : 'NAO_INICIADA'
             }
