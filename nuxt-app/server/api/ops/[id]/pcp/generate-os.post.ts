@@ -1,6 +1,6 @@
-import { defineEventHandler, createError, getRouterParam } from 'h3'
+import { defineEventHandler, createError, getRouterParam, H3Event } from 'h3'
 
-export default defineEventHandler(async (event) => {
+export default defineEventHandler(async (event: H3Event) => {
     const opId = getRouterParam(event, 'id')
     if (!opId) {
         throw createError({
@@ -35,6 +35,13 @@ export default defineEventHandler(async (event) => {
                 updatedCount: 0
             }
         }
+
+        // 1.5 Buscar mapeamento de siglas do banco
+        const configProcessos = await prisma.configProcessoPeca.findMany()
+        const siglaMap = configProcessos.reduce((acc: any, p: any) => {
+            acc[p.nome.toUpperCase().trim()] = p.sigla
+            return acc
+        }, {})
 
         // 2. Agrupar por nome do processo (Tipo da OS)
         const grupos = processosSemOS.reduce((acc: any, proc: any) => {
@@ -72,7 +79,11 @@ export default defineEventHandler(async (event) => {
                 updatedCount++
             } else {
                 const count = await prisma.ordemServico.count()
-                const numero = `OS-${opId}-${tipo.substring(0, 3)}-${(count + 1).toString().padStart(3, '0')}`
+
+                // Pega a sigla do banco, ou fallback para as primeiras 3 letras
+                const abrev = siglaMap[tipo] || tipo.substring(0, 3)
+                const numero = `OS-${opId}-${abrev}-${(count + 1).toString().padStart(3, '0')}`
+
 
                 console.log(`🆕 Criando nova OS: ${numero}`)
                 const novaOS = await prisma.ordemServico.create({

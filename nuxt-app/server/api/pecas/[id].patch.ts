@@ -14,16 +14,16 @@ export default defineEventHandler(async (event) => {
 
     try {
         console.log(`📝 Atualizando peça ${id}:`, body)
-        
+
         const existing = await prisma.peca.findUnique({ where: { id: parseInt(id) } })
         const newQtd = (body.quantidade !== undefined && body.quantidade !== null) ? parseInt(body.quantidade) : (existing?.quantidade || 1)
-        
+
         // Se vier valor unitário na edição, sobrescreve. Senão mantém o valor já atrelado.
         let newVUnit = existing?.valorUnitario || 0
         if (body.valorUnitario !== undefined && body.valorUnitario !== null) {
             newVUnit = parseFloat(body.valorUnitario)
         }
-        
+
         const updatedPeca = await prisma.peca.update({
             where: { id: parseInt(id) },
             data: {
@@ -34,6 +34,7 @@ export default defineEventHandler(async (event) => {
                 status: body.status,
                 categoria: body.categoria,
                 subcategoria: body.subcategoria,
+                subconjunto: body.subconjunto,
                 statusSuprimento: body.statusSuprimento,
                 valorUnitario: newVUnit,
                 custoTotal: newVUnit * newQtd,

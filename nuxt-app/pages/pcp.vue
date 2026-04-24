@@ -7,20 +7,19 @@
       icon="mdi-factory"
     />
 
-    <!-- Dashboard Resumo -->
-    <v-row class="mb-4">
-      <v-col cols="12" sm="6" md="3" v-for="card in dashboardCards" :key="card.title">
-        <v-card variant="elevated" :color="card.color" theme="dark" class="pa-4">
-          <div class="d-flex justify-space-between align-center">
-            <div>
-              <div class="text-overline mb-1">{{ card.title }}</div>
-              <div class="text-h4 font-weight-black">{{ card.value }}</div>
-            </div>
-            <v-icon size="48" style="opacity: 0.3">{{ card.icon }}</v-icon>
-          </div>
-        </v-card>
-      </v-col>
-    </v-row>
+
+
+    <!-- Navegação por Abas -->
+    <v-tabs v-model="activeTab" color="primary" class="mb-4" @update:model-value="loadOrdens">
+      <v-tab value="ativas">
+        <v-icon start>mdi-progress-wrench</v-icon>
+        Ativas
+      </v-tab>
+      <v-tab value="finalizadas">
+        <v-icon start>mdi-check-circle-outline</v-icon>
+        Finalizadas
+      </v-tab>
+    </v-tabs>
 
     <!-- Filtros -->
     <v-card variant="outlined" class="mb-4">
@@ -41,8 +40,8 @@
           <v-col cols="12" sm="4" md="3">
             <v-select
               v-model="filters.status"
-              :items="['NAO_INICIADO', 'EM_PRODUCAO', 'CONCLUIDA']"
-              label="Status"
+              :items="['NAO_INICIADO', 'EM_ANDAMENTO', 'AGUARDANDO', 'CONCLUIDO', 'BLOQUEADO', 'CANCELADO']"
+              label="Status Específico"
               variant="outlined"
               density="comfortable"
               clearable
@@ -104,14 +103,6 @@
         </template>
 
         <template v-slot:item.acoes="{ item }">
-          <v-btn
-            icon="mdi-printer"
-            variant="text"
-            size="small"
-            color="primary"
-            title="Imprimir OS"
-            @click="printOS(item)"
-          ></v-btn>
           <v-btn
             prepend-icon="mdi-email"
             variant="tonal"
@@ -210,6 +201,28 @@
           <v-btn icon="mdi-close" @click="dialogOS.show = false"></v-btn>
           <v-toolbar-title>Visualização da Ordem de Serviço</v-toolbar-title>
           <v-spacer></v-spacer>
+          
+          <div style="width: 200px" class="mr-4 mt-4" v-if="dialogOS.data">
+            <v-select
+              v-model="dialogOS.data.status"
+              :items="[
+                { title: 'Não Iniciado', value: 'NAO_INICIADO' },
+                { title: 'Aguardando Orç.', value: 'AGUARDANDO' },
+                { title: 'Em Andamento', value: 'EM_ANDAMENTO' },
+                { title: 'Concluído', value: 'CONCLUIDO' },
+                { title: 'Bloqueado', value: 'BLOQUEADO' },
+                { title: 'Cancelado', value: 'CANCELADO' }
+              ]"
+              label="Alterar Status"
+              variant="solo"
+              density="compact"
+              bg-color="white"
+              flat
+              hide-details
+              @update:model-value="updateOSStatus"
+            ></v-select>
+          </div>
+
           <v-btn prepend-icon="mdi-printer" variant="flat" color="white" @click="doPrint">
             Imprimir Agora (PDF)
           </v-btn>
@@ -289,6 +302,7 @@ const route = useRoute()
 const ordens = ref([])
 const loading = ref(false)
 const types = ref([])
+const activeTab = ref('ativas')
 const filters = ref({
   tipo: null,
   status: null
@@ -329,19 +343,7 @@ const headers = [
   { title: 'Ações', key: 'acoes', align: 'center', sortable: false }
 ]
 
-const dashboardCards = computed(() => {
-  const all = ordens.value
-  const corte = all.filter(o => o.tipo.includes('CORTE')).length
-  const dobra = all.filter(o => o.tipo.includes('DOBRA')).length
-  const cald = all.filter(o => o.tipo.includes('CALDEIRARIA')).length
 
-  return [
-    { title: 'Total de OS', value: all.length, icon: 'mdi-file-tree', color: 'primary' },
-    { title: 'Corte', value: corte, icon: 'mdi-laser-pointer', color: 'indigo' },
-    { title: 'Dobra', value: dobra, icon: 'mdi-angle-acute', color: 'orange' },
-    { title: 'Caldeiraria', value: cald, icon: 'mdi-hammer-wrench', color: 'brown' }
-  ]
-})
 
 const selectedSupplierEmail = computed(() => {
   const f = fornecedores.value.find(forn => forn.id === dialogBudget.value.fornecedorId)
@@ -375,13 +377,32 @@ const loadOrdens = async () => {
   try {
     const params = {}
     if (filters.value.tipo) params.tipo = filters.value.tipo
-    if (filters.value.status) params.status = filters.value.status
-    if (route.query.opId) params.opId = route.query.opId
     
-    // Usar params diretamente no $fetch para evitar problemas de query string malformada
-    ordens.value = await $fetch('/api/pcp/ordens-servico', {
+    // Se tiver filtro de status explícito, usa ele. Se não, usa a lógica da aba.
+    if (filters.value.status) {
+      params.status = filters.value.status
+    } else {
+      if (activeTab.value === 'finalizadas') {
+        // Para o histórico, buscamos tanto os concluídos quanto os cancelados
+        // Se o backend não suportar lista de status, filtramos no frontend
+        params.status = undefined // buscar todos e filtrar abaixo
+      } else {
+        // Aba de Ativas
+      }
+    }
+    
+    let data = await $fetch('/api/pcp/ordens-servico', {
       params
     })
+
+    // Filtro adicional no frontend baseado na aba
+    if (activeTab.value === 'finalizadas') {
+      data = data.filter(os => os.status === 'CONCLUIDO' || os.status === 'CANCELADO')
+    } else if (activeTab.value === 'ativas' && !filters.value.status) {
+      data = data.filter(os => os.status !== 'CONCLUIDO' && os.status !== 'CANCELADO')
+    }
+
+    ordens.value = data
   } catch (error) {
     console.error('Erro detalhado no carregamento de OS:', error)
     const message = error.data?.message || error.data?.statusMessage || error.message || 'Erro de conexão/servidor'
@@ -474,19 +495,35 @@ const viewOS = async (item) => {
   }
 }
 
-const printOS = (item) => {
-  viewOS(item)
-}
-
 const doPrint = () => {
   window.print()
 }
 
+const updateOSStatus = async (newStatus) => {
+  if (!dialogOS.value.data) return
+  
+  try {
+    await $fetch(`/api/pcp/ordens-servico/${dialogOS.value.data.id}`, {
+      method: 'PATCH',
+      body: { status: newStatus }
+    })
+    showSnackbar('Status da OS atualizado com sucesso!', 'success')
+    await loadOrdens()
+  } catch (error) {
+    showSnackbar('Erro ao atualizar status: ' + (error.data?.message || error.message), 'error')
+  }
+}
+
 const getStatusColor = (status) => {
   const colors = {
-    NAO_INICIADO: 'grey',
-    EM_PRODUCAO: 'blue',
-    CONCLUIDA: 'success'
+    NAO_INICIADO: 'grey-lighten-1',
+    AGUARDANDO: 'amber-darken-2',
+    EM_ANDAMENTO: 'light-blue-darken-1',
+    EM_PRODUCAO: 'light-blue-darken-1',
+    CONCLUIDO: 'success',
+    CONCLUIDA: 'success',
+    BLOQUEADO: 'deep-orange-darken-4',
+    CANCELADO: 'blue-grey-darken-4'
   }
   return colors[status] || 'grey'
 }

@@ -78,6 +78,7 @@
         </v-badge>
       </v-tab>
       <v-tab value="pedidos">Pedidos de Compra (OCs)</v-tab>
+      <v-tab value="finalizadas">Finalizadas / Recebidas</v-tab>
     </v-tabs>
 
     <v-tabs-window v-model="tab">
@@ -133,9 +134,58 @@
             </template>
             <template v-slot:item.acoes_oc="{ item }">
               <v-btn
+                icon="mdi-truck-check"
+                variant="text"
+                color="success"
+                size="small"
+                @click="abrirRecebimento(item)"
+                title="Registrar Recebimento (NF)"
+              ></v-btn>
+              <v-btn
                 icon="mdi-printer"
                 variant="text"
                 color="primary"
+                size="small"
+                @click="prepararImpressao(item)"
+                title="Imprimir OC"
+              ></v-btn>
+            </template>
+          </v-data-table>
+        </v-card>
+      </v-tabs-window-item>
+
+      <v-tabs-window-item value="finalizadas">
+        <v-card variant="outlined">
+          <v-data-table
+            :headers="headers"
+            :items="finalizedOrders"
+            :loading="loading"
+            hover
+          >
+            <template v-slot:item.numero="{ item }">
+              <div class="font-weight-bold">{{ item.numero }}</div>
+            </template>
+            <template v-slot:item.op="{ item }">
+              <span class="text-primary font-weight-bold">#{{ item.op?.numeroOP }}</span>
+            </template>
+            <template v-slot:item.status="{ item }">
+              <v-chip color="success" size="small" variant="tonal">
+                RECEBIDA
+              </v-chip>
+            </template>
+            <template v-slot:item.acoes_oc="{ item }">
+              <v-btn
+                icon="mdi-eye"
+                variant="text"
+                color="primary"
+                size="small"
+                @click="verDetalhesOC(item)"
+                title="Ver Detalhes"
+              ></v-btn>
+              <v-btn
+                icon="mdi-printer"
+                variant="text"
+                color="grey"
                 size="small"
                 @click="prepararImpressao(item)"
                 title="Imprimir OC"
@@ -202,12 +252,46 @@
             class="mb-4"
             title="Instruções para Compras"
           >
-            Negocie os itens abaixo no SigeCloud e, após gerar a Ordem de Compra formal, vincule o número e a data de entrega aqui no sistema.
+            Selecione o fornecedor vencedor e preencha os valores negociados. Ao emitir a OC, os status de produção da peça na BOM serão atualizados automaticamente.
           </v-alert>
+
+          <v-row dense>
+             <v-col cols="12" md="8">
+               <v-select
+                 v-model="dialogDetalhes.fornecedorId"
+                 :items="fornecedores"
+                 item-title="nome"
+                 item-value="id"
+                 label="Fornecedor Vencedor"
+                 variant="outlined"
+                 density="compact"
+                 color="primary"
+                 prepend-inner-icon="mdi-badge-account"
+               ></v-select>
+             </v-col>
+             <v-col cols="12" md="4">
+               <v-text-field
+                 v-model="dialogDetalhes.dataPrevisao"
+                 label="Previsão de Entrega"
+                 type="date"
+                 variant="outlined"
+                 density="compact"
+               ></v-text-field>
+             </v-col>
+          </v-row>
 
           <v-table density="compact" class="mb-4">
             <thead>
               <tr>
+                <th style="width: 40px;">
+                  <v-checkbox-btn
+                    v-model="selecionarTodosItens"
+                    color="white"
+                    density="compact"
+                    hide-details
+                    @change="toggleSelectAll"
+                  ></v-checkbox-btn>
+                </th>
                 <th class="text-left font-weight-bold">Item / Descrição</th>
                 <th class="text-center font-weight-bold" style="width: 80px;">Qtd</th>
                 <th class="text-center font-weight-bold" style="width: 120px;">Vlr. Unit (R$)</th>
@@ -217,7 +301,15 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="item in dialogDetalhes.requisicao.itens" :key="item.id">
+              <tr v-for="item in dialogDetalhes.requisicao.itens" :key="item.id" :class="{'bg-blue-lighten-5': item.selected}">
+                <td>
+                  <v-checkbox-btn
+                    v-model="item.selected"
+                    color="primary"
+                    density="compact"
+                    hide-details
+                  ></v-checkbox-btn>
+                </td>
                 <td>
                   <div class="font-weight-bold">{{ item.peca?.codigo || '-' }}</div>
                   <div class="text-caption text-grey">{{ item.descricao }}</div>
@@ -320,13 +412,7 @@
               ></v-text-field>
             </v-col>
             <v-col cols="12" md="3">
-              <v-text-field
-                v-model="dialogDetalhes.dataPrevisao"
-                label="Previsão de Entrega"
-                type="date"
-                variant="outlined"
-                density="compact"
-              ></v-text-field>
+              <!-- Removido redundante -->
             </v-col>
             <v-col cols="12" md="3" class="text-right">
               <div class="text-overline">Total do Pedido</div>
@@ -347,14 +433,16 @@
           <v-spacer></v-spacer>
           <v-btn variant="text" @click="dialogDetalhes.show = false">Desistir</v-btn>
           <v-btn
-            color="success"
+            v-if="temItensSelecionados"
+            :color="todosItensSelecionados ? 'success' : 'indigo'"
             variant="flat"
             :loading="saving"
             @click="emitirOC"
-            prepend-icon="mdi-file-check"
+            :prepend-icon="todosItensSelecionados ? 'mdi-file-check' : 'mdi-content-cut'"
           >
-            Emitir Ordem de Compra
+            {{ todosItensSelecionados ? 'Emitir Ordem de Compra' : 'Emitir OC Parcial (itens marcados)' }}
           </v-btn>
+          <v-btn v-else disabled variant="tonal">Selecione itens</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -533,6 +621,110 @@
       </v-card>
     </v-dialog>
 
+    <!-- Diálogo de Recebimento de Materiais (Almoxarifado) -->
+    <v-dialog v-model="dialogRecebimento.show" max-width="800px">
+      <v-card>
+        <v-card-title class="bg-success text-white d-flex justify-space-between align-center">
+          <span>Conferência de Recebimento</span>
+          <v-chip color="white" variant="flat" size="small">{{ dialogRecebimento.data.numero }}</v-chip>
+        </v-card-title>
+        <v-card-text class="pa-4">
+          <div class="d-flex justify-space-between mb-4">
+            <div>
+              <div class="text-caption text-grey">Fornecedor</div>
+              <div class="text-subtitle-1 font-weight-bold">{{ dialogRecebimento.data.fornecedor }}</div>
+            </div>
+            <div style="width: 200px">
+              <v-text-field
+                v-model="dialogRecebimento.data.numeroNF"
+                label="Nota Fiscal (NF)"
+                variant="outlined"
+                density="compact"
+                hide-details
+                prepend-inner-icon="mdi-file-document-outline"
+                placeholder="000.000.000"
+              ></v-text-field>
+            </div>
+            <div style="width: 180px">
+              <v-text-field
+                v-model="dialogRecebimento.data.dataEntregaReal"
+                label="Data"
+                type="date"
+                variant="outlined"
+                density="compact"
+                hide-details
+              ></v-text-field>
+            </div>
+          </div>
+
+          <v-table density="compact" class="border rounded mb-4">
+            <thead>
+              <tr class="bg-grey-lighten-4">
+                <th class="text-left">Item / Código</th>
+                <th class="text-center">Qtd Pedida</th>
+                <th class="text-center">Já Recebido</th>
+                <th class="text-center" style="width: 120px;">Qtd a Entregar</th>
+                <th class="text-right">Saldo</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in dialogRecebimento.data.itens" :key="item.id">
+                <td>
+                  <div class="font-weight-bold">{{ item.peca?.codigo || '-' }}</div>
+                  <div class="text-caption text-truncate" style="max-width: 200px">{{ item.descricao }}</div>
+                </td>
+                <td class="text-center">{{ item.quantidade }}</td>
+                <td class="text-center">
+                  <v-chip size="x-small" :color="item.qtdRecebida > 0 ? 'success' : 'grey'">
+                    {{ item.qtdRecebida }}
+                  </v-chip>
+                </td>
+                <td>
+                  <v-text-field
+                    v-model.number="item.qtdAchegada"
+                    type="number"
+                    variant="outlined"
+                    density="compact"
+                    hide-details
+                    :max="item.quantidade - item.qtdRecebida"
+                    min="0"
+                    bg-color="green-lighten-5"
+                    class="text-center"
+                  ></v-text-field>
+                </td>
+                <td class="text-right text-caption" :class="item.quantidade - item.qtdRecebida - (item.qtdAchegada || 0) > 0 ? 'text-orange-darken-2' : 'text-success'">
+                  {{ item.quantidade - item.qtdRecebida - (item.qtdAchegada || 0) }} pend.
+                </td>
+              </tr>
+            </tbody>
+          </v-table>
+
+          <v-alert
+            v-if="temPendenciasNoRecebimento"
+            type="warning"
+            variant="tonal"
+            density="compact"
+            icon="mdi-alert-circle"
+          >
+            Atenção: Nem todos os itens serão recebidos totalmente. O pedido continuará como <b>RECEBIDO PARCIAL</b>.
+          </v-alert>
+        </v-card-text>
+        <v-card-actions class="pa-4 bg-grey-lighten-4">
+          <v-spacer></v-spacer>
+          <v-btn variant="text" @click="dialogRecebimento.show = false">Cancelar</v-btn>
+          <v-btn 
+            color="success" 
+            variant="flat" 
+            :loading="saving" 
+            @click="confirmarRecebimento"
+            prepend-icon="mdi-check-all"
+          >
+            Confirmar Recebimento
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <v-snackbar v-model="snackbar.show" :color="snackbar.color">{{ snackbar.text }}</v-snackbar>
   </div>
 </template>
@@ -557,6 +749,13 @@ const activeOrders = computed(() => {
     o.status !== 'SOLICITADA' && 
     o.status !== 'RECEBIDA_TOTAL' && 
     o.status !== 'CANCELADA'
+  )
+})
+
+const finalizedOrders = computed(() => {
+  return compras.value.filter(o => 
+    o.status === 'RECEBIDA_TOTAL' || 
+    o.status === 'CANCELADA'
   )
 })
 
@@ -625,6 +824,7 @@ const headers = [
   { title: 'Fornecedor', key: 'fornecedor' },
   { title: 'Previsão de Entrega', key: 'previsao' },
   { title: 'Status', key: 'status' },
+  { title: 'NF', key: 'numeroNF' },
   { title: 'Itens', key: '_count.itens', align: 'center' },
   { title: 'Ações', key: 'acoes_oc', align: 'center', sortable: false }
 ]
@@ -642,13 +842,7 @@ const calculateItemTotal = (item) => {
   return base + ipi
 }
 
-const totalPedidoCalculado = computed(() => {
-  if (!dialogDetalhes.value.requisicao) return 0
-  const itensTotal = dialogDetalhes.value.requisicao.itens.reduce((acc, item) => {
-    return acc + calculateItemTotal(item)
-  }, 0)
-  return itensTotal + (dialogDetalhes.value.valorFrete || 0) - (dialogDetalhes.value.valorDesconto || 0)
-})
+// totalPedidoCalculado agora é declarado mais abaixo para suportar fatiamento (split) de pedidos.
 
 const recacheTotals = () => {
   // Apenas para forçar reatividade se necessário
@@ -749,13 +943,83 @@ const dialogDetalhes = ref({
   dataPrevisao: '',
   valorFrete: 0,
   valorDesconto: 0,
-  observacoes: ''
+  observacoes: '',
+  fornecedorId: null
 })
 
 const dialogVisualizador = ref({
   show: false,
   anexo: null
 })
+
+const dialogRecebimento = ref({
+  show: false,
+  data: { id: null, numero: '', fornecedor: '', numeroNF: '', dataEntregaReal: new Date().toISOString().substr(0, 10), itens: [] }
+})
+
+const temPendenciasNoRecebimento = computed(() => {
+  return dialogRecebimento.value.data.itens.some(i => {
+    const pendente = i.quantidade - i.qtdRecebida - (i.qtdAchegada || 0)
+    return pendente > 0
+  })
+})
+
+const abrirRecebimento = (item) => {
+  dialogRecebimento.value = {
+    show: true,
+    data: { 
+      id: item.id, 
+      numero: item.numero, 
+      fornecedor: item.fornecedor, 
+      numeroNF: item.numeroNF || '', 
+      dataEntregaReal: new Date().toISOString().substr(0, 10),
+      itens: JSON.parse(JSON.stringify(item.itens)).map(i => ({
+        ...i,
+        qtdAchegada: i.quantidade - (i.qtdRecebida || 0) // Sugere o saldo total
+      }))
+    }
+  }
+}
+
+const confirmarRecebimento = async () => {
+  if (!dialogRecebimento.value.data.numeroNF) {
+    showSnackbar('Por favor, informe o número da NF', 'warning')
+    return
+  }
+
+  const itensRecebidos = dialogRecebimento.value.data.itens
+    .filter(i => i.qtdAchegada > 0)
+    .map(i => ({ id: i.id, qtdEntregue: i.qtdAchegada }))
+
+  if (itensRecebidos.length === 0) {
+    showSnackbar('Informe a quantidade recebida de pelo menos um item', 'warning')
+    return
+  }
+  
+  saving.value = true
+  try {
+    const statusFinal = temPendenciasNoRecebimento.value ? 'RECEBIDA_PARCIAL' : 'RECEBIDA_TOTAL'
+    
+    await $fetch('/api/compras', {
+      method: 'PUT',
+      body: {
+        id: dialogRecebimento.value.data.id,
+        status: statusFinal,
+        numeroNF: dialogRecebimento.value.data.numeroNF,
+        dataEntregaReal: dialogRecebimento.value.data.dataEntregaReal,
+        itensRecebidos
+      },
+      headers: authHeaders.value
+    })
+    showSnackbar(statusFinal === 'RECEBIDA_TOTAL' ? 'Recebimento TOTAL concluído!' : 'Recebimento PARCIAL registrado!')
+    dialogRecebimento.value.show = false
+    await loadCompras()
+  } catch (error) {
+    showSnackbar('Erro ao registrar recebimento', 'error')
+  } finally {
+    saving.value = false
+  }
+}
 
 const visualizarAnexo = (anexo) => {
   dialogVisualizador.value = {
@@ -805,20 +1069,50 @@ const excluirAnexo = async (compraId, anexoId) => {
     
     dialogDetalhes.value.requisicao.anexos = dialogDetalhes.value.requisicao.anexos.filter(a => a.id !== anexoId)
     showSnackbar('Anexo removido.')
-  } catch (error) {
-    showSnackbar('Erro ao remover anexo', 'error')
+} finally {
+    saving.value = false
   }
 }
 
-const verDetalhesRequisicao = (req) => {
+const totalPedidoCalculado = computed(() => {
+  if (!dialogDetalhes.value.requisicao) return 0
+  const itens = dialogDetalhes.value.requisicao.itens.filter(i => i.selected)
+  const itensSum = itens.reduce((acc, item) => acc + calculateItemTotal(item), 0)
+  return itensSum + (Number(dialogDetalhes.value.valorFrete) || 0) - (Number(dialogDetalhes.value.valorDesconto) || 0)
+})
+
+const selecionarTodosItens = ref(true)
+
+const toggleSelectAll = () => {
+  if (!dialogDetalhes.value.requisicao) return
+  dialogDetalhes.value.requisicao.itens.forEach(i => {
+    i.selected = selecionarTodosItens.value
+  })
+}
+
+const temItensSelecionados = computed(() => {
+  return dialogDetalhes.value.requisicao?.itens?.some(i => i.selected) || false
+})
+
+const todosItensSelecionados = computed(() => {
+  const itens = dialogDetalhes.value.requisicao?.itens || []
+  return itens.length > 0 && itens.every(i => i.selected)
+})
+
+const verDetalhesRequisicao = (item) => {
   dialogDetalhes.value = {
     show: true,
-    requisicao: JSON.parse(JSON.stringify(req)), // Clone para edição
-    dataPrevisao: '',
-    valorFrete: 0,
-    valorDesconto: 0,
-    observacoes: ''
+    requisicao: JSON.parse(JSON.stringify(item)),
+    dataPrevisao: item.dataPrevisaoEntrega ? new Date(item.dataPrevisaoEntrega).toISOString().substr(0, 10) : '',
+    valorFrete: item.valorFrete || 0,
+    valorDesconto: item.valorDesconto || 0,
+    observacoes: item.observacoes || '',
+    fornecedorId: item.fornecedorId || null
   }
+  // Inicializa todos como selecionados
+  dialogDetalhes.value.requisicao.itens.forEach(i => i.selected = true)
+  selecionarTodosItens.value = true
+  loadFornecedores()
 }
 
 const emitirOC = async () => {
@@ -826,19 +1120,32 @@ const emitirOC = async () => {
     showSnackbar('Por favor, informe a previsão de entrega', 'warning')
     return
   }
+
+  if (!dialogDetalhes.value.fornecedorId) {
+    showSnackbar('Por favor, selecione o fornecedor vencedor', 'warning')
+    return
+  }
+
+  const selectedItens = dialogDetalhes.value.requisicao.itens.filter(i => i.selected)
   
   saving.value = true
   try {
-    // 1. Atualizar a Compra com os novos valores e status
+    const isSplit = !todosItensSelecionados.value
+    const fornecedorObj = fornecedores.value.find(f => f.id === dialogDetalhes.value.fornecedorId)
+
     const body = {
       id: dialogDetalhes.value.requisicao.id,
       status: 'PEDIDO_EMITIDO',
+      split: isSplit,
+      splitItemIds: isSplit ? selectedItens.map(i => i.id) : undefined,
+      fornecedor: fornecedorObj?.nome || 'Desconhecido',
+      fornecedorId: dialogDetalhes.value.fornecedorId,
       valorTotal: totalPedidoCalculado.value,
       valorFrete: dialogDetalhes.value.valorFrete,
       valorDesconto: dialogDetalhes.value.valorDesconto,
       observacoes: dialogDetalhes.value.observacoes,
       dataPrevisaoEntrega: dialogDetalhes.value.dataPrevisao,
-      itens: dialogDetalhes.value.requisicao.itens.map(item => ({
+      itens: selectedItens.map(item => ({
         id: item.id,
         valorUnitario: item.valorUnitario,
         aliqIPI: item.aliqIPI,
@@ -855,12 +1162,16 @@ const emitirOC = async () => {
     })
     
     if (response) {
-      showSnackbar('Ordem de Compra emitida com sucesso!')
+      showSnackbar(isSplit ? 'OC Parcial emitida! O restante da REQ continua disponível.' : 'Ordem de Compra emitida com sucesso!')
       dialogDetalhes.value.show = false
       await loadCompras()
       
-      // Abrir para impressão automaticamente?
-      prepararImpressao(response)
+      if (response.newOCId) {
+        // No caso de split, recarrega e talvez devesse imprimir a nova OC?
+         // Por simplicidade, apenas recarregamos.
+      } else {
+        prepararImpressao(response)
+      }
     }
   } catch (error) {
     console.error('Erro ao emitir OC:', error.data || error)
@@ -917,10 +1228,11 @@ const getStatusColor = (status) => {
     PEDIDO_EMITIDO: 'orange',
     APROVADA: 'success',
     COMPRADA: 'orange',
-    ENTREGUE: 'success',
-    CANCELADA: 'red'
+    'RECEBIDA_PARCIAL': '#FF9800',
+    'RECEBIDA_TOTAL': '#4CAF50',
+    'CANCELADA': '#757575'
   }
-  return colors[status] || 'grey'
+  return colors[status] || '#9E9E9E'
 }
 
 const getSuprimentoColor = (status) => {

@@ -271,9 +271,20 @@
                         variant="text" 
                         color="primary"
                         @click="viewOP(op)"
-                        title="Visualizar"
+                        title="Visualizar Detalhes"
                       >
                         <v-icon>mdi-eye</v-icon>
+                      </v-btn>
+
+                      <v-btn 
+                        icon 
+                        size="small" 
+                        variant="text" 
+                        color="indigo"
+                        @click.stop="navigateTo(`/ops/${op.id}/pecas`)"
+                        title="Ver BOM (Lista de Peças)"
+                      >
+                        <v-icon>mdi-format-list-bulleted-type</v-icon>
                       </v-btn>
                       
                       <v-btn 

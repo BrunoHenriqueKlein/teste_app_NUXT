@@ -51,6 +51,7 @@ export default defineEventHandler(async (event) => {
                 const quantidade = parseInt(row.Quantidade || row.quantidade || row.QUANTIDADE || '1')
                 const material = String(row.Material || row.material || row.MATERIAL || '').trim()
                 const subcategoria = String(row.Subcategoria || row.subcategoria || row.SUBCATEGORIA || '').trim()
+                const subconjunto = String(row.Subconjunto || row.subconjunto || row.SUBCONJUNTO || '').trim()
                 const rawCategoria = String(row.Categoria || row.categoria || row.CATEGORIA || 'FABRICADO').trim().toUpperCase()
                 const categoria = rawCategoria === 'COMPRADO' ? 'COMPRADO' : 'FABRICADO'
 
@@ -80,7 +81,8 @@ export default defineEventHandler(async (event) => {
                         quantidade,
                         material,
                         categoria,
-                        subcategoria
+                        subcategoria,
+                        subconjunto
                         // Não sobrescrevemos valorUnitario e custoTotal no update para não apagar custos manuais já definidos
                     },
                     create: {
@@ -91,6 +93,7 @@ export default defineEventHandler(async (event) => {
                         material,
                         categoria,
                         subcategoria,
+                        subconjunto,
                         valorUnitario: vUnit,
                         custoTotal: vUnit ? vUnit * quantidade : null,
                         status: itemEstoque ? 'EM_ESTOQUE' : 'NAO_INICIADA'

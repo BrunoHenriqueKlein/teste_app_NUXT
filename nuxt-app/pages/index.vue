@@ -238,7 +238,22 @@
                     </div>
                   </td>
                   <td class="text-center">
-                    <v-btn icon="mdi-eye-outline" variant="text" color="primary" size="small"></v-btn>
+                    <v-btn 
+                      icon="mdi-eye-outline" 
+                      variant="text" 
+                      color="primary" 
+                      size="small" 
+                      title="Ver Detalhes da OP"
+                      @click.stop="viewOP(op)"
+                    ></v-btn>
+                    <v-btn 
+                      icon="mdi-format-list-bulleted-type" 
+                      variant="text" 
+                      color="indigo" 
+                      size="small" 
+                      title="Ver BOM (Lista de Peças)"
+                      @click.stop="navigateTo(`/ops/${op.id}/pecas`)"
+                    ></v-btn>
                   </td>
                 </tr>
               </tbody>

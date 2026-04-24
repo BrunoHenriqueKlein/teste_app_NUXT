@@ -230,6 +230,7 @@ model Peca {
   material         String?
   categoria        PecaCategoria    @default(FABRICADO)
   subcategoria     String?
+  subconjunto      String?          @map("subconjunto") // Grupo para Kits de Montagem
   statusSuprimento SuprimentoStatus @default(NAO_SOLICITADO)
   valorUnitario    Float?           @map("valor_unitario")
   custoTotal       Float?           @map("custo_total")
@@ -306,6 +307,7 @@ model Fornecedor {
   ordensServico OrdemServico[]
   processos     ProcessoPeca[]
   pecas         Peca[]
+  compras       Compra[]       @relation("FornecedorCompra")
 
   @@map("fornecedores")
 }
@@ -346,20 +348,22 @@ model Compra {
   osId                Int?         @map("os_id")
   numero              String       @unique
   fornecedor          String
+  fornecedorId        Int?         @map("fornecedor_id")
   valorTotal          Float?
   valorFrete          Float?       @default(0) @map("valor_frete")
   valorDesconto       Float?       @default(0) @map("valor_desconto")
-  observacoes         String?      @db.Text
   status              CompraStatus @default(SOLICITADA)
-  dataSolicitacao     DateTime     @default(now())
+  observacoes         String?
+  dataSolicitacao     DateTime     @default(now()) @map("data_solicitacao")
   dataCompra          DateTime?    @map("data_compra")
   dataPrevisaoEntrega DateTime?    @map("data_previsao_entrega")
   dataEntregaReal     DateTime?    @map("data_entrega_real")
   numeroNF            String?      @map("numero_nf")
-  itens               CompraItem[]
-  anexos              CompraAnexo[]
   op                  OP           @relation(fields: [opId], references: [id], onDelete: Cascade)
   os                  OrdemServico? @relation(fields: [osId], references: [id], onDelete: SetNull)
+  fornecedorRef       Fornecedor?  @relation("FornecedorCompra", fields: [fornecedorId], references: [id])
+  itens               CompraItem[]
+  anexos              CompraAnexo[]
 
   @@map("compras")
 }
@@ -376,6 +380,7 @@ model CompraItem {
   valorIPI      Float? @map("valor_ipi")
   valorICMS     Float? @map("valor_icms")
   custoLiquido  Float? @map("custo_liquido")
+  qtdRecebida   Int    @default(0) @map("qtd_recebida")
   compra        Compra @relation(fields: [compraId], references: [id], onDelete: Cascade)
   peca          Peca?  @relation(fields: [pecaId], references: [id], onDelete: SetNull)
 
@@ -448,6 +453,7 @@ enum SuprimentoStatus {
   PARA_COTACAO
   EM_ORCAMENTO
   COMPRADO
+  RECEBIDO_PARCIAL
   RECEBIDO
 }
 
@@ -476,6 +482,7 @@ model ConfigProcessoPadrao {
 model ConfigProcessoPeca {
   id        Int     @id @default(autoincrement())
   nome      String  @unique
+  sigla     String? @db.VarChar(10)
   descricao String?
 
   @@map("config_processos_peca")

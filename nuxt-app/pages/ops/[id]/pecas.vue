@@ -60,21 +60,121 @@
       </template>
     </PageHeader>
 
-    <!-- Resumo do Estoque -->
+    <!-- Balanço Financeiro da OP -->
+    <v-expand-transition>
+      <v-card v-if="custos" variant="outlined" class="mb-4 bg-blue-grey-lighten-5 border-primary">
+        <v-card-text>
+          <div class="d-flex align-center justify-space-between mb-4">
+            <div class="d-flex align-center">
+              <v-icon class="mr-2" color="primary">mdi-finance</v-icon>
+              <h3 class="text-h6 font-weight-bold">Balanço Financeiro da Fabricação</h3>
+            </div>
+            <v-chip :color="custos.resumo.financeiro.statusOrcamento === 'DENTRO' ? 'success' : 'error'" variant="flat">
+              Orçamento: {{ custos.resumo.financeiro.statusOrcamento }}
+            </v-chip>
+          </div>
+
+          <v-row dense>
+            <v-col cols="12" sm="6" md="3">
+              <v-card elevation="0" class="border">
+                <v-card-text class="py-2">
+                  <div class="text-caption text-grey">Orçamento Disponível</div>
+                  <div class="text-h6">R$ {{ custos.op.orcamentoPrevisto?.toFixed(2) || '0.00' }}</div>
+                </v-card-text>
+              </v-card>
+            </v-col>
+            
+            <v-col cols="12" sm="6" md="3">
+              <v-card elevation="0" class="border">
+                <v-card-text class="py-2">
+                  <div class="text-caption text-grey">Custo Líquido Real</div>
+                  <div class="text-h6 text-primary">R$ {{ custos.resumo.totais.liquido.toFixed(2) }}</div>
+                  <div class="text-caption text-success">- R$ {{ custos.resumo.totais.creditosImpostos.toFixed(2) }} em créditos</div>
+                </v-card-text>
+              </v-card>
+            </v-col>
+
+            <v-col cols="12" sm="6" md="3">
+              <v-card elevation="0" class="border">
+                <v-card-text class="py-2">
+                  <div class="text-caption text-grey">Valor de Venda</div>
+                  <div class="text-h6">R$ {{ custos.op.valorVenda?.toFixed(2) || '0.00' }}</div>
+                  <div v-if="custos.op.valorVenda" class="text-caption mt-1 font-weight-medium">
+                    Margem Global: 
+                    <span :class="custos.resumo.financeiro.lucroPrejuizoGlobal >= 0 ? 'text-success' : 'text-error'">
+                      {{ custos.resumo.financeiro.margemGlobalPercentual.toFixed(1) }}%
+                    </span>
+                  </div>
+                </v-card-text>
+              </v-card>
+            </v-col>
+
+            <v-col cols="12" sm="6" md="3">
+              <v-card 
+                elevation="0" 
+                class="border" 
+                :class="custos.resumo.financeiro.lucroPrejuizo >= 0 ? 'bg-green-lighten-5' : 'bg-red-lighten-5'"
+              >
+                <v-card-text class="py-2">
+                  <div class="text-caption text-grey">Lucro / Prejuízo</div>
+                  <div 
+                    class="text-h6 font-weight-bold" 
+                    :class="custos.resumo.financeiro.lucroPrejuizo >= 0 ? 'text-success' : 'text-error'"
+                  >
+                    R$ {{ custos.resumo.financeiro.lucroPrejuizo.toFixed(2) }}
+                  </div>
+                  <div class="text-caption font-weight-bold">Margem: {{ custos.resumo.financeiro.margemPercentual.toFixed(1) }}%</div>
+                </v-card-text>
+              </v-card>
+            </v-col>
+          </v-row>
+        </v-card-text>
+      </v-card>
+    </v-expand-transition>
+
+    <!-- Resumo do Estoque e Prontidão -->
     <v-row class="mb-4">
       <v-col cols="12" md="3">
-        <v-card variant="outlined" class="text-center">
+        <v-card variant="outlined" class="text-center h-100">
           <v-card-text>
-            <div class="text-overline mb-1">Total de Peças</div>
+            <div class="text-overline mb-1">Total de Peças (BOM)</div>
             <div class="text-h4 font-weight-bold">{{ pecas.length }}</div>
+            <div class="text-caption text-grey">Itens cadastrados na engenharia</div>
           </v-card-text>
         </v-card>
       </v-col>
       <v-col cols="12" md="3">
-        <v-card variant="outlined" class="text-center" color="success">
+        <v-card variant="outlined" class="text-center h-100" color="success">
           <v-card-text>
-            <div class="text-overline mb-1">Disponíveis no Estoque</div>
+            <div class="text-overline mb-1">Materiais em Estoque</div>
             <div class="text-h4 font-weight-bold">{{ pecasDisponiveis }}</div>
+            <div class="text-caption">Prontas para uso imediato</div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+      <v-col cols="12" md="6">
+        <v-card variant="elevated" class="text-center h-100 bg-grey-lighten-4" elevation="1">
+          <v-card-text class="d-flex align-center justify-space-around py-2">
+            <div class="text-left">
+              <div class="text-overline mb-0">Prontidão da Máquina</div>
+              <div class="text-h4 font-weight-black" :color="getProntidaoColor">
+                {{ prontidaoGeral }}%
+              </div>
+              <div class="text-subtitle-2 font-weight-bold mt-1" :class="`text-${getProntidaoColor}`">
+                {{ getProntidaoStatus }}
+              </div>
+            </div>
+            <v-progress-circular
+              :model-value="prontidaoGeral"
+              :size="80"
+              :width="12"
+              :color="getProntidaoColor"
+              rotate="270"
+            >
+              <v-icon size="32" :color="getProntidaoColor">
+                {{ prontidaoGeral === 100 ? 'mdi-check-decagram' : 'mdi-cog-play' }}
+              </v-icon>
+            </v-progress-circular>
           </v-card-text>
         </v-card>
       </v-col>
@@ -315,35 +415,44 @@
 
       <!-- Aba 2: Kits de Montagem -->
       <v-tabs-window-item value="kits">
-        <v-row>
-          <v-col cols="12" md="6" v-for="(kit, name) in kitsGrouped" :key="name">
-            <v-card variant="outlined" class="mb-4">
-              <v-card-title class="d-flex justify-space-between align-center">
-                <span>Conjunto: {{ name }}</span>
-                <v-chip :color="kit.progresso === 100 ? 'success' : 'primary'" size="small">
-                  {{ kit.progresso }}% Pronto
+        <v-row class="pa-2">
+          <v-col cols="12" md="6" lg="4" v-for="(kit, name) in kitsGrouped" :key="name">
+            <v-card variant="outlined" class="mb-4 overflow-hidden border-2" :class="kit.progresso === 100 ? 'border-success' : ''">
+              <v-card-title class="d-flex justify-space-between align-center bg-grey-lighten-4 pa-3">
+                <div class="d-flex align-center">
+                  <v-icon :color="kit.progresso === 100 ? 'success' : 'primary'" class="mr-2">
+                    {{ kit.progresso === 100 ? 'mdi-package-variant-closed' : 'mdi-package-variant' }}
+                  </v-icon>
+                  <span class="text-subtitle-1 font-weight-bold">{{ name }}</span>
+                </div>
+                <v-chip :color="kit.progresso === 100 ? 'success' : 'primary'" size="small" variant="flat">
+                  {{ kit.progresso }}%
                 </v-chip>
               </v-card-title>
-              <v-card-text>
-                <v-progress-linear
-                  :model-value="kit.progresso"
-                  :color="kit.progresso === 100 ? 'success' : 'primary'"
-                  height="10"
-                  rounded
-                  class="mb-4"
-                ></v-progress-linear>
+              
+              <v-progress-linear
+                :model-value="kit.progresso"
+                :color="kit.progresso === 100 ? 'success' : 'primary'"
+                height="6"
+              ></v-progress-linear>
 
-                <v-list density="compact">
-                  <v-list-item v-for="peca in kit.itens" :key="peca.id" class="px-0">
+              <v-card-text class="pa-0" style="max-height: 300px; overflow-y: auto;">
+                <v-list density="compact" class="py-0">
+                  <v-list-item v-for="peca in kit.itens" :key="peca.id" class="border-bottom py-1">
                     <template v-slot:prepend>
-                      <v-icon :color="pecaPronta(peca) ? 'success' : 'grey'" size="small">
+                      <v-icon :color="pecaPronta(peca) ? 'success' : 'grey-lighten-1'" size="18">
                         {{ pecaPronta(peca) ? 'mdi-check-circle' : 'mdi-circle-outline' }}
                       </v-icon>
                     </template>
-                    <v-list-item-title class="text-body-2">{{ peca.codigo }} - {{ peca.descricao }}</v-list-item-title>
+                    <v-list-item-title class="text-caption font-weight-medium">
+                      {{ peca.codigo }}
+                    </v-list-item-title>
+                    <v-list-item-subtitle class="text-truncate" style="font-size: 10px;">
+                      {{ peca.descricao }}
+                    </v-list-item-subtitle>
                     <template v-slot:append>
-                      <v-chip size="x-small" :color="getStatusColor(peca.statusSuprimento)" variant="tonal">
-                        {{ peca.statusSuprimento }}
+                      <v-chip size="x-small" :color="getSuprimentoColor(peca.statusSuprimento)" variant="tonal" class="text-uppercase" style="font-size: 8px;">
+                        {{ peca.statusSuprimento?.replace('_', ' ') }}
                       </v-chip>
                     </template>
                   </v-list-item>
@@ -363,11 +472,26 @@
           <v-text-field v-model="dialogPeca.data.codigo" label="Código" variant="outlined"></v-text-field>
           <v-text-field v-model="dialogPeca.data.descricao" label="Descrição" variant="outlined"></v-text-field>
           <v-row>
-            <v-col cols="6">
+            <v-col cols="4">
               <v-text-field v-model.number="dialogPeca.data.quantidade" label="Quantidade" type="number" variant="outlined" density="compact"></v-text-field>
             </v-col>
-            <v-col cols="6">
+            <v-col cols="8">
               <v-text-field v-model="dialogPeca.data.material" label="Material" variant="outlined" density="compact"></v-text-field>
+            </v-col>
+          </v-row>
+          <v-row>
+            <v-col cols="12">
+              <v-combobox
+                v-model="dialogPeca.data.subconjunto"
+                :items="subconjuntosExistentes"
+                label="Subconjunto (Kit de Montagem)"
+                variant="outlined"
+                density="compact"
+                hide-details
+                placeholder="Ex: Eixo X, Gabinete, Painel Elétrico..."
+                hint="As peças serão agrupadas nos Kits de Montagem baseadas neste nome"
+                persistent-hint
+              ></v-combobox>
             </v-col>
           </v-row>
           <v-row>
@@ -445,95 +569,140 @@
     </v-dialog>
 
     <!-- Diálogo de Processos -->
-    <v-dialog v-model="dialogProcessos.show" max-width="700px">
+    <v-dialog v-model="dialogProcessos.show" max-width="1200px" scrollable>
       <v-card>
-        <v-card-title class="d-flex justify-space-between align-center pa-4">
-          <span class="text-h5">Processos da Peça: {{ dialogProcessos.peca?.codigo }}</span>
-          <v-btn icon="mdi-close" variant="text" @click="dialogProcessos.show = false"></v-btn>
+        <v-card-title class="d-flex justify-space-between align-center px-6 py-4 bg-primary text-white">
+          <div class="d-flex align-center">
+            <v-icon color="white" class="mr-2">mdi-cogs</v-icon>
+            <span class="text-h6 font-weight-bold">Fluxo de Processos: {{ dialogProcessos.peca?.codigo }}</span>
+          </div>
+          <v-btn icon="mdi-close" variant="text" color="white" @click="dialogProcessos.show = false"></v-btn>
         </v-card-title>
-        <v-card-text>
-          <p class="text-body-2 mb-4">{{ dialogProcessos.peca?.descricao }}</p>
-          
-          <v-list density="compact">
-            <v-list-item v-for="(proc, index) in dialogProcessos.items" :key="index" class="pa-0 mb-2">
-              <v-row dense align="center">
-                <v-col cols="4">
-                  <v-combobox
-                    v-model="proc.nome"
-                    :items="processosDisponiveis"
-                    label="Nome do Processo"
-                    placeholder="Selecione ou digite"
-                    variant="outlined"
-                    density="compact"
-                    hide-details
-                  ></v-combobox>
-                </v-col>
-                <v-col cols="2">
-                  <v-select
-                    v-model="proc.status"
-                    :items="['NAO_INICIADO', 'EM_PRODUCAO', 'CONCLUIDA']"
-                    label="Status"
-                    variant="outlined"
-                    density="compact"
-                    hide-details
-                  ></v-select>
-                </v-col>
-                <v-col cols="3">
-                  <v-select
-                    v-model="proc.fornecedorId"
-                    :items="fornecedores"
-                    item-title="nome"
-                    item-value="id"
-                    label="Fornecedor / Setor"
-                    variant="outlined"
-                    density="compact"
-                    hide-details
-                    clearable
-                  ></v-select>
-                </v-col>
-                <v-col cols="2">
-                  <v-text-field
-                    v-model.number="proc.valorCusto"
-                    label="Custo (R$)"
-                    type="number"
-                    variant="outlined"
-                    density="compact"
-                    hide-details
-                  ></v-text-field>
-                </v-col>
-                <v-col cols="1" class="text-right">
-                  <v-btn icon="mdi-delete" color="error" variant="text" size="small" @click="removeProcess(index)"></v-btn>
-                </v-col>
-              </v-row>
-            </v-list-item>
-          </v-list>
+        
+        <v-divider></v-divider>
 
-          <v-btn
-            v-if="hasPermission('Peças', 'canEdit')"
-            prepend-icon="mdi-plus"
-            variant="text"
-            color="primary"
-            class="mt-2"
-            @click="addProcess"
-          >
-            Adicionar Processo
-          </v-btn>
+        <v-card-text class="pa-6 bg-grey-lighten-4" style="height: 60vh;">
+          <div class="mb-4">
+            <div class="text-subtitle-1 font-weight-black">{{ dialogProcessos.peca?.descricao }}</div>
+            <div class="text-caption text-grey-darken-1">Defina a sequência de fabricação ou serviços externos para este item.</div>
+          </div>
+
+          <div v-if="dialogProcessos.items.length === 0" class="text-center py-10">
+            <v-icon size="64" color="grey-lighten-1">mdi-tray-plus</v-icon>
+            <p class="text-grey">Nenhum processo cadastrado para esta peça.</p>
+          </div>
+          
+          <v-row v-else>
+            <v-col cols="12" v-for="(proc, index) in dialogProcessos.items" :key="index">
+              <v-card variant="outlined" class="rounded-lg" :style="{ borderLeft: `10px solid ${getStatusColor(proc.status)}` }" elevation="1">
+                <v-card-text class="pa-4">
+                  <v-row dense>
+                    <v-col cols="12" md="4">
+                      <v-combobox
+                        v-model="proc.nome"
+                        :items="processosDisponiveis"
+                        label="Etapa / Processo"
+                        placeholder="Ex: Corte Laser, Dobra, Usinagem..."
+                        variant="outlined"
+                        density="compact"
+                        :prefix="`${index + 1}. `"
+                      ></v-combobox>
+                    </v-col>
+                    <v-col cols="12" md="2">
+                      <v-select
+                        v-model="proc.status"
+                        :items="[
+                          { title: 'Não Iniciado', value: 'NAO_INICIADO' },
+                          { title: 'Em Andamento', value: 'EM_ANDAMENTO' },
+                          { title: 'Concluído', value: 'CONCLUIDO' }
+                        ]"
+                        label="Status"
+                        variant="outlined"
+                        density="compact"
+                      >
+                        <template v-slot:selection="{ item }">
+                          <v-chip :color="getStatusColor(item.value)" size="x-small" label variant="flat" class="text-white">
+                            {{ item.title }}
+                          </v-chip>
+                        </template>
+                      </v-select>
+                    </v-col>
+                    <v-col cols="12" md="3">
+                      <v-select
+                        v-model="proc.fornecedorId"
+                        :items="fornecedores"
+                        item-title="nome"
+                        item-value="id"
+                        label="Responsável / Fornecedor"
+                        variant="outlined"
+                        density="compact"
+                        placeholder="Setor interno ou Terceiro"
+                        clearable
+                      >
+                      </v-select>
+                    </v-col>
+                    <v-col cols="12" md="2">
+                      <v-text-field
+                        v-model.number="proc.valorCusto"
+                        label="Custo Serv."
+                        type="number"
+                        variant="outlined"
+                        density="compact"
+                        prefix="R$"
+                        placeholder="0,00"
+                      ></v-text-field>
+                    </v-col>
+                    <v-col cols="12" md="1" class="d-flex align-center justify-end">
+                      <v-btn
+                        icon="mdi-delete-outline"
+                        color="error"
+                        variant="text"
+                        size="small"
+                        title="Remover etapa"
+                        @click="removeProcess(index)"
+                      ></v-btn>
+                    </v-col>
+                  </v-row>
+                </v-card-text>
+              </v-card>
+            </v-col>
+          </v-row>
+
+          <div class="d-flex justify-center mt-4">
+            <v-btn
+              v-if="hasPermission('Peças', 'canEdit')"
+              prepend-icon="mdi-plus-circle"
+              variant="tonal"
+              color="primary"
+              rounded="pill"
+              @click="addProcess"
+            >
+              Adicionar Nova Etapa
+            </v-btn>
+          </div>
         </v-card-text>
+
+        <v-divider></v-divider>
+        
         <v-card-actions class="pa-4">
           <v-spacer></v-spacer>
-          <v-btn variant="text" @click="dialogProcessos.show = false">Cancelar</v-btn>
+          <v-btn variant="text" @click="dialogProcessos.show = false">Fechar</v-btn>
           <v-btn
             v-if="hasPermission('Peças', 'canEdit')"
-            color="primary"
+            color="success"
             variant="flat"
+            size="large"
+            rounded="lg"
             :loading="savingProcessos"
             @click="saveProcessos"
+            prepend-icon="mdi-content-save-check"
           >
-            Salvar Processos
+            Salvar Fluxo
           </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
+
 
     <!-- Hidden File Input for Drawing -->
     <input
@@ -570,6 +739,7 @@ const loadingOS = ref(false)
 const loadingRelease = ref(false)
 const selected = ref([])
 const activeTab = ref('bom')
+const custos = ref(null)
 
 const pecaPronta = (peca) => {
   // Peça está pronta se já estiver em estoque ou concluída no fluxo
@@ -599,6 +769,34 @@ const kitsGrouped = computed(() => {
   }
 
   return groups
+})
+
+const prontidaoGeral = computed(() => {
+  if (pecas.value.length === 0) return 0
+  const prontos = pecas.value.filter(p => pecaPronta(p)).length
+  return Math.round((prontos / pecas.value.length) * 100)
+})
+
+const getProntidaoColor = computed(() => {
+  const v = prontidaoGeral.value
+  if (v === 100) return 'success'
+  if (v >= 80) return 'primary'
+  if (v >= 50) return 'orange'
+  return 'error'
+})
+
+const getProntidaoStatus = computed(() => {
+  const v = prontidaoGeral.value
+  if (v === 100) return 'EQUIPAMENTO PRONTO PARA FINALIZAR'
+  if (v >= 80) return 'PRONTO PARA INICIAR MONTAGEM'
+  if (v >= 50) return 'MONTAGEM PARCIAL LIBERADA'
+  if (v > 0) return 'AGUARDANDO MATERIAIS CRÍTICOS'
+  return 'ENGENHARIA PENDENTE'
+})
+
+const subconjuntosExistentes = computed(() => {
+  const subs = pecas.value.map(p => p.subconjunto).filter(Boolean)
+  return [...new Set(subs)]
 })
 
 const loadFornecedores = async () => {
@@ -697,6 +895,14 @@ const loadPecas = async () => {
     showSnackbar('Erro ao carregar peças', 'error')
   } finally {
     loading.value = false
+  }
+}
+
+const loadCustos = async () => {
+  try {
+    custos.value = await $fetch(`/api/ops/${opId}/custos`)
+  } catch (error) {
+    console.error('Erro ao carregar custos:', error)
   }
 }
 
@@ -841,13 +1047,20 @@ const saveProcessos = async () => {
 
 const getStatusColor = (status) => {
   const colors = {
-    NAO_INICIADA: 'grey',
-    EM_PRODUCAO: 'blue',
-    CANCELADA: 'red',
-    CONCLUIDA: 'success',
-    EM_ESTOQUE: 'green-darken-2'
+    // Status de Peça (PecaStatus)
+    NAO_INICIADA: '#757575',
+    EM_ESTOQUE: '#2E7D32',
+    AGUARDANDO_RECEBIMENTO: '#0288D1',
+    // Status de Processo (ProcessoStatus)
+    NAO_INICIADO: '#757575',
+    EM_ANDAMENTO: '#1976D2',
+    EM_PRODUCAO: '#1976D2', 
+    CONCLUIDO: '#4CAF50',
+    CONCLUIDA: '#4CAF50',
+    CANCELADO: '#D32F2F',
+    BLOQUEADO: '#F44336'
   }
-  return colors[status] || 'grey'
+  return colors[status] || '#757575'
 }
 
 const getSuprimentoColor = (status) => {
@@ -976,6 +1189,7 @@ onMounted(() => {
   loadPecas()
   loadFornecedores()
   loadSettings()
+  loadCustos()
 })
 </script>
 

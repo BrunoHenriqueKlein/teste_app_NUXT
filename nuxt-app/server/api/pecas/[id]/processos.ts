@@ -101,11 +101,24 @@ export default defineEventHandler(async (event) => {
                 const qty = pecaAtual?.quantidade || 1;
 
                 const totalProcessos = results.reduce((sum, p) => sum + (p.valorCusto || 0), 0)
+
+                // 5. Sincronizar Status da Peça (BOM) baseado nos Processos + Compras
+                const todosItensPeca = await tx.compraItem.findMany({ where: { pecaId: parseInt(id) } })
+                const totalRecebidoGlobal = todosItensPeca.reduce((sum: number, item: any) => sum + item.qtdRecebida, 0)
+
+                const todosProcessosConcluidos = results.length === 0 || results.every((p: any) => p.status === 'CONCLUIDO')
+                const globalmenteCompleta = totalRecebidoGlobal >= qty
+                const algumRecebido = totalRecebidoGlobal > 0
+
+                const prontaParaEstoque = globalmenteCompleta && todosProcessosConcluidos
+
                 await tx.peca.update({
                     where: { id: parseInt(id) },
-                    data: { 
+                    data: {
                         valorUnitario: totalProcessos,
-                        custoTotal: totalProcessos * qty
+                        custoTotal: totalProcessos * qty,
+                        statusSuprimento: globalmenteCompleta ? 'RECEBIDO' : (algumRecebido ? 'RECEBIDO_PARCIAL' : 'NAO_SOLICITADO'),
+                        status: prontaParaEstoque ? 'EM_ESTOQUE' : (algumRecebido ? 'AGUARDANDO_RECEBIMENTO' : 'NAO_INICIADA')
                     }
                 })
 

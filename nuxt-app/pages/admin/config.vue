@@ -93,6 +93,14 @@
         <v-card-title>Adicionar {{ dialog.title }}</v-card-title>
         <v-card-text>
           <v-text-field v-model="dialog.nome" label="Nome" variant="outlined"></v-text-field>
+          <v-text-field 
+            v-if="dialog.type === 'processo-peca'" 
+            v-model="dialog.sigla" 
+            label="Sigla da OS (3-4 letras)" 
+            variant="outlined"
+            placeholder="Ex: CLD, CRT, USI"
+            maxlength="4"
+          ></v-text-field>
           <v-textarea v-model="dialog.descricao" label="Descrição (Opcional)" variant="outlined" rows="2"></v-textarea>
             <v-text-field 
             v-if="dialog.type === 'processo-op'" 
@@ -212,6 +220,7 @@ const headersProcessoOp = [
 
 const headersProcessoPeca = [
   { title: 'Nome', key: 'nome', sortable: true },
+  { title: 'Sigla (OS)', key: 'sigla', sortable: true },
   { title: 'Descrição', key: 'descricao', sortable: true },
   { title: 'Ações', key: 'acoes', align: 'end', sortable: false }
 ]
@@ -258,7 +267,8 @@ const openDialog = (type) => {
     descricao: '', 
     prazoEstimadoPadrao: null, 
     responsavelId: null,
-    vinculoStatusOP: null 
+    vinculoStatusOP: null,
+    sigla: ''
   }
 }
 
@@ -277,7 +287,8 @@ const editItem = (type, item) => {
     descricao: item.descricao || '', 
     prazoEstimadoPadrao: item.prazoEstimadoPadrao || null,
     responsavelId: item.responsavelId || null,
-    vinculoStatusOP: item.vinculoStatusOP || null
+    vinculoStatusOP: item.vinculoStatusOP || null,
+    sigla: item.sigla || ''
   }
 }
 
@@ -311,7 +322,8 @@ const saveSimple = async () => {
         descricao: dialog.value.descricao,
         prazoEstimadoPadrao: dialog.value.prazoEstimadoPadrao,
         responsavelId: dialog.value.responsavelId,
-        vinculoStatusOP: dialog.value.vinculoStatusOP
+        vinculoStatusOP: dialog.value.vinculoStatusOP,
+        sigla: dialog.value.sigla
       },
       headers: authHeaders.value
     })

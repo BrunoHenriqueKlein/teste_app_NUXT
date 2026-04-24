@@ -1,6 +1,6 @@
-import { defineEventHandler, createError, readBody } from 'h3'
+import { defineEventHandler, createError, readBody, H3Event } from 'h3'
 
-export default defineEventHandler(async (event) => {
+export default defineEventHandler(async (event: H3Event) => {
     const prisma = event.context.prisma
     const method = event.method
 
@@ -15,6 +15,7 @@ export default defineEventHandler(async (event) => {
         return await prisma.configProcessoPeca.create({
             data: {
                 nome: body.nome,
+                sigla: body.sigla,
                 descricao: body.descricao
             }
         })
@@ -26,6 +27,7 @@ export default defineEventHandler(async (event) => {
             where: { id: body.id },
             data: {
                 nome: body.nome,
+                sigla: body.sigla,
                 descricao: body.descricao
             }
         })

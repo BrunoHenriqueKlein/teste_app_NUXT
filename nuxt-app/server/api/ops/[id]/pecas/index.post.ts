@@ -47,6 +47,7 @@ export default defineEventHandler(async (event) => {
                 material: body.material,
                 categoria: body.categoria || 'FABRICADO',
                 subcategoria: body.subcategoria,
+                subconjunto: body.subconjunto,
                 statusSuprimento: body.statusSuprimento || 'NAO_SOLICITADO',
                 valorUnitario: vUnit,
                 custoTotal: vUnit ? vUnit * qtd : null,
