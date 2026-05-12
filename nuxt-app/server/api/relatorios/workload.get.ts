@@ -28,6 +28,7 @@ export default defineEventHandler(async (event) => {
                     select: {
                         id: true,
                         numeroOP: true,
+                        codigoMaquina: true,
                         cliente: true,
                         descricaoMaquina: true
                     }
@@ -50,6 +51,7 @@ export default defineEventHandler(async (event) => {
                     opId: t.opId,
                     nome: t.nome,
                     op: t.op?.numeroOP || 'N/A',
+                    codigoMaquina: t.op?.codigoMaquina || 'N/A',
                     cliente: t.op?.cliente || 'N/A',
                     maquina: t.op?.descricaoMaquina || 'N/A',
                     status: t.status,

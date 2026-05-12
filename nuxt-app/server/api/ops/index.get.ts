@@ -25,7 +25,7 @@ export default defineEventHandler(async (event) => {
 
     if (atrasada === 'true') {
       where.dataEntrega = { lt: new Date() }
-      where.status = { not: 'ENTREGUE' }
+      where.status = { notIn: ['CONCLUIDA', 'CANCELADA'] }
     }
 
     // Filtro por intervalo de data de entrega

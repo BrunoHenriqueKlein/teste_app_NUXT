@@ -254,7 +254,7 @@
                     <div>
                       <div>{{ formatDate(op.dataEntrega) }}</div>
                       <v-chip 
-                        v-if="isAtrasada(op.dataEntrega) && op.status !== 'ENTREGUE'" 
+                        v-if="isAtrasada(op.dataEntrega) && op.status !== 'CONCLUIDA' && op.status !== 'CANCELADA'" 
                         color="error" 
                         size="x-small"
                         class="mt-1"

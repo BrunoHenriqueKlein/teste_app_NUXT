@@ -140,7 +140,7 @@
                             <v-icon v-if="isLate(task)" size="10" color="white" class="late-icon">mdi-alert</v-icon>
                           </div>
                         </template>
-                        <span>{{ task.op }} - {{ task.nome }} ({{ formatDate(task.dataInicioPrevista) }} - {{ formatDate(task.dataTerminoPrevista) }})</span>
+                        <span>{{ task.op }} ({{ task.codigoMaquina }}) - {{ task.nome }} ({{ formatDate(task.dataInicioPrevista) }} - {{ formatDate(task.dataTerminoPrevista) }})</span>
                       </v-tooltip>
                     </template>
                   </div>
@@ -218,7 +218,7 @@
                       <v-chip v-if="isLate(task)" size="x-small" color="error" variant="flat" class="ml-2">ATRASADA</v-chip>
                     </v-list-item-title>
                     <v-list-item-subtitle>
-                      OP: {{ task.op }} • Cliente: {{ task.cliente }}
+                      OP: {{ task.op }} ({{ task.codigoMaquina }}) • Cliente: {{ task.cliente }}
                     </v-list-item-subtitle>
                     <template v-slot:append>
                       <div class="text-right d-none d-sm-block">
@@ -251,7 +251,7 @@
           Detalhes da Tarefa
         </v-card-title>
         <v-card-text class="pa-4">
-          <div class="text-overline text-primary">OP {{ selectedTask.op }}</div>
+          <div class="text-overline text-primary">OP {{ selectedTask.op }} ({{ selectedTask.codigoMaquina }})</div>
           <div class="text-h5 font-weight-bold mb-2">{{ selectedTask.nome }}</div>
           <div class="text-body-2 text-grey mb-4">{{ selectedTask.maquina }}</div>
           

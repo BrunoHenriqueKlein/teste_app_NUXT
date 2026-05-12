@@ -288,6 +288,7 @@ const stats = computed(() => [
     color: 'grey-darken-1',
     action: () => {
       filters.value.status = 'AGUARDANDO'
+      filters.value.atrasada = false
       loadDashboardData()
     }
   },
@@ -298,6 +299,7 @@ const stats = computed(() => [
     color: 'blue-darken-2',
     action: () => {
       filters.value.status = 'IN_PRODUCTION'
+      filters.value.atrasada = false
       loadDashboardData()
     }
   },
@@ -307,9 +309,8 @@ const stats = computed(() => [
     icon: 'mdi-alert-decagram', 
     color: 'red-darken-1',
     action: () => {
-      // Para atrasadas, limpamos o status e deixamos o usuário ver todas ou aplicamos um filtro de data se necessário
-      // Por enquanto, apenas removemos filtros de status para mostrar todas
       filters.value.status = null
+      filters.value.atrasada = true
       filters.value.sortBy = 'dataEntrega'
       filters.value.sortOrder = 'asc'
       loadDashboardData()
@@ -322,6 +323,7 @@ const stats = computed(() => [
     color: 'green-darken-2',
     action: () => {
       filters.value.status = 'CONCLUIDA'
+      filters.value.atrasada = false
       loadDashboardData()
     }
   }
@@ -335,7 +337,8 @@ const filters = ref({
   status: null,
   dataEntrega: null,
   sortBy: 'dataCriacao',
-  sortOrder: 'desc'
+  sortOrder: 'desc',
+  atrasada: false
 })
 
 const statusOptions = [
@@ -375,6 +378,10 @@ const loadDashboardData = async () => {
       sortOrder: filters.value.sortOrder
     }
     
+    if (filters.value.atrasada) {
+      params.atrasada = 'true'
+    }
+    
     if (filters.value.dataEntrega) {
       params.dataInicio = filters.value.dataEntrega
       params.dataFim = filters.value.dataEntrega
@@ -398,7 +405,8 @@ const clearFilters = () => {
     status: null,
     dataEntrega: null,
     sortBy: 'dataCriacao',
-    sortOrder: 'desc'
+    sortOrder: 'desc',
+    atrasada: false
   }
   loadDashboardData()
 }
