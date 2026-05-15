@@ -7,6 +7,7 @@ export default defineEventHandler(async (event) => {
     try {
         // 1. Buscar todos os usuários
         const users = await prisma.user.findMany({
+            where: { isActive: true },
             select: {
                 id: true,
                 name: true,

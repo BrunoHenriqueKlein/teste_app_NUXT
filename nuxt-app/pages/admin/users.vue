@@ -95,6 +95,16 @@
           >
             <v-icon>mdi-shield-lock</v-icon>
           </v-btn>
+          <v-btn
+            icon
+            size="small"
+            variant="text"
+            color="error"
+            @click="confirmDeleteUser(item)"
+            title="Excluir Usuário"
+          >
+            <v-icon>mdi-delete</v-icon>
+          </v-btn>
         </template>
       </v-data-table>
     </v-card>
@@ -237,6 +247,22 @@
       </v-card>
     </v-dialog>
 
+    <!-- Dialog de Exclusão -->
+    <v-dialog v-model="showDeleteDialog" max-width="400">
+      <v-card>
+        <v-card-title class="text-h5 bg-error text-white pa-4">Confirmar Exclusão</v-card-title>
+        <v-card-text class="pa-4 pt-6">
+          Tem certeza de que deseja excluir o usuário <strong>{{ selectedUser?.name }}</strong>?<br><br>
+          <span class="text-caption text-error">Esta ação não poderá ser desfeita. Se o usuário tiver vínculos (OPs, processos), a exclusão será bloqueada.</span>
+        </v-card-text>
+        <v-card-actions class="pa-4">
+          <v-spacer></v-spacer>
+          <v-btn color="grey-darken-1" variant="text" @click="showDeleteDialog = false" :disabled="deleting">Cancelar</v-btn>
+          <v-btn color="error" variant="flat" @click="deleteUser" :loading="deleting">Excluir</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <v-snackbar v-model="snackbar.show" :color="snackbar.color" timeout="3000">
       {{ snackbar.text }}
     </v-snackbar>
@@ -263,7 +289,9 @@ const allModules = ref([])
 
 const showEditDialog = ref(false)
 const showPermissionsDialog = ref(false)
+const showDeleteDialog = ref(false)
 const selectedUser = ref(null)
+const deleting = ref(false)
 
 const editFormModel = ref({
   id: null,
@@ -356,6 +384,28 @@ const saveUserUpdates = async () => {
     showError('Erro ao salvar alterações')
   } finally {
     saving.value = false
+  }
+}
+
+const confirmDeleteUser = (user) => {
+  selectedUser.value = user
+  showDeleteDialog.value = true
+}
+
+const deleteUser = async () => {
+  if (!selectedUser.value) return
+  deleting.value = true
+  try {
+    await $fetch(`/api/admin/users/${selectedUser.value.id}`, {
+      method: 'DELETE'
+    })
+    showSuccess('Usuário excluído com sucesso')
+    showDeleteDialog.value = false
+    await fetchUsers()
+  } catch (err) {
+    showError(err.data?.statusMessage || 'Erro ao excluir usuário')
+  } finally {
+    deleting.value = false
   }
 }
 
