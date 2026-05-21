@@ -104,6 +104,7 @@
             prepend-icon="mdi-file-pdf-box"
             variant="tonal"
             @click="abrirImpressao"
+            :loading="gerandoPDF"
           >
             PDF
           </v-btn>
@@ -491,6 +492,7 @@ const opData = ref(null)
 const processos = ref([])
 const loading = ref(true)
 const gerandoImagem = ref(false)
+const gerandoPDF = ref(false)
 const dataInicioOP = ref('')
 const showTodayLine = ref(true)
 
@@ -987,237 +989,73 @@ const exportarImagem = async () => {
   }
 }
 
-const abrirImpressao = () => {
-  // Pegar o conteúdo da área de impressão
+const abrirImpressao = async () => {
+  if (!window.htmlToImage || !window.jspdf) {
+    alert('As bibliotecas de conversão ainda estão carregando. Tente novamente em alguns segundos.')
+    return
+  }
+
   const printElement = document.querySelector('.print-content')
-  if (!printElement) return
+  const scrollContainer = document.querySelector('.gantt-scroll-container')
   
-  const printContent = printElement.innerHTML
-  const winPrint = window.open('', '', 'left=0,top=0,width=1280,height=900,toolbar=0,scrollbars=1,status=0')
+  if (!printElement || !scrollContainer) return
+
+  gerandoPDF.value = true
   
-  // Calcular escala para caber no A4 Paisagem (aprox 1100px para margens seguras)
-  const totalWidth = taskHeaderWidth.value + (timelineDates.value.length * celulaLargura.value)
-  const a4Width = 1100
-  const scale = totalWidth > a4Width ? (a4Width / totalWidth).toFixed(3) : 1
+  try {
+    const originalOverflow = scrollContainer.style.overflowX
+    scrollContainer.style.overflowX = 'visible'
+    
+    const headerElement = document.querySelector('.print-only-header')
+    if (headerElement) headerElement.style.display = 'block'
+    
+    await new Promise(resolve => setTimeout(resolve, 100))
 
-  winPrint.document.write(`
-    <html>
-      <head>
-        <title>CRONOGRAMA - OP ${opData.value?.numeroOP}</title>
-        <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
-        <style>
-          @page { size: landscape; margin: 0.5cm; }
-          
-          /* Forçar cores e box-sizing para evitar deslocamentos */
-          * { 
-            -webkit-print-color-adjust: exact !important; 
-            print-color-adjust: exact !important; 
-            box-sizing: border-box !important;
-          }
-          
-          body { 
-            font-family: 'Segoe UI', Roboto, sans-serif; 
-            margin: 0; 
-            padding: 10px; 
-            background: white; 
-          }
-          
-          .print-content { 
-            transform-origin: top left;
-            transform: scale(${scale});
-            width: ${totalWidth}px;
-            position: relative;
-          }
+    const totalWidth = taskHeaderWidth.value + (timelineDates.value.length * celulaLargura.value)
 
-          .no-print { display: none !important; }
-          
-          /* Cabeçalho de Impressão */
-          .print-only-header { 
-            display: block !important; 
-            margin-bottom: 25px; 
-            border-bottom: 2px solid #000; 
-            padding-bottom: 10px; 
-            width: 100%;
-          }
-          
-          .gantt-scroll-container { width: 100%; border: 1px solid #ddd; overflow: visible !important; }
-          .gantt-container { width: 100%; position: relative; background: #fff; }
-          
-          /* Header do Gantt */
-          .gantt-header { display: flex; background: #eee !important; border-bottom: 2px solid #999; }
-          .gantt-task-header { 
-            width: ${taskHeaderWidth.value}px !important; 
-            min-width: ${taskHeaderWidth.value}px !important;
-            padding: 12px; 
-            font-weight: bold; 
-            background: #e0e0e0 !important; 
-            border-right: 2px solid #999; 
-          }
-          
-          .gantt-timeline-header { flex: 1; overflow: hidden; }
-          .gantt-months-row { display: flex; height: 32px; border-bottom: 1px solid #999; }
-          .gantt-month-label { 
-            flex-shrink: 0; 
-            padding: 6px; 
-            font-size: 12px; 
-            font-weight: bold; 
-            border-right: 1px solid #999; 
-            background: #e1f5fe !important; 
-            text-align: center; 
-          }
-          
-          .gantt-days-row { display: flex; }
-          .gantt-date-cell { 
-            width: ${celulaLargura.value}px !important;
-            min-width: ${celulaLargura.value}px !important;
-            padding: 4px 0; 
-            text-align: center; 
-            border-right: 1px solid #ccc; 
-            height: 42px; 
-            flex-shrink: 0; 
-          }
-          .gantt-date-cell.weekend { background-color: #f0f0f0 !important; }
-          .gantt-date { font-size: 11px; font-weight: bold; }
-          .gantt-weekday { font-size: 9px; color: #555; }
+    const dataUrl = await window.htmlToImage.toPng(printElement, {
+      width: Math.max(printElement.scrollWidth, totalWidth + 50),
+      height: printElement.scrollHeight,
+      backgroundColor: '#ffffff',
+      style: {
+        transform: 'none'
+      }
+    })
 
-          /* Corpo do Gantt */
-          .gantt-body { position: relative; }
-          .gantt-row { display: flex; border-bottom: 1px solid #ccc; min-height: 85px; position: relative; }
-          
-          .gantt-task-cell { 
-            width: ${taskHeaderWidth.value}px !important;
-            min-width: ${taskHeaderWidth.value}px !important;
-            padding: 12px; 
-            border-right: 2px solid #999; 
-            background: #fff !important; 
-            display: flex; 
-            align-items: center; 
-            font-size: 12px;
-          }
-          
-          .gantt-timeline-cell { flex: 1; position: relative; background: #fff !important; }
-          
-          /* Gradias */
-          .gantt-grid { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; z-index: 1; }
-          .grid-line { 
-            width: ${celulaLargura.value}px !important;
-            min-width: ${celulaLargura.value}px !important;
-            border-right: 1px solid #f1f1f1; 
-            height: 100%; 
-            flex-shrink: 0; 
-          }
-          
-          /* Barras */
-          .gantt-bar { position: absolute; border-radius: 6px; font-size: 10px; display: flex; align-items: center; white-space: nowrap; box-sizing: border-box; z-index: 5; }
-          
-          .gantt-bar.planned { 
-            top: 12px; 
-            height: 24px; 
-            background: #f3e5f5 !important; 
-            border: 1.5px solid #9c27b0 !important; 
-            color: #7b1fa2 !important; 
-          }
-          
-          .gantt-bar.actual { 
-            top: 44px; 
-            height: 30px; 
-            z-index: 6; 
-            border-width: 1.5px; 
-            border-style: solid; 
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2); 
-          }
-          
-          .bar-label { position: absolute; left: 100%; margin-left: 10px; font-weight: bold; font-size: 11px; }
+    scrollContainer.style.overflowX = originalOverflow || 'auto'
+    if (headerElement) headerElement.style.display = ''
 
-          /* Status das barras (para garantir cores no PDF) */
-          .status-delayed { background: #f44336 !important; border-color: #b71c1c !important; color: white !important; }
-          .status-concluido-ontime { background: #4caf50 !important; border-color: #1b5e20 !important; color: white !important; }
-          .status-em_andamento-ontime { background: #2196f3 !important; border-color: #0d47a1 !important; color: white !important; }
-          .status-waiting { background: #ff9800 !important; border-color: #e65100 !important; color: white !important; }
-          
-          /* Cores de texto das labels exteriores */
-          .status-delayed .bar-label { color: #b71c1c !important; }
-          .status-concluido-ontime .bar-label { color: #1b5e20 !important; }
-          .status-em_andamento-ontime .bar-label { color: #0d47a1 !important; }
-          .status-waiting .bar-label { color: #e65100 !important; }
+    const { jsPDF } = window.jspdf
+    
+    const imgProps = new Image()
+    imgProps.src = dataUrl
+    await new Promise(resolve => imgProps.onload = resolve)
 
-          .gantt-progress { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(255,255,255,0.2) !important; }
+    const imgWidth = imgProps.width
+    const imgHeight = imgProps.height
+    
+    // 1px = ~0.264583 mm
+    const pdfWidth = imgWidth * 0.264583
+    const pdfHeight = imgHeight * 0.264583
+    
+    const doc = new jsPDF({
+      orientation: pdfWidth > pdfHeight ? 'landscape' : 'portrait',
+      unit: 'mm',
+      format: [pdfWidth + 10, pdfHeight + 10]
+    })
 
-          /* Marcos Verticais (Garantir cores e posicionamento) */
-          .gantt-today-line { 
-            position: absolute; 
-            top: 0; 
-            bottom: 0; 
-            width: 2px !important; 
-            background-color: #f44336 !important; 
-            border-left: 2px solid #f44336 !important;
-            z-index: 10; 
-          }
-          .today-marker { 
-            position: absolute; 
-            top: -28px; 
-            left: 50%; 
-            transform: translateX(-50%); 
-            background: #f44336 !important; 
-            color: white !important; 
-            padding: 3px 8px; 
-            border-radius: 4px; 
-            font-size: 11px; 
-            font-weight: bold; 
-          }
-          
-          .gantt-delivery-line { 
-            position: absolute; 
-            top: 0; 
-            bottom: 0; 
-            width: 2px !important; 
-            background-color: #2e7d32 !important; 
-            border-left: 2px solid #2e7d32 !important;
-            z-index: 9; 
-          }
-          .delivery-marker { 
-            position: absolute; 
-            top: -28px; 
-            left: 50%; 
-            transform: translateX(-50%); 
-            background: #2e7d32 !important; 
-            color: white !important; 
-            padding: 3px 10px; 
-            border-radius: 4px; 
-            font-size: 11px; 
-            font-weight: bold; 
-            display: flex;
-            align-items: center;
-          }
+    doc.addImage(dataUrl, 'PNG', 5, 5, pdfWidth, pdfHeight)
+    doc.save(`Gantt_OP_${opData.value?.numeroOP || 'Cronograma'}.pdf`)
 
-          /* Textos Informativos */
-          h1 { margin: 0; font-size: 26px; color: #000; }
-          .text-h6 { color: #000; font-size: 18px; margin-top: 6px; }
-          .text-subtitle-1 { font-size: 15px; margin-top: 5px; }
-          .text-caption { font-size: 13px; color: #333; }
-          .d-flex { display: flex; }
-          .justify-space-between { justify-content: space-between; }
-          .align-center { align-items: center; }
-          .mb-4 { margin-bottom: 20px; }
-        </style>
-      </head>
-      <body>
-        <div class="print-content">
-          ${printContent}
-        </div>
-        <script>
-          window.onload = function() {
-            setTimeout(function() {
-              window.print();
-              // window.close(); // Opcional
-            }, 1000);
-          };
-        <\/script>
-      </body>
-    </html>
-  `)
-  winPrint.document.close()
-  winPrint.focus()
+  } catch (err) {
+    console.error('Erro ao gerar PDF:', err)
+    alert('Erro ao gerar o PDF. Tente novamente.')
+  } finally {
+    if (scrollContainer) scrollContainer.style.overflowX = 'auto'
+    const headerElement = document.querySelector('.print-only-header')
+    if (headerElement) headerElement.style.display = ''
+    gerandoPDF.value = false
+  }
 }
 
 // Lifecycle

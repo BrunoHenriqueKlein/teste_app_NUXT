@@ -5,7 +5,8 @@ export default defineNuxtConfig({
   app: {
     head: {
       script: [
-        { src: 'https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js' }
+        { src: 'https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js' },
+        { src: 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js' }
       ]
     }
   },
