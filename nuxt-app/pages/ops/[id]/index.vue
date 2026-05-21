@@ -109,6 +109,16 @@
           </v-btn>
 
           <v-btn
+            color="info"
+            prepend-icon="mdi-image"
+            variant="tonal"
+            @click="exportarImagem"
+            :loading="gerandoImagem"
+          >
+            Imagem
+          </v-btn>
+
+          <v-btn
             color="success"
             prepend-icon="mdi-factory"
             variant="elevated"
@@ -179,16 +189,23 @@
             <div v-else>
               <!-- ÁREA DE IMPRESSÃO (Focada apenas no Gráfico e Cabeçalho de Impressão) -->
               <div class="print-content">
-                <!-- Cabeçalho Exclusivo para Impressão -->
+                <!-- Cabeçalho Exclusivo para Impressão e Imagem -->
                 <div class="print-only-header">
-                  <div class="d-flex justify-space-between align-center mb-4">
-                    <div>
-                      <h1 class="text-h4 font-weight-bold mb-1">CRONOGRAMA DE PRODUÇÃO</h1>
-                      <div class="text-h6 text-grey-darken-1">OP: {{ opData?.numeroOP }} - {{ opData?.descricaoMaquina }}</div>
+                  <div class="d-flex justify-space-between mb-4">
+                    <div class="d-flex align-start">
+                      <img src="~/assets/imagens/logo-someh-fundo-claro.png" alt="Logo" style="height: 60px; object-fit: contain; margin-right: 20px; margin-top: 5px;" />
+                      <div>
+                        <h1 class="text-h4 font-weight-bold mb-2">CRONOGRAMA DE PRODUÇÃO</h1>
+                        <div class="text-h6 text-grey-darken-3 mb-1">OP: <span class="font-weight-bold">{{ opData?.numeroOP }}</span> ({{ opData?.codigoMaquina }})</div>
+                        <div class="text-subtitle-1 mb-1">Máquina: {{ opData?.descricaoMaquina }}</div>
+                        <div class="text-subtitle-1">Cliente: {{ opData?.cliente }}</div>
+                      </div>
                     </div>
                     <div class="text-right">
-                      <div class="text-subtitle-1">Cliente: {{ opData?.cliente }}</div>
-                      <div class="text-caption">Gerado em: {{ new Date().toLocaleDateString('pt-BR') }}</div>
+                      <div class="text-caption mb-3">Gerado em: {{ new Date().toLocaleDateString('pt-BR') }}</div>
+                      <div class="text-subtitle-2 mb-1">Data da Compra/Pedido: <span class="font-weight-bold">{{ formatDate(opData?.dataPedido) }}</span></div>
+                      <div class="text-subtitle-2 mb-1">Data Limite OP (Entrega): <span class="font-weight-bold text-error">{{ formatDate(opData?.dataEntrega) }}</span></div>
+                      <div class="text-subtitle-2 mt-2">Finalização Prevista (Gantt): <span class="font-weight-bold text-primary">{{ formatDate(dataTerminoPrevista) || 'Indefinida' }}</span></div>
                     </div>
                   </div>
                   <v-divider class="mb-4"></v-divider>
@@ -473,6 +490,7 @@ const generateOS = async () => {
 const opData = ref(null)
 const processos = ref([])
 const loading = ref(true)
+const gerandoImagem = ref(false)
 const dataInicioOP = ref('')
 const showTodayLine = ref(true)
 
@@ -910,6 +928,63 @@ const ajustarATela = () => {
   const totalDays = timelineDates.value.length
   const suggestedWidth = Math.floor((containerWidth - taskHeaderWidth.value) / totalDays)
   celulaLargura.value = Math.max(15, Math.min(suggestedWidth, 100))
+}
+
+const exportarImagem = async () => {
+  if (!window.htmlToImage) {
+    alert('A biblioteca de conversão de imagem ainda está carregando. Tente novamente em alguns segundos.')
+    return
+  }
+
+  const printElement = document.querySelector('.print-content')
+  const scrollContainer = document.querySelector('.gantt-scroll-container')
+  
+  if (!printElement || !scrollContainer) return
+
+  gerandoImagem.value = true
+  
+  try {
+    // Removemos temporariamente o overflow e forçamos a largura total para que a imagem capture tudo
+    const originalOverflow = scrollContainer.style.overflowX
+    scrollContainer.style.overflowX = 'visible'
+    
+    // Tornar o cabeçalho visível para a imagem
+    const headerElement = document.querySelector('.print-only-header')
+    if (headerElement) headerElement.style.display = 'block'
+    
+    // Pequeno delay para a DOM renderizar a mudança de overflow e o cabeçalho
+    await new Promise(resolve => setTimeout(resolve, 100))
+
+    const totalWidth = taskHeaderWidth.value + (timelineDates.value.length * celulaLargura.value)
+
+    const dataUrl = await window.htmlToImage.toPng(printElement, {
+      width: Math.max(printElement.scrollWidth, totalWidth + 50),
+      height: printElement.scrollHeight,
+      backgroundColor: '#ffffff',
+      style: {
+        transform: 'none'
+      }
+    })
+
+    // Restaura o overflow e oculta o cabeçalho novamente
+    scrollContainer.style.overflowX = originalOverflow || 'auto'
+    if (headerElement) headerElement.style.display = ''
+
+    const link = document.createElement('a')
+    link.download = `Gantt_OP_${opData.value?.numeroOP || 'Cronograma'}.png`
+    link.href = dataUrl
+    link.click()
+
+  } catch (err) {
+    console.error('Erro ao gerar imagem:', err)
+    alert('Erro ao gerar a imagem. Tente novamente.')
+  } finally {
+    // Garantir que restaure o overflow e o cabeçalho em caso de erro
+    if (scrollContainer) scrollContainer.style.overflowX = 'auto'
+    const headerElement = document.querySelector('.print-only-header')
+    if (headerElement) headerElement.style.display = ''
+    gerandoImagem.value = false
+  }
 }
 
 const abrirImpressao = () => {
