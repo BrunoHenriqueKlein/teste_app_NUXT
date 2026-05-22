@@ -80,17 +80,27 @@ export default defineEventHandler(async (event) => {
             }
         }
 
+        const deptoMap: Record<string, string> = {
+            'ADMINISTRATIVO': 'Administrativo',
+            'VENDAS': 'Vendas',
+            'ENGENHARIA': 'Engenharia',
+            'COMPRAS': 'Compras',
+            'PCP': 'PCP',
+            'QUALIDADE': 'Qualidade'
+        }
+        const senderDepto = sender?.department ? (deptoMap[sender.department] || sender.department) : 'Departamento'
+
         // 5. Preparar E-mail Final
-        const finalSubject = overrideSubject || `Solicitação de Orçamento - OS ${os.numero} - OP ${os.op.numeroOP}`
+        const finalSubject = overrideSubject || `Solicitação de Orçamento - ${os.op.codigoMaquina} (${os.op.numeroOP}) - ${os.numero}`
         const defaultHtml = `
             <div style="font-family: Arial, sans-serif; line-height: 1.6;">
                 <h2>Solicitação de Orçamento</h2>
                 <p>Olá <strong>${fornecedor.contato || fornecedor.nome}</strong>,</p>
-                <p>Gostaríamos de solicitar um orçamento para os itens listados abaixo, referentes à <strong>OS ${os.numero}</strong> da <strong>OP ${os.op.numeroOP}</strong>.</p>
+                <p>Gostaríamos de solicitar um orçamento para os itens listados abaixo, referentes à <strong>Máquina ${os.op.codigoMaquina} (OP ${os.op.numeroOP}) - OS ${os.numero}</strong>.</p>
                 
                 <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
                     <thead>
-                        <tr style="background-color: #f2f2f2;">
+                        <tr style="background-color: #f5f5f5; border-bottom: 2px solid #ddd;">
                             <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Código</th>
                             <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Descrição</th>
                             <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">Qtd</th>
@@ -101,12 +111,20 @@ export default defineEventHandler(async (event) => {
                         ${pecasTable}
                     </tbody>
                 </table>
-                
+
                 <p style="margin-top: 20px;">Os desenhos técnicos seguem em anexo para análise.</p>
                 <p>Ficamos no aguardo de sua proposta técnica e comercial.</p>
                 <br>
-                <p>Atenciosamente,</p>
-                <p><strong>Departamento de Compras/PCP</strong><br>Sistema SOMEH</p>
+                <p>Att...</p>
+                <p style="margin-bottom: 5px;">
+                    <strong>${sender?.name || 'Sistema SOMEH'}</strong> | ${senderDepto}<br>
+                    &#9742; (47) 3202-7221<br>
+                    &#127758; <a href="http://www.someh.com.br" style="color: #333; text-decoration: underline;">www.someh.com.br</a>
+                </p>
+                
+                <div style="margin-top: 15px;">
+                    <img src="cid:banner_assinatura" alt="SOMEH Redes Sociais" style="max-width: 100%; height: auto;" />
+                </div>
             </div>
         `
         const finalHtml = overrideHtml || defaultHtml
@@ -151,6 +169,16 @@ export default defineEventHandler(async (event) => {
             data: { status: 'AGUARDANDO' } 
         })
 
+        // 7.1. Adicionar o banner da assinatura como anexo embutido (CID)
+        const bannerPath = path.join(process.cwd(), 'assets', 'imagens', 'banner-assinatura.jpg')
+        if (fs.existsSync(bannerPath)) {
+            attachments.push({
+                filename: 'banner-assinatura.jpg',
+                path: bannerPath,
+                cid: 'banner_assinatura' // ID usado no HTML src="cid:banner_assinatura"
+            })
+        }
+
         let emailOk = false
         let userMessage = ''
 
@@ -172,6 +200,7 @@ export default defineEventHandler(async (event) => {
                 await transporter.sendMail({
                     from: `"${sender.mailFrom || sender.name}" <${sender.mailUser}>`,
                     to: fornecedor.email,
+                    bcc: sender.mailUser, // Envia cópia oculta para o próprio remetente para registrar envio
                     subject: finalSubject,
                     html: finalHtml,
                     attachments
