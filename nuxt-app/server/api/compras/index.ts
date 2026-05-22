@@ -11,6 +11,9 @@ export default defineEventHandler(async (event) => {
                     op: {
                         select: { numeroOP: true, cliente: true }
                     },
+                    os: {
+                        select: { numero: true, tipo: true, op: { select: { codigoMaquina: true } } }
+                    },
                     itens: {
                         include: {
                             peca: {
@@ -253,10 +256,16 @@ export default defineEventHandler(async (event) => {
                 where: { id: Number(id) },
                 data: {
                     numero: finalNumero,
+                    fornecedor: data.fornecedor !== undefined ? data.fornecedor : undefined,
+                    fornecedorRef: data.fornecedorId ? { connect: { id: Number(data.fornecedorId) } } : undefined,
                     status: data.status,
                     valorTotal: data.valorTotal,
                     valorFrete: data.valorFrete,
                     valorDesconto: data.valorDesconto,
+                    formaPagamento: data.formaPagamento,
+                    tipoFrete: data.tipoFrete,
+                    transportadora: data.transportadora,
+                    cnpjTransportadora: data.cnpjTransportadora,
                     observacoes: data.observacoes,
                     dataCompra: data.status === 'PEDIDO_EMITIDO' && !currentCompra?.dataCompra ? new Date() : (data.dataCompra ? new Date(data.dataCompra) : undefined),
                     dataPrevisaoEntrega: data.dataPrevisaoEntrega ? new Date(data.dataPrevisaoEntrega) : undefined,

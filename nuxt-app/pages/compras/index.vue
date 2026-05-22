@@ -93,10 +93,23 @@
             <template v-slot:item.op="{ item }">
               <span class="text-primary font-weight-bold">#{{ item.op?.numeroOP }}</span>
             </template>
+            <template v-slot:item.os="{ item }">
+              <div v-if="item.os">
+                <div class="font-weight-bold">{{ item.os.numero }}</div>
+                <div class="text-caption text-grey">{{ item.os.op?.codigoMaquina || 'Máquina N/A' }}</div>
+              </div>
+              <span v-else class="text-grey">-</span>
+            </template>
             <template v-slot:item.categoria="{ item }">
               <v-chip size="x-small" color="indigo" variant="flat">
                 {{ item.fornecedor.replace('REQ_', '') }}
               </v-chip>
+            </template>
+            <template v-slot:item.tipo="{ item }">
+              <v-chip v-if="item.os?.tipo" size="small" color="blue-grey-darken-2" variant="flat">
+                {{ item.os.tipo }}
+              </v-chip>
+              <span v-else class="text-grey text-caption">Peças / BOM</span>
             </template>
             <template v-slot:item.acoes="{ item }">
               <v-btn
@@ -183,12 +196,12 @@
                 title="Ver Detalhes"
               ></v-btn>
               <v-btn
-                icon="mdi-printer"
+                icon="mdi-image-outline"
                 variant="text"
                 color="grey"
                 size="small"
-                @click="prepararImpressao(item)"
-                title="Imprimir OC"
+                @click="baixarImagemOC(item)"
+                title="Exportar PDF"
               ></v-btn>
             </template>
           </v-data-table>
@@ -233,7 +246,7 @@
       </v-card>
     </v-dialog>
     <!-- Diálogo de Detalhes da Requisição -->
-    <v-dialog v-model="dialogDetalhes.show" max-width="900px">
+    <v-dialog v-model="dialogDetalhes.show" max-width="1300px">
       <v-card v-if="dialogDetalhes.requisicao">
         <v-card-title class="bg-primary text-white d-flex justify-space-between align-center pa-4">
           <div>
@@ -292,12 +305,15 @@
                     @change="toggleSelectAll"
                   ></v-checkbox-btn>
                 </th>
-                <th class="text-left font-weight-bold">Item / Descrição</th>
-                <th class="text-center font-weight-bold" style="width: 80px;">Qtd</th>
-                <th class="text-center font-weight-bold" style="width: 120px;">Vlr. Unit (R$)</th>
-                <th class="text-center font-weight-bold" style="width: 80px;">IPI (%)</th>
-                <th class="text-center font-weight-bold" style="width: 80px;">ICMS (%)</th>
-                <th class="text-right font-weight-bold" style="width: 120px;">Subtotal</th>
+                <th class="text-left font-weight-bold" style="width: 200px; min-width: 200px; white-space: nowrap;">Código</th>
+                <th class="text-left font-weight-bold" style="width: 100%;">Descrição</th>
+                <th class="text-left font-weight-bold" style="width: 120px; min-width: 120px; white-space: nowrap;">Etapa / Processo</th>
+                <th class="text-center font-weight-bold" style="width: 80px; min-width: 80px;">Material</th>
+                <th class="text-center font-weight-bold" style="width: 60px; min-width: 60px;">Qtd</th>
+                <th class="text-center font-weight-bold" style="width: 120px; min-width: 120px;">Vlr. Unit (R$)</th>
+                <th class="text-center font-weight-bold" style="width: 80px; min-width: 80px;">IPI (%)</th>
+                <th class="text-center font-weight-bold" style="width: 80px; min-width: 80px;">ICMS (%)</th>
+                <th class="text-right font-weight-bold" style="width: 120px; min-width: 120px; white-space: nowrap;">Subtotal</th>
               </tr>
             </thead>
             <tbody>
@@ -310,9 +326,17 @@
                     hide-details
                   ></v-checkbox-btn>
                 </td>
-                <td>
+                <td style="white-space: nowrap;">
                   <div class="font-weight-bold">{{ item.peca?.codigo || '-' }}</div>
-                  <div class="text-caption text-grey">{{ item.descricao }}</div>
+                </td>
+                <td>
+                  <div class="text-body-2">{{ item.peca?.descricao || (item.descricao.includes(' - Peça: ') ? item.descricao.split(' - Peça: ')[1] : item.descricao) }}</div>
+                </td>
+                <td>
+                  <div class="text-caption">{{ item.descricao.includes('SERVIÇO: ') ? item.descricao.split(' - ')[0].replace('SERVIÇO: ', '') : '-' }}</div>
+                </td>
+                <td class="text-center">
+                  <div class="text-caption">{{ item.peca?.material || '-' }}</div>
                 </td>
                 <td class="text-center">{{ item.quantidade }}</td>
                 <td>
@@ -371,6 +395,14 @@
               <v-list density="compact" class="bg-grey-lighten-4 rounded" border>
                 <v-list-item v-for="anexo in dialogDetalhes.requisicao.anexos" :key="anexo.id">
                   <template v-slot:prepend>
+                    <v-checkbox
+                      v-model="dialogDetalhes.anexosSelecionados"
+                      :value="anexo.id"
+                      hide-details
+                      density="compact"
+                      class="mr-2"
+                      title="Selecionar para enviar ao fornecedor"
+                    ></v-checkbox>
                     <v-icon color="error" v-if="anexo.url.endsWith('.pdf')">mdi-file-pdf-box</v-icon>
                     <v-icon color="primary" v-else>mdi-file-image</v-icon>
                   </template>
@@ -412,11 +444,45 @@
               ></v-text-field>
             </v-col>
             <v-col cols="12" md="3">
-              <!-- Removido redundante -->
+              <v-text-field
+                v-model="dialogDetalhes.formaPagamento"
+                label="Forma de Pagamento"
+                placeholder="Ex: 30/45/60 DDL"
+                variant="outlined"
+                density="compact"
+              ></v-text-field>
             </v-col>
             <v-col cols="12" md="3" class="text-right">
               <div class="text-overline">Total do Pedido</div>
               <div class="text-h5 font-weight-bold text-success">{{ formatCurrency(totalPedidoCalculado) }}</div>
+            </v-col>
+          </v-row>
+
+          <v-row dense class="mt-2">
+            <v-col cols="12" md="4">
+              <v-select
+                v-model="dialogDetalhes.tipoFrete"
+                :items="['FOB', 'CIF', 'Sem Frete']"
+                label="Modalidade de Frete"
+                variant="outlined"
+                density="compact"
+              ></v-select>
+            </v-col>
+            <v-col cols="12" md="4">
+              <v-text-field
+                v-model="dialogDetalhes.transportadora"
+                label="Nome da Transportadora"
+                variant="outlined"
+                density="compact"
+              ></v-text-field>
+            </v-col>
+            <v-col cols="12" md="4">
+              <v-text-field
+                v-model="dialogDetalhes.cnpjTransportadora"
+                label="CNPJ da Transportadora"
+                variant="outlined"
+                density="compact"
+              ></v-text-field>
             </v-col>
           </v-row>
 
@@ -433,14 +499,25 @@
           <v-spacer></v-spacer>
           <v-btn variant="text" @click="dialogDetalhes.show = false">Desistir</v-btn>
           <v-btn
-            v-if="temItensSelecionados"
+            v-if="temItensSelecionados && !dialogDetalhes.isVisualizado"
             :color="todosItensSelecionados ? 'success' : 'indigo'"
             variant="flat"
             :loading="saving"
             @click="emitirOC"
             :prepend-icon="todosItensSelecionados ? 'mdi-file-check' : 'mdi-content-cut'"
           >
-            {{ todosItensSelecionados ? 'Emitir Ordem de Compra' : 'Emitir OC Parcial (itens marcados)' }}
+            {{ todosItensSelecionados ? 'PRÉ-VISUALIZAR ORDEM DE COMPRA' : 'PRÉ-VISUALIZAR OC PARCIAL' }}
+          </v-btn>
+
+          <v-btn
+            v-if="dialogDetalhes.isVisualizado"
+            color="primary"
+            variant="flat"
+            :loading="saving"
+            @click="enviarEmailOC"
+            prepend-icon="mdi-email-fast"
+          >
+            CONFIRMAR EMISSÃO E ENVIAR E-MAIL
           </v-btn>
           <v-btn v-else disabled variant="tonal">Selecione itens</v-btn>
         </v-card-actions>
@@ -448,103 +525,169 @@
     </v-dialog>
 
     <!-- Layout de Impressão de OC (Oculto na Web) -->
-    <div id="print-oc" class="d-none print-only pa-8">
-      <div v-if="printData" class="oc-layout">
-        <!-- Cabeçalho Empresa -->
-        <div class="d-flex justify-space-between align-start mb-8 border-bottom pb-4">
-          <div class="d-flex">
-            <v-img :src="empresa?.logoUrl" width="100" class="mr-4" v-if="empresa?.logoUrl"></v-img>
-            <div>
-              <h1 class="text-h4 font-weight-black">{{ empresa?.nomeFantasia }}</h1>
-              <div class="text-caption font-weight-bold">{{ empresa?.razaoSocial }} - CNPJ: {{ empresa?.cnpj }}</div>
-              <div class="text-caption">{{ empresa?.endereco }}, {{ empresa?.cidade }}-{{ empresa?.estado }}</div>
-              <div class="text-caption">Telefone: {{ empresa?.telefone }} | E-mail: {{ empresa?.email }}</div>
-            </div>
-          </div>
-          <div class="text-right">
-            <h2 class="text-h5 text-primary font-weight-black">ORDEM DE COMPRA</h2>
-            <div class="text-h4 font-weight-bold mb-1">{{ printData.numero }}</div>
-            <div class="text-overline">Data: {{ formatDate(printData.dataCompra) }}</div>
-          </div>
-        </div>
-
-        <!-- Fornecedor / OP -->
-        <v-row class="mb-6">
-          <v-col cols="7">
-            <div class="bg-grey-lighten-3 pa-3 rounded">
-              <div class="text-overline text-primary">FORNECEDOR</div>
-              <div class="text-h6 font-weight-bold">{{ printData.fornecedor }}</div>
-            </div>
-          </v-col>
-          <v-col cols="5">
-            <div class="bg-grey-lighten-3 pa-3 rounded">
-              <div class="text-overline text-primary">REFERÊNCIA / PROJETO</div>
-              <div class="font-weight-bold">OP #{{ printData.op?.numeroOP }}</div>
-              <div class="text-caption">{{ printData.op?.cliente }} - {{ printData.op?.codigoMaquina }}</div>
-            </div>
-          </v-col>
-        </v-row>
-
-        <!-- Itens -->
-        <table class="oc-table w-100 mb-6">
-          <thead>
-            <tr class="bg-primary text-white">
-              <th class="pa-2 text-left">Item</th>
-              <th class="pa-2 text-left">Descrição</th>
-              <th class="pa-2 text-center" style="width: 60px;">Qtd</th>
-              <th class="pa-2 text-right">Unitário</th>
-              <th class="pa-2 text-right">IPI</th>
-              <th class="pa-2 text-right">Subtotal</th>
+    <div id="print-oc" class="d-none print-only pa-4">
+      <div v-if="printData" class="oc-layout" style="font-family: Arial, sans-serif; font-size: 11px; color: #000; line-height: 1.3;">
+        
+        <!-- Cabeçalho Principal -->
+        <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; margin-bottom: 0;">
+            <tr>
+                <td style="width: 20%; padding: 10px; border-right: 1px solid #000; text-align: center;">
+                    <img :src="logoSomehUrl" alt="SOMEH" style="max-width: 150px;" />
+                </td>
+                <td style="width: 45%; padding: 10px; border-right: 1px solid #000; font-size: 10px;">
+                    <strong>SOMEH PROJETOS, PRODUTOS E SERVIÇOS LTDA - ME</strong><br/>
+                    CNPJ: 19526992000113 IE: 25.767.346-6<br/>
+                    <strong>Endereço:</strong> Rua João Elias Claudino, Nº 738 - Lateral Procópio Pereira<br/>
+                    89245-000 Bairro corveta Araquari/SC Loteamento industrial Techlog Service<br/>
+                    Fone/Fax: 47 3202-7221<br/>
+                    compras@someh.com.br<br/>
+                    www.someh.com.br
+                </td>
+                <td style="width: 35%; padding: 0; vertical-align: top;">
+                    <table style="width: 100%; border-collapse: collapse; height: 100%;">
+                        <tr>
+                            <td style="padding: 5px; border-bottom: 1px solid #000; border-right: 1px solid #000; font-weight: bold;">PEDIDO DE COMPRA:</td>
+                            <td style="padding: 5px; border-bottom: 1px solid #000; font-weight: bold; font-size: 16px; text-align: right; color: red;">{{ printData.numero?.startsWith('REQ') ? 'OC - A GERAR' : printData.numero }}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 5px; border-bottom: 1px solid #000; border-right: 1px solid #000; font-weight: bold;">EMISSÃO:</td>
+                            <td style="padding: 5px; border-bottom: 1px solid #000; text-align: right;">{{ new Date().toLocaleDateString('pt-BR') }}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 5px; border-bottom: 1px solid #000; border-right: 1px solid #000; font-weight: bold;">FORMA DE PAGAMENTO:</td>
+                            <td style="padding: 5px; border-bottom: 1px solid #000; text-align: right;">{{ printData.formaPagamento || 'A Combinar' }}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 5px; border-right: 1px solid #000; font-weight: bold;">ENTREGA PREVISÃO:</td>
+                            <td style="padding: 5px; text-align: right; font-weight: bold;">{{ printData.dataPrevisaoEntrega ? new Date(printData.dataPrevisaoEntrega).toLocaleDateString('pt-BR') : 'A Combinar' }}</td>
+                        </tr>
+                    </table>
+                </td>
             </tr>
-          </thead>
-          <tbody>
-            <tr v-for="item in printData.itens" :key="item.id" class="border-bottom">
-              <td class="pa-2 font-weight-bold">{{ item.peca?.codigo || '-' }}</td>
-              <td class="pa-2">{{ item.descricao }}</td>
-              <td class="pa-2 text-center">{{ item.quantidade }}</td>
-              <td class="pa-2 text-right">{{ formatCurrency(item.valorUnitario) }}</td>
-              <td class="pa-2 text-right">{{ item.aliqIPI }}%</td>
-              <td class="pa-2 text-right font-weight-bold">{{ formatCurrency(calculateItemTotal(item)) }}</td>
+        </table>
+
+        <!-- Dados do Fornecedor -->
+        <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; border-top: none;">
+            <tr>
+                <td colspan="4" style="background-color: #e0e0e0; text-align: center; font-weight: bold; padding: 5px; border-bottom: 1px solid #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact;">DADOS DO FORNECEDOR</td>
             </tr>
-          </tbody>
+            <tr>
+                <td style="padding: 5px; font-weight: bold; width: 15%; border-right: 1px solid #000; border-bottom: 1px solid #000;">FORNECEDOR:</td>
+                <td style="padding: 5px; width: 55%; border-right: 1px solid #000; border-bottom: 1px solid #000;">{{ printData.fornecedor }}</td>
+                <td style="padding: 5px; font-weight: bold; width: 10%; border-right: 1px solid #000; border-bottom: 1px solid #000;">CNPJ:</td>
+                <td style="padding: 5px; width: 20%; border-bottom: 1px solid #000;">{{ printData.fornecedorRef?.cnpj || '' }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 5px; font-weight: bold; border-right: 1px solid #000; border-bottom: 1px solid #000;">TELEFONE:</td>
+                <td style="padding: 5px; border-right: 1px solid #000; border-bottom: 1px solid #000;">{{ printData.fornecedorRef?.telefone || '' }}</td>
+                <td style="padding: 5px; font-weight: bold; border-right: 1px solid #000; border-bottom: 1px solid #000;">E-MAIL:</td>
+                <td style="padding: 5px; border-bottom: 1px solid #000;">{{ printData.fornecedorRef?.email || '' }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 5px; font-weight: bold; border-right: 1px solid #000;">ENDEREÇO:</td>
+                <td colspan="3" style="padding: 5px;">{{ printData.fornecedorRef?.endereco || '' }}</td>
+            </tr>
+        </table>
+
+
+
+        <!-- Produtos -->
+        <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; border-top: none; margin-top: 5px;">
+            <tr>
+                <td colspan="9" style="background-color: #e0e0e0; text-align: center; font-weight: bold; padding: 5px; border-bottom: 1px solid #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact;">PRODUTOS</td>
+            </tr>
+            <tr style="font-weight: bold; text-align: center;">
+                <td rowspan="2" style="padding: 5px; border: 1px solid #000;">CÓDIGO</td>
+                <td rowspan="2" style="padding: 5px; border: 1px solid #000;">DESCRIÇÃO</td>
+                <td rowspan="2" style="padding: 5px; border: 1px solid #000;">ETAPA / PROCESSO</td>
+                <td rowspan="2" style="padding: 5px; border: 1px solid #000;">MATERIAL</td>
+                <td rowspan="2" style="padding: 5px; border: 1px solid #000;">QTD</td>
+                <td rowspan="2" style="padding: 5px; border: 1px solid #000;">UN</td>
+                <td rowspan="2" style="padding: 5px; border: 1px solid #000;">R$ UNIT.</td>
+                <td colspan="2" style="padding: 5px; border: 1px solid #000;">IMPOSTOS</td>
+                <td rowspan="2" style="padding: 5px; border: 1px solid #000;">VALOR TOTAL (R$)</td>
+            </tr>
+            <tr style="font-weight: bold; text-align: center;">
+                <td style="padding: 2px; border: 1px solid #000; font-size: 9px;">(%) ICMS</td>
+                <td style="padding: 2px; border: 1px solid #000; font-size: 9px;">(%) IPI</td>
+            </tr>
+            <tr v-for="item in printData.itens" :key="item.id">
+                <td style="padding: 5px; border: 1px solid #000;">{{ item.peca?.codigo || '-' }}</td>
+                <td style="padding: 5px; border: 1px solid #000;">{{ item.peca?.descricao || (item.descricao.includes(' - Peça: ') ? item.descricao.split(' - Peça: ')[1] : item.descricao) }}</td>
+                <td style="padding: 5px; border: 1px solid #000;">{{ item.descricao.includes('SERVIÇO: ') ? item.descricao.split(' - ')[0].replace('SERVIÇO: ', '') : '-' }}</td>
+                <td style="padding: 5px; border: 1px solid #000; text-align: center;">{{ item.peca?.material || '-' }}</td>
+                <td style="padding: 5px; border: 1px solid #000; text-align: center;">{{ item.quantidade }}</td>
+                <td style="padding: 5px; border: 1px solid #000; text-align: center;">PÇ</td>
+                <td style="padding: 5px; border: 1px solid #000; text-align: right;">{{ formatCurrency(item.valorUnitario) }}</td>
+                <td style="padding: 5px; border: 1px solid #000; text-align: center;">{{ item.aliqICMS || 0 }}%</td>
+                <td style="padding: 5px; border: 1px solid #000; text-align: center;">{{ item.aliqIPI || 0 }}%</td>
+                <td style="padding: 5px; border: 1px solid #000; text-align: right;">{{ formatCurrency((item.quantidade * item.valorUnitario) + ((item.quantidade * item.valorUnitario) * ((item.aliqIPI || 0) / 100))) }}</td>
+            </tr>
         </table>
 
         <!-- Totais -->
-        <v-row class="justify-end">
-          <v-col cols="5">
-            <v-table density="compact" class="totals-table">
-              <tr>
-                <td class="text-right text-grey">Subtotal de Itens:</td>
-                <td class="text-right font-weight-bold">{{ formatCurrency(printData.itensSum) }}</td>
-              </tr>
-              <tr>
-                <td class="text-right text-grey">Total IPI:</td>
-                <td class="text-right font-weight-bold text-orange">{{ formatCurrency(printData.totalIPI) }}</td>
-              </tr>
-              <tr>
-                <td class="text-right text-grey">Frete (+) / Desconto (-):</td>
-                <td class="text-right font-weight-bold">{{ formatCurrency(printData.valorFrete - printData.valorDesconto) }}</td>
-              </tr>
-              <tr class="bg-success-lighten-5">
-                <td class="text-right text-h6 font-weight-black">VALOR TOTAL:</td>
-                <td class="text-right text-h6 font-weight-black text-success">{{ formatCurrency(printData.valorTotal) }}</td>
-              </tr>
-            </v-table>
-          </v-col>
-        </v-row>
+        <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+                <td style="width: 70%; border: 0;"></td>
+                <td style="width: 30%; padding: 0;">
+                    <table style="width: 100%; border-collapse: collapse; border-left: 1px solid #000; border-right: 1px solid #000; border-bottom: 1px solid #000;">
+                        <tr>
+                            <td style="padding: 5px; font-weight: bold; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: right;">VALOR TOTAL:</td>
+                            <td style="padding: 5px; text-align: right; border-bottom: 1px solid #000;">{{ formatCurrency(printData.itensSum) }}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 5px; font-weight: bold; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: right;">VALOR TOTAL IPI:</td>
+                            <td style="padding: 5px; text-align: right; border-bottom: 1px solid #000;">{{ formatCurrency(printData.totalIPI) }}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 5px; font-weight: bold; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: right;">VALOR TOTAL FRETE:</td>
+                            <td style="padding: 5px; text-align: right; border-bottom: 1px solid #000;">{{ formatCurrency(printData.valorFrete || 0) }}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 5px; font-weight: bold; border-right: 1px solid #000; text-align: right;">VALOR TOTAL COM IPI:</td>
+                            <td style="padding: 5px; text-align: right;">{{ formatCurrency(printData.valorTotal) }}</td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
 
-        <!-- Rodapé / Assinatura -->
-        <div class="mt-12 pt-8 d-flex justify-space-between text-center border-top">
-          <div style="width: 250px;">
-            <div class="border-top pt-2">Responsável Compras</div>
-          </div>
-          <div style="width: 250px;">
-            <div class="border-top pt-2">Aprovação Financeira</div>
-          </div>
-          <div style="width: 250px;">
-            <div class="border-top pt-2">Setor Solicitante</div>
-          </div>
-        </div>
+        <!-- Rodapé -->
+        <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; margin-top: 5px; page-break-inside: avoid;">
+            <tr>
+                <td style="padding: 5px; background-color: #e0e0e0; border-bottom: 1px solid #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact;" colspan="3">
+                    <strong>TRANSPORTADORA:</strong> {{ printData.transportadora || 'A DEFINIR' }} &nbsp;&nbsp;&nbsp; <strong>CNPJ:</strong> {{ printData.cnpjTransportadora || '-' }}
+                </td>
+            </tr>
+            <tr>
+                <td style="padding: 10px; width: 60%; border-right: 1px solid #000; vertical-align: top;">
+                    <strong>OBS:</strong> {{ printData.observacoes || '' }}<br/>
+                    {{ printData.os ? 'Ref OS: ' + printData.os.numero : '' }}<br/>
+                    {{ printData.op ? 'OP: ' + printData.op.numeroOP + ' - ' + printData.op.cliente : '' }}
+                </td>
+                <td style="padding: 10px; width: 20%; border-right: 1px solid #000; vertical-align: top; text-align: center;">
+                    <strong>FRETE:</strong><br/><br/>
+                    {{ printData.tipoFrete || 'A Combinar' }}
+                </td>
+                <td style="padding: 10px; width: 20%; vertical-align: top; text-align: center;">
+                    <strong>Aprovação:</strong>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="3" style="padding: 10px; border-top: 1px solid #000; text-align: center; font-size: 10px;">
+                    <span style="color: red; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact;">ATENÇÃO:</span> Só receberemos vossa mercadoria mediante ao envio dos arquivos DANFE e XML para <span style="color: blue;">adm1@someh.com.br</span><br/>
+                    Obrigatório mencionar o número do pedido de compra no campo observação da NF<br/>
+                    <span style="color: red; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact;">NOVO ENDEREÇO:</span> Rua João Elias Claudino. Nº 738 – Lateral Procópio Pereira 89245-000 Bairro corveta Araquari/SC Loteamento industrial Techlog Service
+                </td>
+            </tr>
+            <tr>
+                <td colspan="3" style="padding: 15px 10px; border-top: 1px solid #000; text-align: justify; position: relative;">
+                    Recebido em: ____/____/________ 
+                    <span style="float: right;">_____________________________________________</span><br>
+                    <span style="float: right;">Assinatura do autorizador e carimbo</span>
+                </td>
+            </tr>
+        </table>
       </div>
     </div>
 
@@ -730,6 +873,7 @@
 </template>
 
 <script setup>
+import logoSomehUrl from '~/assets/imagens/logo-someh-fundo-claro.png'
 const tab = ref('requisicoes')
 const demandas = ref([])
 const loadingDemandas = ref(false)
@@ -813,6 +957,8 @@ const headersDemandas = [
 const headersRequisicoes = [
   { title: 'Data', key: 'dataSolicitacao', formatter: formatDate },
   { title: 'OP / Cliente', key: 'op' },
+  { title: 'OS / Máquina', key: 'os' },
+  { title: 'Processo / Tipo', key: 'tipo', align: 'center' },
   { title: 'Categoria', key: 'categoria', align: 'center' },
   { title: 'Itens', key: '_count.itens', align: 'center' },
   { title: 'Ações', key: 'acoes', align: 'center', sortable: false }
@@ -943,8 +1089,14 @@ const dialogDetalhes = ref({
   dataPrevisao: '',
   valorFrete: 0,
   valorDesconto: 0,
+  formaPagamento: '',
+  tipoFrete: 'FOB',
+  transportadora: '',
+  cnpjTransportadora: '',
   observacoes: '',
-  fornecedorId: null
+  fornecedorId: null,
+  anexosSelecionados: [],
+  isVisualizado: false
 })
 
 const dialogVisualizador = ref({
@@ -1106,8 +1258,14 @@ const verDetalhesRequisicao = (item) => {
     dataPrevisao: item.dataPrevisaoEntrega ? new Date(item.dataPrevisaoEntrega).toISOString().substr(0, 10) : '',
     valorFrete: item.valorFrete || 0,
     valorDesconto: item.valorDesconto || 0,
+    formaPagamento: item.formaPagamento || 'A Combinar',
+    tipoFrete: item.tipoFrete || 'FOB',
+    transportadora: item.transportadora || '',
+    cnpjTransportadora: item.cnpjTransportadora || '',
     observacoes: item.observacoes || '',
-    fornecedorId: item.fornecedorId || null
+    fornecedorId: item.fornecedorId || null,
+    anexosSelecionados: [],
+    isVisualizado: false
   }
   // Inicializa todos como selecionados
   dialogDetalhes.value.requisicao.itens.forEach(i => i.selected = true)
@@ -1130,6 +1288,89 @@ const emitirOC = async () => {
   
   saving.value = true
   try {
+    // APENAS PREVISUALIZAÇÃO - NÃO SALVA NO BANCO
+    const isSplit = !todosItensSelecionados.value
+    const fornecedorObj = fornecedores.value.find(f => f.id === dialogDetalhes.value.fornecedorId)
+
+    const targetOC = {
+      ...dialogDetalhes.value.requisicao,
+      fornecedor: fornecedorObj?.nome || 'Desconhecido',
+      fornecedorId: dialogDetalhes.value.fornecedorId,
+      fornecedorRef: fornecedorObj,
+      valorTotal: totalPedidoCalculado.value,
+      valorFrete: dialogDetalhes.value.valorFrete,
+      valorDesconto: dialogDetalhes.value.valorDesconto,
+      formaPagamento: dialogDetalhes.value.formaPagamento,
+      tipoFrete: dialogDetalhes.value.tipoFrete,
+      transportadora: dialogDetalhes.value.transportadora,
+      cnpjTransportadora: dialogDetalhes.value.cnpjTransportadora,
+      observacoes: dialogDetalhes.value.observacoes,
+      dataPrevisaoEntrega: dialogDetalhes.value.dataPrevisao,
+      itens: selectedItens.map(item => ({
+        ...item,
+        valorIPI: (item.valorUnitario * item.quantidade) * (item.aliqIPI / 100),
+        valorICMS: (item.valorUnitario * item.quantidade) * (item.aliqICMS / 100),
+        custoLiquido: item.valorUnitario * (1 + (item.aliqIPI / 100))
+      }))
+    }
+    
+    // Carrega os dados na div oculta para bater a foto
+    const itensSum = targetOC.itens?.reduce((acc, i) => acc + ((i.valorUnitario || 0) * (i.quantidade || 0)), 0) || 0
+    const totalIPI = targetOC.itens?.reduce((acc, i) => acc + (i.valorIPI || 0), 0) || 0
+    printData.value = { ...targetOC, itensSum, totalIPI }
+    
+    await new Promise(r => setTimeout(r, 200)) // Aguarda o Vue renderizar a tabela oculta
+
+    const printElement = document.getElementById('print-oc')
+    if (printElement && window.htmlToImage) {
+      const oldDisplay = printElement.style.display
+      printElement.style.setProperty('display', 'block', 'important')
+      try {
+        const jpegBase64 = await window.htmlToImage.toJpeg(printElement, {
+          backgroundColor: '#ffffff',
+          style: { transform: 'none' },
+          pixelRatio: 2,
+          quality: 0.8
+        })
+        
+        if (window.jspdf && window.jspdf.jsPDF) {
+          const { jsPDF } = window.jspdf
+          const pdf = new jsPDF('l', 'mm', 'a4')
+          const pdfWidth = pdf.internal.pageSize.getWidth()
+          const pdfHeight = (printElement.offsetHeight * pdfWidth) / printElement.offsetWidth
+          
+          pdf.addImage(jpegBase64, 'JPEG', 0, 0, pdfWidth, pdfHeight)
+          const blobUrl = pdf.output('bloburl')
+          window.open(blobUrl, '_blank')
+        } else {
+           console.error('jsPDF não está carregado.')
+        }
+      } catch (e) {
+        console.error('Erro ao gerar pdf:', e)
+      } finally {
+        printElement.style.display = oldDisplay
+      }
+    }
+
+    showSnackbar('PDF gerado para conferência. Se estiver tudo OK, clique em Confirmar e Enviar.')
+    
+    // Mostra o botão de envio
+    dialogDetalhes.value.isVisualizado = true
+  } catch (error) {
+    console.error('Erro ao emitir OC:', error.data || error)
+    showSnackbar('Erro ao emitir OC: ' + (error.data?.statusMessage || error.message), 'error')
+  } finally {
+    saving.value = false
+  }
+}
+
+const enviarEmailOC = async () => {
+  saving.value = true
+  try {
+    showSnackbar('Emitindo ordem de compra e gerando e-mail...', 'info')
+    
+    // 1. AGORA SIM SALVA NO BANCO
+    const selectedItens = dialogDetalhes.value.requisicao.itens.filter(i => i.selected)
     const isSplit = !todosItensSelecionados.value
     const fornecedorObj = fornecedores.value.find(f => f.id === dialogDetalhes.value.fornecedorId)
 
@@ -1143,6 +1384,10 @@ const emitirOC = async () => {
       valorTotal: totalPedidoCalculado.value,
       valorFrete: dialogDetalhes.value.valorFrete,
       valorDesconto: dialogDetalhes.value.valorDesconto,
+      formaPagamento: dialogDetalhes.value.formaPagamento,
+      tipoFrete: dialogDetalhes.value.tipoFrete,
+      transportadora: dialogDetalhes.value.transportadora,
+      cnpjTransportadora: dialogDetalhes.value.cnpjTransportadora,
       observacoes: dialogDetalhes.value.observacoes,
       dataPrevisaoEntrega: dialogDetalhes.value.dataPrevisao,
       itens: selectedItens.map(item => ({
@@ -1161,28 +1406,84 @@ const emitirOC = async () => {
       body
     })
     
-    if (response) {
-      showSnackbar(isSplit ? 'OC Parcial emitida! O restante da REQ continua disponível.' : 'Ordem de Compra emitida com sucesso!')
-      dialogDetalhes.value.show = false
-      await loadCompras()
-      
-      if (response.newOCId) {
-        // No caso de split, recarrega e talvez devesse imprimir a nova OC?
-         // Por simplicidade, apenas recarregamos.
-      } else {
-        prepararImpressao(response)
-      }
+    const targetId = response.newOCId || response.id
+    const targetOC = response.newOCId ? response.newOC : response
+
+    // 2. GERA O PDF COM A OC OFICIAL PARA ANEXAR NO E-MAIL
+    // Enriquecer targetOC com os dados aninhados da requisição original, pois a API PUT retorna apenas os dados brutos e 'itens'
+    const enrichedTargetOC = {
+      ...dialogDetalhes.value.requisicao, // traz op, os, etc
+      ...targetOC,
+      fornecedorRef: fornecedorObj,
+      op: dialogDetalhes.value.requisicao.op,
+      os: dialogDetalhes.value.requisicao.os,
+      itens: targetOC.itens?.map(item => {
+        const originalItem = dialogDetalhes.value.requisicao.itens.find(i => i.id === item.id)
+        return {
+          ...item,
+          peca: originalItem?.peca,
+          descricao: originalItem?.descricao || item.descricao
+        }
+      }) || []
     }
-  } catch (error) {
-    console.error('Erro ao emitir OC:', error.data || error)
-    showSnackbar('Erro ao emitir OC: ' + (error.data?.statusMessage || error.message), 'error')
+
+    const itensSum = enrichedTargetOC.itens?.reduce((acc, i) => acc + ((i.valorUnitario || 0) * (i.quantidade || 0)), 0) || 0
+    const totalIPI = enrichedTargetOC.itens?.reduce((acc, i) => acc + (i.valorIPI || 0), 0) || 0
+    printData.value = { ...enrichedTargetOC, itensSum, totalIPI }
+    
+    await new Promise(r => setTimeout(r, 500)) // Dá tempo de renderizar
+
+    const printElement = document.getElementById('print-oc')
+    if (!printElement || !window.htmlToImage || !window.jspdf) {
+      showSnackbar('Erro ao carregar bibliotecas', 'error')
+      return
+    }
+
+    const oldDisplay = printElement.style.display
+    printElement.style.setProperty('display', 'block', 'important')
+    let poImageBase64 = null
+    
+    try {
+      const jpegBase64 = await window.htmlToImage.toJpeg(printElement, {
+        backgroundColor: '#ffffff',
+        style: { transform: 'none' },
+        pixelRatio: 2,
+        quality: 0.8
+      })
+      
+      const { jsPDF } = window.jspdf
+      const pdf = new jsPDF('l', 'mm', 'a4')
+      const pdfWidth = pdf.internal.pageSize.getWidth()
+      const pdfHeight = (printElement.offsetHeight * pdfWidth) / printElement.offsetWidth
+      
+      pdf.addImage(jpegBase64, 'JPEG', 0, 0, pdfWidth, pdfHeight)
+      poImageBase64 = pdf.output('datauristring')
+    } finally {
+      printElement.style.display = oldDisplay
+    }
+
+    // 3. ENVIA O E-MAIL
+    await $fetch(`/api/compras/${targetId}/send-po-email`, { 
+      method: 'POST',
+      body: { 
+        poImageBase64,
+        anexosSelecionados: dialogDetalhes.value.anexosSelecionados
+      }
+    })
+    
+    showSnackbar('Ordem de Compra emitida e enviada por e-mail com sucesso!', 'success')
+    dialogDetalhes.value.show = false
+    loadCompras()
+  } catch (err) {
+    console.error(err)
+    showSnackbar('Falha ao enviar e-mail: ' + (err.data?.statusMessage || err.message), 'warning')
   } finally {
     saving.value = false
   }
 }
 
-const prepararImpressao = (oc) => {
-  const itensSum = oc.itens.reduce((acc, i) => acc + (i.valorUnitario * i.quantidade), 0)
+const baixarImagemOC = async (oc) => {
+  const itensSum = oc.itens.reduce((acc, i) => acc + ((i.valorUnitario || 0) * (i.quantidade || 0)), 0)
   const totalIPI = oc.itens.reduce((acc, i) => acc + (i.valorIPI || 0), 0)
   
   printData.value = {
@@ -1191,9 +1492,46 @@ const prepararImpressao = (oc) => {
     totalIPI
   }
   
-  setTimeout(() => {
-    window.print()
-  }, 500)
+  if (!window.htmlToImage) {
+    showSnackbar('Biblioteca de imagem não carregada', 'warning')
+    return
+  }
+
+  showSnackbar('Gerando PDF...', 'info')
+  await new Promise(r => setTimeout(r, 200)) // Dá tempo de renderizar o HTML oculto
+
+  const printElement = document.getElementById('print-oc')
+  if (printElement) {
+    const oldDisplay = printElement.style.display
+    printElement.style.setProperty('display', 'block', 'important')
+    try {
+      const jpegBase64 = await window.htmlToImage.toJpeg(printElement, {
+        backgroundColor: '#ffffff',
+        style: { transform: 'none' },
+        pixelRatio: 2,
+        quality: 0.8
+      })
+
+      if (window.jspdf && window.jspdf.jsPDF) {
+        const { jsPDF } = window.jspdf
+        const pdf = new jsPDF('l', 'mm', 'a4')
+        const pdfWidth = pdf.internal.pageSize.getWidth()
+        const pdfHeight = (printElement.offsetHeight * pdfWidth) / printElement.offsetWidth
+        
+        pdf.addImage(jpegBase64, 'JPEG', 0, 0, pdfWidth, pdfHeight)
+        
+        const blobUrl = pdf.output('bloburl')
+        window.open(blobUrl, '_blank')
+      } else {
+        showSnackbar('Biblioteca PDF não carregada', 'error')
+      }
+    } catch (e) {
+      console.error(e)
+      showSnackbar('Erro ao gerar PDF', 'error')
+    } finally {
+      printElement.style.display = oldDisplay
+    }
+  }
 }
 
 const viewDrawing = (url) => {
@@ -1257,27 +1595,38 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* Remove setas de inputs number */
+:deep(input[type="number"]::-webkit-outer-spin-button),
+:deep(input[type="number"]::-webkit-inner-spin-button) {
+  -webkit-appearance: none;
+  margin: 0;
+}
+:deep(input[type="number"]) {
+  -moz-appearance: textfield;
+}
+
 @media print {
-  .v-application {
-    background: white !important;
+  body * {
+    visibility: hidden;
   }
-  .print-only {
+  #print-oc, #print-oc * {
+    visibility: visible;
+  }
+  #print-oc {
     display: block !important;
     position: absolute;
     left: 0;
     top: 0;
     width: 100%;
-    z-index: 9999;
     background: white !important;
+    z-index: 999999;
   }
-  body * {
-    visibility: hidden;
-  }
-  .print-only, .print-only * {
-    visibility: visible;
-  }
-  .no-print {
+  /* Oculta os popups/overlays do Vuetify para não criarem páginas em branco fantasma */
+  .v-overlay-container {
     display: none !important;
+  }
+  @page {
+    margin: 1cm;
   }
 }
 

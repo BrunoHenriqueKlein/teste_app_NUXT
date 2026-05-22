@@ -359,6 +359,10 @@ model Compra {
   dataPrevisaoEntrega DateTime?    @map("data_previsao_entrega")
   dataEntregaReal     DateTime?    @map("data_entrega_real")
   numeroNF            String?      @map("numero_nf")
+  formaPagamento      String?      @map("forma_pagamento")
+  tipoFrete           String?      @map("tipo_frete")
+  transportadora      String?
+  cnpjTransportadora  String?      @map("cnpj_transportadora")
   op                  OP           @relation(fields: [opId], references: [id], onDelete: Cascade)
   os                  OrdemServico? @relation(fields: [osId], references: [id], onDelete: SetNull)
   fornecedorRef       Fornecedor?  @relation("FornecedorCompra", fields: [fornecedorId], references: [id])

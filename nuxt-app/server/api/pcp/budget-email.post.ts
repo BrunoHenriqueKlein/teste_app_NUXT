@@ -141,27 +141,36 @@ export default defineEventHandler(async (event) => {
             }
         }
 
-        // 6. Criar Requisição de Compras no Banco (Sempre garante o fluxo de suprimentos!)
-        const count = await prisma.compra.count()
-        const numeroReq = `REQ-OS-${os.numero.split('-').pop()}-${(count + 1).toString().padStart(3, '0')}`
-
-        const novaCompra = await prisma.compra.create({
-            data: {
-                numero: numeroReq,
-                opId: os.opId,
+        // 6. Criar Requisição de Compras no Banco (apenas se já não existir uma aberta)
+        let targetCompra = await prisma.compra.findFirst({
+            where: {
                 osId: os.id,
-                fornecedor: fornecedor.nome,
-                status: 'SOLICITADA',
-                itens: {
-                    create: os.itens.map((item: any) => ({
-                        pecaId: item.pecaId,
-                        descricao: `SERVIÇO: ${os.tipo} - Peça: ${item.peca.codigo}`,
-                        quantidade: item.peca.quantidade,
-                        valorUnitario: 0
-                    }))
-                }
+                status: { in: ['SOLICITADA', 'COTACAO'] }
             }
         })
+
+        if (!targetCompra) {
+            const count = await prisma.compra.count()
+            const numeroReq = `REQ-OS-${os.numero.split('-').pop()}-${(count + 1).toString().padStart(3, '0')}`
+
+            targetCompra = await prisma.compra.create({
+                data: {
+                    numero: numeroReq,
+                    opId: os.opId,
+                    osId: os.id,
+                    fornecedor: 'Múltiplos / Cotação',
+                    status: 'SOLICITADA',
+                    itens: {
+                        create: os.itens.map((item: any) => ({
+                            pecaId: item.pecaId,
+                            descricao: `SERVIÇO: ${os.tipo} - Peça: ${item.peca.codigo}`,
+                            quantidade: item.peca.quantidade,
+                            valorUnitario: 0
+                        }))
+                    }
+                }
+            })
+        }
 
         // 7. Atualizar OS informando que está Aguardando (Orçamento)
         await prisma.ordemServico.update({
@@ -221,7 +230,7 @@ export default defineEventHandler(async (event) => {
             success: true,
             emailEnviado: emailOk,
             message: userMessage,
-            compraId: novaCompra.id
+            compraId: targetCompra.id
         }
 
     } catch (error: any) {
