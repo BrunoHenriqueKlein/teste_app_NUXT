@@ -100,6 +100,33 @@ export default defineEventHandler(async (event) => {
                     }
                 })
 
+                // 3. Adicionar processos de fabricação se informados (Processo1 até Processo6)
+                const processosNomes = []
+                for (let i = 1; i <= 6; i++) {
+                    const procNome = String(row[`Processo${i}`] || row[`processo${i}`] || row[`PROCESSO${i}`] || '').trim()
+                    if (procNome) {
+                        processosNomes.push(procNome)
+                    }
+                }
+
+                if (processosNomes.length > 0) {
+                    // Apaga processos existentes caso esteja sobreescrevendo a importação
+                    await prisma.processoPeca.deleteMany({
+                        where: { pecaId: peca.id }
+                    })
+
+                    const processosData = processosNomes.map((nome, index) => ({
+                        pecaId: peca.id,
+                        nome: nome,
+                        sequencia: index + 1,
+                        status: 'NAO_INICIADO'
+                    }))
+
+                    await prisma.processoPeca.createMany({
+                        data: processosData
+                    })
+                }
+
                 results.push({
                     ...peca,
                     temNoEstoque: !!itemEstoque,

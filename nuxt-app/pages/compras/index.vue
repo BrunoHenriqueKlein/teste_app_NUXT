@@ -526,10 +526,11 @@
 
     <!-- Layout de Impressão de OC (Oculto na Web) -->
     <div id="print-oc" class="d-none print-only pa-4">
-      <div v-if="printData" class="oc-layout" style="font-family: Arial, sans-serif; font-size: 11px; color: #000; line-height: 1.3;">
+      <div v-if="printData">
+        <div v-for="(chunk, pageIndex) in chunkedPrintItens" :key="pageIndex" class="oc-page" style="font-family: Arial, sans-serif; font-size: 11px; color: #000; line-height: 1.3; margin-bottom: 20px; background: white; padding: 10px; page-break-after: always; min-height: 200mm;">
         
-        <!-- Cabeçalho Principal -->
-        <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; margin-bottom: 0;">
+          <!-- Cabeçalho Principal -->
+          <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; margin-bottom: 0;">
             <tr>
                 <td style="width: 20%; padding: 10px; border-right: 1px solid #000; text-align: center;">
                     <img :src="logoSomehUrl" alt="SOMEH" style="max-width: 150px;" />
@@ -564,10 +565,10 @@
                     </table>
                 </td>
             </tr>
-        </table>
+          </table>
 
-        <!-- Dados do Fornecedor -->
-        <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; border-top: none;">
+          <!-- Dados do Fornecedor -->
+          <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; border-top: none;">
             <tr>
                 <td colspan="4" style="background-color: #e0e0e0; text-align: center; font-weight: bold; padding: 5px; border-bottom: 1px solid #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact;">DADOS DO FORNECEDOR</td>
             </tr>
@@ -587,31 +588,29 @@
                 <td style="padding: 5px; font-weight: bold; border-right: 1px solid #000;">ENDEREÇO:</td>
                 <td colspan="3" style="padding: 5px;">{{ printData.fornecedorRef?.endereco || '' }}</td>
             </tr>
-        </table>
+          </table>
 
-
-
-        <!-- Produtos -->
-        <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; border-top: none; margin-top: 5px;">
+          <!-- Produtos -->
+          <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; border-top: none; margin-top: 5px;">
             <tr>
                 <td colspan="9" style="background-color: #e0e0e0; text-align: center; font-weight: bold; padding: 5px; border-bottom: 1px solid #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact;">PRODUTOS</td>
             </tr>
             <tr style="font-weight: bold; text-align: center;">
-                <td rowspan="2" style="padding: 5px; border: 1px solid #000;">CÓDIGO</td>
-                <td rowspan="2" style="padding: 5px; border: 1px solid #000;">DESCRIÇÃO</td>
-                <td rowspan="2" style="padding: 5px; border: 1px solid #000;">ETAPA / PROCESSO</td>
-                <td rowspan="2" style="padding: 5px; border: 1px solid #000;">MATERIAL</td>
-                <td rowspan="2" style="padding: 5px; border: 1px solid #000;">QTD</td>
-                <td rowspan="2" style="padding: 5px; border: 1px solid #000;">UN</td>
-                <td rowspan="2" style="padding: 5px; border: 1px solid #000;">R$ UNIT.</td>
-                <td colspan="2" style="padding: 5px; border: 1px solid #000;">IMPOSTOS</td>
-                <td rowspan="2" style="padding: 5px; border: 1px solid #000;">VALOR TOTAL (R$)</td>
+                <td rowspan="2" style="padding: 5px; border: 1px solid #000; width: 12%;">CÓDIGO</td>
+                <td rowspan="2" style="padding: 5px; border: 1px solid #000; width: 32%;">DESCRIÇÃO</td>
+                <td rowspan="2" style="padding: 5px; border: 1px solid #000; width: 12%;">ETAPA / PROCESSO</td>
+                <td rowspan="2" style="padding: 5px; border: 1px solid #000; width: 10%;">MATERIAL</td>
+                <td rowspan="2" style="padding: 5px; border: 1px solid #000; width: 4%;">QTD</td>
+                <td rowspan="2" style="padding: 5px; border: 1px solid #000; width: 4%;">UN</td>
+                <td rowspan="2" style="padding: 5px; border: 1px solid #000; width: 8%;">R$ UNIT.</td>
+                <td colspan="2" style="padding: 5px; border: 1px solid #000; width: 8%;">IMPOSTOS</td>
+                <td rowspan="2" style="padding: 5px; border: 1px solid #000; width: 10%;">VALOR TOTAL (R$)</td>
             </tr>
             <tr style="font-weight: bold; text-align: center;">
                 <td style="padding: 2px; border: 1px solid #000; font-size: 9px;">(%) ICMS</td>
                 <td style="padding: 2px; border: 1px solid #000; font-size: 9px;">(%) IPI</td>
             </tr>
-            <tr v-for="item in printData.itens" :key="item.id">
+            <tr v-for="item in chunk" :key="item.id">
                 <td style="padding: 5px; border: 1px solid #000;">{{ item.peca?.codigo || '-' }}</td>
                 <td style="padding: 5px; border: 1px solid #000;">{{ item.peca?.descricao || (item.descricao.includes(' - Peça: ') ? item.descricao.split(' - Peça: ')[1] : item.descricao) }}</td>
                 <td style="padding: 5px; border: 1px solid #000;">{{ item.descricao.includes('SERVIÇO: ') ? item.descricao.split(' - ')[0].replace('SERVIÇO: ', '') : '-' }}</td>
@@ -623,71 +622,79 @@
                 <td style="padding: 5px; border: 1px solid #000; text-align: center;">{{ item.aliqIPI || 0 }}%</td>
                 <td style="padding: 5px; border: 1px solid #000; text-align: right;">{{ formatCurrency((item.quantidade * item.valorUnitario) + ((item.quantidade * item.valorUnitario) * ((item.aliqIPI || 0) / 100))) }}</td>
             </tr>
-        </table>
+          </table>
 
-        <!-- Totais -->
-        <table style="width: 100%; border-collapse: collapse;">
-            <tr>
-                <td style="width: 70%; border: 0;"></td>
-                <td style="width: 30%; padding: 0;">
-                    <table style="width: 100%; border-collapse: collapse; border-left: 1px solid #000; border-right: 1px solid #000; border-bottom: 1px solid #000;">
-                        <tr>
-                            <td style="padding: 5px; font-weight: bold; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: right;">VALOR TOTAL:</td>
-                            <td style="padding: 5px; text-align: right; border-bottom: 1px solid #000;">{{ formatCurrency(printData.itensSum) }}</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 5px; font-weight: bold; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: right;">VALOR TOTAL IPI:</td>
-                            <td style="padding: 5px; text-align: right; border-bottom: 1px solid #000;">{{ formatCurrency(printData.totalIPI) }}</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 5px; font-weight: bold; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: right;">VALOR TOTAL FRETE:</td>
-                            <td style="padding: 5px; text-align: right; border-bottom: 1px solid #000;">{{ formatCurrency(printData.valorFrete || 0) }}</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 5px; font-weight: bold; border-right: 1px solid #000; text-align: right;">VALOR TOTAL COM IPI:</td>
-                            <td style="padding: 5px; text-align: right;">{{ formatCurrency(printData.valorTotal) }}</td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-        </table>
+          <!-- Totais e Rodapé (Apenas na última página) -->
+          <div v-if="pageIndex === chunkedPrintItens.length - 1">
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <td style="width: 70%; border: 0;"></td>
+                    <td style="width: 30%; padding: 0;">
+                        <table style="width: 100%; border-collapse: collapse; border-left: 1px solid #000; border-right: 1px solid #000; border-bottom: 1px solid #000;">
+                            <tr>
+                                <td style="padding: 5px; font-weight: bold; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: right;">VALOR TOTAL:</td>
+                                <td style="padding: 5px; text-align: right; border-bottom: 1px solid #000;">{{ formatCurrency(printData.itensSum) }}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 5px; font-weight: bold; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: right;">VALOR TOTAL IPI:</td>
+                                <td style="padding: 5px; text-align: right; border-bottom: 1px solid #000;">{{ formatCurrency(printData.totalIPI) }}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 5px; font-weight: bold; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: right;">VALOR TOTAL FRETE:</td>
+                                <td style="padding: 5px; text-align: right; border-bottom: 1px solid #000;">{{ formatCurrency(printData.valorFrete || 0) }}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 5px; font-weight: bold; border-right: 1px solid #000; text-align: right;">VALOR TOTAL COM IPI:</td>
+                                <td style="padding: 5px; text-align: right;">{{ formatCurrency(printData.valorTotal) }}</td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
 
-        <!-- Rodapé -->
-        <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; margin-top: 5px; page-break-inside: avoid;">
-            <tr>
-                <td style="padding: 5px; background-color: #e0e0e0; border-bottom: 1px solid #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact;" colspan="3">
-                    <strong>TRANSPORTADORA:</strong> {{ printData.transportadora || 'A DEFINIR' }} &nbsp;&nbsp;&nbsp; <strong>CNPJ:</strong> {{ printData.cnpjTransportadora || '-' }}
-                </td>
-            </tr>
-            <tr>
-                <td style="padding: 10px; width: 60%; border-right: 1px solid #000; vertical-align: top;">
-                    <strong>OBS:</strong> {{ printData.observacoes || '' }}<br/>
-                    {{ printData.os ? 'Ref OS: ' + printData.os.numero : '' }}<br/>
-                    {{ printData.op ? 'OP: ' + printData.op.numeroOP + ' - ' + printData.op.cliente : '' }}
-                </td>
-                <td style="padding: 10px; width: 20%; border-right: 1px solid #000; vertical-align: top; text-align: center;">
-                    <strong>FRETE:</strong><br/><br/>
-                    {{ printData.tipoFrete || 'A Combinar' }}
-                </td>
-                <td style="padding: 10px; width: 20%; vertical-align: top; text-align: center;">
-                    <strong>Aprovação:</strong>
-                </td>
-            </tr>
-            <tr>
-                <td colspan="3" style="padding: 10px; border-top: 1px solid #000; text-align: center; font-size: 10px;">
-                    <span style="color: red; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact;">ATENÇÃO:</span> Só receberemos vossa mercadoria mediante ao envio dos arquivos DANFE e XML para <span style="color: blue;">adm1@someh.com.br</span><br/>
-                    Obrigatório mencionar o número do pedido de compra no campo observação da NF<br/>
-                    <span style="color: red; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact;">NOVO ENDEREÇO:</span> Rua João Elias Claudino. Nº 738 – Lateral Procópio Pereira 89245-000 Bairro corveta Araquari/SC Loteamento industrial Techlog Service
-                </td>
-            </tr>
-            <tr>
-                <td colspan="3" style="padding: 15px 10px; border-top: 1px solid #000; text-align: justify; position: relative;">
-                    Recebido em: ____/____/________ 
-                    <span style="float: right;">_____________________________________________</span><br>
-                    <span style="float: right;">Assinatura do autorizador e carimbo</span>
-                </td>
-            </tr>
-        </table>
+            <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; margin-top: 5px; page-break-inside: avoid;">
+                <tr>
+                    <td style="padding: 5px; background-color: #e0e0e0; border-bottom: 1px solid #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact;" colspan="3">
+                        <strong>TRANSPORTADORA:</strong> {{ printData.transportadora || 'A DEFINIR' }} &nbsp;&nbsp;&nbsp; <strong>CNPJ:</strong> {{ printData.cnpjTransportadora || '-' }}
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; width: 60%; border-right: 1px solid #000; vertical-align: top;">
+                        <strong>OBS:</strong> {{ printData.observacoes || '' }}<br/>
+                        {{ printData.os ? 'Ref OS: ' + printData.os.numero : '' }}<br/>
+                        {{ printData.op ? 'OP: ' + printData.op.numeroOP + ' - ' + printData.op.cliente : '' }}
+                    </td>
+                    <td style="padding: 10px; width: 20%; border-right: 1px solid #000; vertical-align: top; text-align: center;">
+                        <strong>FRETE:</strong><br/><br/>
+                        {{ printData.tipoFrete || 'A Combinar' }}
+                    </td>
+                    <td style="padding: 10px; width: 20%; vertical-align: top; text-align: center;">
+                        <strong>Aprovação:</strong>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="3" style="padding: 10px; border-top: 1px solid #000; text-align: center; font-size: 10px;">
+                        <span style="color: red; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact;">ATENÇÃO:</span> Só receberemos vossa mercadoria mediante ao envio dos arquivos DANFE e XML para <span style="color: blue;">adm1@someh.com.br</span><br/>
+                        Obrigatório mencionar o número do pedido de compra no campo observação da NF<br/>
+                        <span style="color: red; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact;">NOVO ENDEREÇO:</span> Rua João Elias Claudino. Nº 738 – Lateral Procópio Pereira 89245-000 Bairro corveta Araquari/SC Loteamento industrial Techlog Service
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="3" style="padding: 15px 10px; border-top: 1px solid #000; text-align: justify; position: relative;">
+                        Recebido em: ____/____/________ 
+                        <span style="float: right;">_____________________________________________</span><br>
+                        <span style="float: right;">Assinatura do autorizador e carimbo</span>
+                    </td>
+                </tr>
+            </table>
+          </div>
+
+          <!-- Numeração de Página -->
+          <div style="text-align: right; margin-top: 10px; font-size: 10px; font-weight: bold;">
+             Página {{ pageIndex + 1 }} de {{ chunkedPrintItens.length }}
+          </div>
+
+        </div>
       </div>
     </div>
 
@@ -803,18 +810,23 @@
           <v-table density="compact" class="border rounded mb-4">
             <thead>
               <tr class="bg-grey-lighten-4">
-                <th class="text-left">Item / Código</th>
-                <th class="text-center">Qtd Pedida</th>
-                <th class="text-center">Já Recebido</th>
-                <th class="text-center" style="width: 120px;">Qtd a Entregar</th>
-                <th class="text-right">Saldo</th>
+                <th class="text-left" style="width: 25%; min-width: 180px;">Código</th>
+                <th class="text-left">Descrição</th>
+                <th class="text-center" style="width: 10%">Qtd Pedida</th>
+                <th class="text-center" style="width: 10%">Já Recebido</th>
+                <th class="text-center" style="width: 15%">NF (Qtd)</th>
+                <th class="text-right" style="width: 10%">Saldo</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="item in dialogRecebimento.data.itens" :key="item.id">
                 <td>
-                  <div class="font-weight-bold">{{ item.peca?.codigo || '-' }}</div>
-                  <div class="text-caption text-truncate" style="max-width: 200px">{{ item.descricao }}</div>
+                  <div class="font-weight-bold" style="word-break: break-word;">{{ item.peca?.codigo || '-' }}</div>
+                </td>
+                <td>
+                  <div class="text-caption" style="white-space: normal; line-height: 1.2;">
+                    {{ item.peca?.descricao || (item.descricao.includes(' - Peça: ') ? item.descricao.split(' - Peça: ')[1] : item.descricao) }}
+                  </div>
                 </td>
                 <td class="text-center">{{ item.quantidade }}</td>
                 <td class="text-center">
@@ -977,6 +989,54 @@ const headers = [
 
 const empresa = ref(null)
 const printData = ref(null)
+
+const chunkedPrintItens = computed(() => {
+  if (!printData.value || !printData.value.itens) return []
+  const items = printData.value.itens
+  const size = 19 // Máximo de itens por página
+  const result = []
+  for (let i = 0; i < items.length; i += size) {
+    result.push(items.slice(i, i + size))
+  }
+  return result
+})
+
+const generateMultiPagePDF = async () => {
+  const printElement = document.getElementById('print-oc')
+  if (!printElement || !window.htmlToImage || !window.jspdf) {
+    throw new Error('Erro ao carregar bibliotecas ou elemento ausente')
+  }
+
+  const oldDisplay = printElement.style.display
+  printElement.style.setProperty('display', 'block', 'important')
+
+  try {
+    await new Promise(r => setTimeout(r, 800)) // Dá tempo para renderizar
+
+    const { jsPDF } = window.jspdf
+    const pdf = new jsPDF('l', 'mm', 'a4')
+
+    const pages = printElement.querySelectorAll('.oc-page')
+    for (let i = 0; i < pages.length; i++) {
+      if (i > 0) pdf.addPage()
+      const pageEl = pages[i]
+      const jpegBase64 = await window.htmlToImage.toJpeg(pageEl, {
+        backgroundColor: '#ffffff',
+        style: { transform: 'none' },
+        pixelRatio: 2,
+        quality: 0.8
+      })
+
+      const pdfWidth = pdf.internal.pageSize.getWidth()
+      const pdfHeight = (pageEl.offsetHeight * pdfWidth) / pageEl.offsetWidth
+
+      pdf.addImage(jpegBase64, 'JPEG', 0, 0, pdfWidth, pdfHeight)
+    }
+    return pdf
+  } finally {
+    printElement.style.display = oldDisplay
+  }
+}
 
 const formatCurrency = (value) => {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0)
@@ -1321,35 +1381,13 @@ const emitirOC = async () => {
     
     await new Promise(r => setTimeout(r, 200)) // Aguarda o Vue renderizar a tabela oculta
 
-    const printElement = document.getElementById('print-oc')
-    if (printElement && window.htmlToImage) {
-      const oldDisplay = printElement.style.display
-      printElement.style.setProperty('display', 'block', 'important')
-      try {
-        const jpegBase64 = await window.htmlToImage.toJpeg(printElement, {
-          backgroundColor: '#ffffff',
-          style: { transform: 'none' },
-          pixelRatio: 2,
-          quality: 0.8
-        })
-        
-        if (window.jspdf && window.jspdf.jsPDF) {
-          const { jsPDF } = window.jspdf
-          const pdf = new jsPDF('l', 'mm', 'a4')
-          const pdfWidth = pdf.internal.pageSize.getWidth()
-          const pdfHeight = (printElement.offsetHeight * pdfWidth) / printElement.offsetWidth
-          
-          pdf.addImage(jpegBase64, 'JPEG', 0, 0, pdfWidth, pdfHeight)
-          const blobUrl = pdf.output('bloburl')
-          window.open(blobUrl, '_blank')
-        } else {
-           console.error('jsPDF não está carregado.')
-        }
-      } catch (e) {
-        console.error('Erro ao gerar pdf:', e)
-      } finally {
-        printElement.style.display = oldDisplay
-      }
+    try {
+      const pdf = await generateMultiPagePDF()
+      const blobUrl = pdf.output('bloburl')
+      window.open(blobUrl, '_blank')
+    } catch (e) {
+      console.error('Erro ao gerar pdf:', e)
+      showSnackbar('Erro ao gerar PDF', 'error')
     }
 
     showSnackbar('PDF gerado para conferência. Se estiver tudo OK, clique em Confirmar e Enviar.')
@@ -1433,33 +1471,14 @@ const enviarEmailOC = async () => {
     
     await new Promise(r => setTimeout(r, 500)) // Dá tempo de renderizar
 
-    const printElement = document.getElementById('print-oc')
-    if (!printElement || !window.htmlToImage || !window.jspdf) {
-      showSnackbar('Erro ao carregar bibliotecas', 'error')
-      return
-    }
-
-    const oldDisplay = printElement.style.display
-    printElement.style.setProperty('display', 'block', 'important')
     let poImageBase64 = null
-    
     try {
-      const jpegBase64 = await window.htmlToImage.toJpeg(printElement, {
-        backgroundColor: '#ffffff',
-        style: { transform: 'none' },
-        pixelRatio: 2,
-        quality: 0.8
-      })
-      
-      const { jsPDF } = window.jspdf
-      const pdf = new jsPDF('l', 'mm', 'a4')
-      const pdfWidth = pdf.internal.pageSize.getWidth()
-      const pdfHeight = (printElement.offsetHeight * pdfWidth) / printElement.offsetWidth
-      
-      pdf.addImage(jpegBase64, 'JPEG', 0, 0, pdfWidth, pdfHeight)
+      const pdf = await generateMultiPagePDF()
       poImageBase64 = pdf.output('datauristring')
-    } finally {
-      printElement.style.display = oldDisplay
+    } catch (e) {
+      console.error('Erro ao gerar pdf:', e)
+      showSnackbar('Erro ao gerar PDF', 'error')
+      return
     }
 
     // 3. ENVIA O E-MAIL
