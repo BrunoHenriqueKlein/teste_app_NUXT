@@ -7,12 +7,25 @@
     >
       <template #actions>
         <v-btn
-          color="primary"
-          prepend-icon="mdi-cart-plus"
+          color="secondary"
+          variant="flat"
+          prepend-icon="mdi-cart-arrow-down"
+          class="mr-2"
           :disabled="!selectedItems.length"
-          @click="openOrderDialog"
+          @click="generateDirectPurchase"
+          title="Pula o envio de e-mail e envia para a aba de Requisições."
         >
-          Gerar Ordem de Compra ({{ selectedItems.length }})
+          Compra Direta / Online ({{ selectedItems.length }})
+        </v-btn>
+        <v-btn
+          color="info"
+          variant="flat"
+          prepend-icon="mdi-email-fast"
+          :disabled="!selectedItems.length"
+          @click="openQuoteDialog"
+          title="Envia e-mail de cotação para fornecedores."
+        >
+          Solicitar Cotações ({{ selectedItems.length }})
         </v-btn>
       </template>
     </PageHeader>
@@ -26,53 +39,25 @@
         show-select
         hover
       >
+        <template v-slot:item.statusSuprimento="{ item }">
+          <v-chip
+            :color="item.statusSuprimento === 'EM_ORCAMENTO' ? 'warning' : 'grey'"
+            size="small"
+            variant="flat"
+          >
+            {{ item.statusSuprimento === 'EM_ORCAMENTO' ? 'EM COTAÇÃO' : 'NÃO COTADO' }}
+          </v-chip>
+        </template>
+
         <template v-slot:item.op="{ item }">
           <span class="text-primary font-weight-bold">#{{ item.op?.numeroOP }}</span>
         </template>
 
-        <template v-slot:item.valorUnitario="{ item }">
-          <v-text-field
-            v-model.number="item.valorUnitario"
-            prefix="R$"
-            density="compact"
-            variant="underlined"
-            hide-details
-            type="number"
-            class="mt-1"
-            style="width: 100px"
-          ></v-text-field>
+        <template v-slot:item.codigo="{ item }">
+          <div class="font-weight-bold">{{ item.codigo }}</div>
         </template>
-
-        <template v-slot:item.impostos="{ item }">
-          <div class="d-flex gap-2">
-            <v-text-field
-              v-model.number="item.valorIPI"
-              label="IPI %"
-              density="compact"
-              variant="underlined"
-              hide-details
-              type="number"
-              style="width: 60px"
-            ></v-text-field>
-            <v-text-field
-              v-model.number="item.valorICMS"
-              label="ICMS %"
-              density="compact"
-              variant="underlined"
-              hide-details
-              type="number"
-              style="width: 60px"
-            ></v-text-field>
-          </div>
-        </template>
-
-        <template v-slot:item.custoLiquido="{ item }">
-          <div class="font-weight-bold">
-            R$ {{ calculateLiquid(item).toFixed(2) }}
-          </div>
-          <div class="text-caption text-grey">
-            (total: R$ {{ (calculateLiquid(item) * item.quantidade).toFixed(2) }})
-          </div>
+        <template v-slot:item.descricao="{ item }">
+          <div class="text-caption">{{ item.descricao }}</div>
         </template>
 
         <template v-slot:item.fornecedorId="{ item }">
@@ -92,62 +77,79 @@
     </v-card>
 
     <!-- Diálogo para Finalizar Ordem de Compra -->
-    <v-dialog v-model="orderDialog.show" max-width="700px">
-      <v-card>
-        <v-card-title>Confirmar Ordem de Compra</v-card-title>
-        <v-card-text>
-          <v-row>
-            <v-col cols="12" sm="6">
-              <v-text-field
-                v-model="orderDialog.data.dataCompra"
-                label="Data da Compra"
-                type="date"
-                variant="outlined"
-              ></v-text-field>
-            </v-col>
-            <v-col cols="12" sm="6">
-              <v-text-field
-                v-model="orderDialog.data.dataPrevisaoEntrega"
-                label="Previsão de Entrega"
-                type="date"
-                variant="outlined"
-              ></v-text-field>
-            </v-col>
-          </v-row>
+    
 
-          <v-table density="compact">
-            <thead>
-              <tr>
-                <th>Item</th>
-                <th class="text-right">Qtd</th>
-                <th class="text-right">Líquido Unit.</th>
-                <th class="text-right">Subtotal OC</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="item in selectedItemsData" :key="item.id">
-                <td>{{ item.codigo }}</td>
-                <td class="text-right">{{ item.quantidade }}</td>
-                <td class="text-right">R$ {{ calculateLiquid(item).toFixed(2) }}</td>
-                <td class="text-right">R$ {{ (item.valorUnitario * item.quantidade).toFixed(2) }}</td>
-              </tr>
-            </tbody>
-            <tfoot>
-              <tr>
-                <td colspan="3" class="text-right font-weight-bold">TOTAL BRUTO (NF):</td>
-                <td class="text-right font-weight-bold text-h6">R$ {{ totalBrutoOC.toFixed(2) }}</td>
-              </tr>
-              <tr>
-                <td colspan="3" class="text-right text-success font-weight-bold">Créditos de Impostos (IPI+ICMS):</td>
-                <td class="text-right text-success font-weight-bold">R$ {{ totalCreditosOC.toFixed(2) }}</td>
-              </tr>
-            </tfoot>
-          </v-table>
+    <!-- Diálogo 1: Seleção de Fornecedores para Cotação -->
+    <v-dialog v-model="dialogQuoteSuppliers.show" max-width="500px">
+      <v-card>
+        <v-card-title class="pa-4 bg-secondary text-white">Solicitar Cotações</v-card-title>
+        <v-card-text class="pa-4">
+          <p class="mb-4">Selecione os fornecedores para enviar o e-mail de cotação das <strong>{{ selectedItems.length }} peças</strong> selecionadas.</p>
+          <v-select
+            v-model="dialogQuoteSuppliers.fornecedorIds"
+            :items="fornecedores"
+            item-title="nome"
+            item-value="id"
+            label="Escolha os Fornecedores"
+            variant="outlined"
+            placeholder="Selecione um ou mais"
+            multiple
+            chips
+          ></v-select>
         </v-card-text>
-        <v-card-actions>
+        <v-card-actions class="pa-4">
           <v-spacer></v-spacer>
-          <v-btn variant="text" @click="orderDialog.show = false">Cancelar</v-btn>
-          <v-btn color="primary" variant="flat" :loading="saving" @click="generateOC">Emitir Pedido de Compra</v-btn>
+          <v-btn variant="text" @click="dialogQuoteSuppliers.show = false">Cancelar</v-btn>
+          <v-btn color="secondary" variant="flat" :loading="loadingPreview" :disabled="!dialogQuoteSuppliers.fornecedorIds.length" @click="loadQuotePreview">
+            Gerar Rascunho
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Diálogo 2: Revisão e Edição de E-mail de Cotação -->
+    <v-dialog v-model="dialogQuoteEmail.show" max-width="800px" persistent>
+      <v-card>
+        <v-card-title class="pa-4 bg-success text-white">Revisar e Enviar E-mail(s)</v-card-title>
+        <v-card-text class="pa-4">
+          <v-alert type="info" variant="tonal" density="compact" class="mb-4">
+            Serão enviados e-mails individuais para os fornecedores selecionados.
+          </v-alert>
+
+          <v-text-field
+            v-model="dialogQuoteEmail.subject"
+            label="Assunto do E-mail"
+            variant="outlined"
+            density="comfortable"
+            class="mb-2"
+          ></v-text-field>
+
+          <v-textarea
+            v-model="dialogQuoteEmail.html"
+            label="Corpo do E-mail (HTML)"
+            variant="outlined"
+            rows="12"
+            auto-grow
+            hint="Você pode editar o texto acima. Os anexos (desenhos) serão incluídos automaticamente se existirem."
+            persistent-hint
+          ></v-textarea>
+          
+          <v-alert
+            v-if="dialogQuoteEmail.attachmentsCount"
+            type="success"
+            variant="tonal"
+            density="compact"
+            class="mt-4"
+          >
+            <strong>{{ dialogQuoteEmail.attachmentsCount }} desenho(s)/anexo(s)</strong> serão enviados automaticamente com estes e-mails.
+          </v-alert>
+        </v-card-text>
+        <v-card-actions class="pa-4">
+          <v-btn variant="text" @click="dialogQuoteEmail.show = false">Voltar</v-btn>
+          <v-spacer></v-spacer>
+          <v-btn color="success" variant="flat" :loading="sendingEmail" @click="sendFinalQuoteEmails">
+            Enviar Agora
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -163,24 +165,30 @@ const fornecedores = ref([])
 const loading = ref(false)
 const saving = ref(false)
 
-const orderDialog = ref({
+
+const dialogQuoteSuppliers = ref({
   show: false,
-  data: {
-    dataCompra: new Date().toISOString().substr(0, 10),
-    dataPrevisaoEntrega: ''
-  }
+  fornecedorIds: []
 })
+
+const dialogQuoteEmail = ref({
+  show: false,
+  subject: '',
+  html: '',
+  attachmentsCount: 0
+})
+
+const loadingPreview = ref(false)
+const sendingEmail = ref(false)
 
 const snackbar = ref({ show: false, text: '', color: 'success' })
 
 const headers = [
+  { title: 'Status', key: 'statusSuprimento', width: '120px' },
   { title: 'OP', key: 'op', width: '80px' },
-  { title: 'Código/Descrição', key: 'codigo' },
-  { title: 'Qtd', key: 'quantidade', align: 'end', width: '60px' },
-  { title: 'Fornecedor', key: 'fornecedorId' },
-  { title: 'Preço Bruto Unit.', key: 'valorUnitario' },
-  { title: 'Impostos', key: 'impostos', sortable: false },
-  { title: 'Custo Líquido', key: 'custoLiquido', align: 'end' }
+  { title: 'Código', key: 'codigo', minWidth: '300px', width: '40%' },
+  { title: 'Descrição', key: 'descricao', minWidth: '150px' },
+  { title: 'Qtd', key: 'quantidade', align: 'end', width: '80px' }
 ]
 
 const loadData = async () => {
@@ -207,80 +215,103 @@ const loadData = async () => {
   }
 }
 
-const calculateLiquid = (item) => {
-  const ipi = (item.valorIPI || 0) / 100
-  const icms = (item.valorICMS || 0) / 100
-  // Custo líquido = Valor Bruto - (Impostos creditáveis)
-  // Nota: A lógica de cálculo pode variar conforme a regra fiscal, aqui simplificamos deduzindo ambos.
-  return item.valorUnitario * (1 - ipi - icms)
-}
 
-const selectedItemsData = computed(() => {
-  return demandas.value.filter(d => selectedItems.value.includes(d.id))
-})
 
-const totalBrutoOC = computed(() => {
-  return selectedItemsData.value.reduce((acc, item) => acc + (item.valorUnitario * item.quantidade), 0)
-})
 
-const totalCreditosOC = computed(() => {
-  return selectedItemsData.value.reduce((acc, item) => {
-    const ipiVal = item.valorUnitario * (item.valorIPI / 100) * item.quantidade
-    const icmsVal = item.valorUnitario * (item.valorICMS / 100) * item.quantidade
-    return acc + ipiVal + icmsVal
-  }, 0)
-})
 
-const openOrderDialog = () => {
-  // Verificar se todos os itens selecionados têm fornecedor
-  const semFornecedor = selectedItemsData.value.some(i => !i.fornecedorId)
-  if (semFornecedor) {
-    showSnackbar('Selecione um fornecedor para todos os itens', 'warning')
-    return
+
+const openQuoteDialog = () => {
+  dialogQuoteSuppliers.value = {
+    show: true,
+    fornecedorIds: []
   }
-  orderDialog.value.show = true
 }
 
-const generateOC = async () => {
-  saving.value = true
+const loadQuotePreview = async () => {
+  loadingPreview.value = true
   try {
-    // Agrupar itens por fornecedor (Opcional, aqui vamos gerar uma OC por fornecedor se forem múltiplos ou uma única OC)
-    // Para simplificar, vamos assumir que o usuário selecionou itens de um mesmo fornecedor ou gerar uma OC consolidada informando um dos fornecedores.
-    // O ideal seria quebrar em múltiplas OCs.
-    
-    const fornecedorPrincipal = fornecedores.value.find(f => f.id === selectedItemsData.value[0].fornecedorId)?.nome
-    
-    await $fetch('/api/compras', {
+    const data = await $fetch('/api/compras/request-quotes', {
       method: 'POST',
       body: {
-        opId: selectedItemsData.value[0].opId,
-        fornecedor: fornecedorPrincipal,
-        status: 'PEDIDO_EMITIDO',
-        dataCompra: orderDialog.value.data.dataCompra,
-        dataPrevisaoEntrega: orderDialog.value.data.dataPrevisaoEntrega,
-        valorTotal: totalBrutoOC.value,
-        itens: selectedItemsData.value.map(i => ({
-          pecaId: i.id,
-          descricao: i.descricao,
-          quantidade: i.quantidade,
-          valorUnitario: i.valorUnitario,
-          valorIPI: i.valorUnitario * (i.valorIPI / 100) * i.quantidade,
-          valorICMS: i.valorUnitario * (i.valorICMS / 100) * i.quantidade,
-          custoLiquido: calculateLiquid(i)
-        }))
+        pecaIds: selectedItems.value,
+        fornecedorIds: dialogQuoteSuppliers.value.fornecedorIds,
+        preview: true
       }
     })
-
-    showSnackbar('Pedido de Compra emitido com sucesso!')
-    orderDialog.value.show = false
-    selectedItems.value = []
-    loadData()
+    
+    dialogQuoteEmail.value = {
+      show: true,
+      subject: data.subject,
+      html: data.html,
+      attachmentsCount: data.attachmentsCount
+    }
+    dialogQuoteSuppliers.value.show = false
   } catch (error) {
-    showSnackbar('Erro ao emitir pedido', 'error')
+    showSnackbar('Erro ao gerar rascunho: ' + (error.data?.statusMessage || error.message), 'error')
+  } finally {
+    loadingPreview.value = false
+  }
+}
+
+const sendFinalQuoteEmails = async () => {
+  sendingEmail.value = true
+  try {
+    const res = await $fetch('/api/compras/request-quotes', {
+      method: 'POST',
+      body: {
+        pecaIds: selectedItems.value,
+        fornecedorIds: dialogQuoteSuppliers.value.fornecedorIds,
+        subject: dialogQuoteEmail.value.subject,
+        html: dialogQuoteEmail.value.html,
+        preview: false
+      }
+    })
+    
+    if (res.success) {
+      showSnackbar(res.message || 'E-mails enviados! Itens movidos para Requisições.', 'success')
+      dialogQuoteEmail.value.show = false
+      selectedItems.value = []
+      setTimeout(() => {
+        navigateTo({ path: '/compras' })
+      }, 1000)
+    } else {
+      showSnackbar(res.message || 'Alguns erros ocorreram ao enviar.', 'warning')
+    }
+  } catch (error) {
+    showSnackbar('Erro ao enviar: ' + (error.data?.statusMessage || error.message), 'error')
+  } finally {
+    sendingEmail.value = false
+  }
+}
+
+const generateDirectPurchase = async () => {
+  saving.value = true
+  try {
+    const res = await $fetch('/api/compras/request-quotes', {
+      method: 'POST',
+      body: {
+        pecaIds: selectedItems.value,
+        directPurchase: true
+      }
+    })
+    
+    if (res.success) {
+      showSnackbar('Itens enviados para Requisições com sucesso!', 'success')
+      selectedItems.value = []
+      setTimeout(() => {
+        navigateTo({ path: '/compras' })
+      }, 1000)
+    } else {
+      showSnackbar(res.message || 'Erro ao processar.', 'warning')
+    }
+  } catch (error) {
+    showSnackbar('Erro: ' + (error.data?.statusMessage || error.message), 'error')
   } finally {
     saving.value = false
   }
 }
+
+
 
 const showSnackbar = (text, color = 'success') => {
   snackbar.value = { show: true, text, color }

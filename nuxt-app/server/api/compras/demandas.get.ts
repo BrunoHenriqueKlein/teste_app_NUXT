@@ -9,7 +9,10 @@ export default defineEventHandler(async (event) => {
             categoria: 'COMPRADO'
         }
 
-        if (query.status) where.statusSuprimento = query.status as string
+        if (query.status) {
+            const statuses = (query.status as string).split(',')
+            where.statusSuprimento = { in: statuses }
+        }
 
         const demandas = await prisma.peca.findMany({
             where,

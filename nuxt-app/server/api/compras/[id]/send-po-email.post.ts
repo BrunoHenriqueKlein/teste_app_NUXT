@@ -79,11 +79,47 @@ export default defineEventHandler(async (event) => {
         }
         const senderDepto = sender?.department ? (deptoMap[sender.department] || sender.department) : 'Departamento'
 
+        const autoSend = body?.autoSend === true
+        let itemsHtml = ''
+        if (!poImageBase64) {
+            itemsHtml = `
+                <table style="width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px;">
+                    <thead>
+                        <tr style="background-color: #f5f5f5; border-bottom: 2px solid #ddd;">
+                            <th style="border: 1px solid #ddd; padding: 6px; text-align: left;">Código</th>
+                            <th style="border: 1px solid #ddd; padding: 6px; text-align: left;">Descrição</th>
+                            <th style="border: 1px solid #ddd; padding: 6px; text-align: center;">Qtd</th>
+                            <th style="border: 1px solid #ddd; padding: 6px; text-align: right;">V. Unitário</th>
+                            <th style="border: 1px solid #ddd; padding: 6px; text-align: right;">Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${compra.itens.map(i => `
+                            <tr>
+                                <td style="border: 1px solid #ddd; padding: 6px;">${i.peca?.codigo || '-'}</td>
+                                <td style="border: 1px solid #ddd; padding: 6px;">${i.descricao}</td>
+                                <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${i.quantidade}</td>
+                                <td style="border: 1px solid #ddd; padding: 6px; text-align: right;">R$ ${(Number(i.valorUnitario) || 0).toFixed(2)}</td>
+                                <td style="border: 1px solid #ddd; padding: 6px; text-align: right;">R$ ${((Number(i.valorUnitario) || 0) * i.quantidade).toFixed(2)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="4" style="text-align: right; padding: 6px; font-weight: bold;">Valor Total do Pedido:</td>
+                            <td style="border: 1px solid #ddd; padding: 6px; text-align: right; font-weight: bold;">R$ ${(Number(compra.valorTotal) || 0).toFixed(2)}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            `
+        }
+
         const finalHtml = `
             <div style="font-family: Arial, sans-serif; font-size: 14px; color: #333; line-height: 1.6; max-width: 600px; margin: 0 auto; background: #fff; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
                 <p>Prezados, bom dia!</p>
-                <p>Segue em anexo nosso <strong>Pedido de Compra (${compra.numero})</strong> referente à solicitação cotada.</p>
-                <p>Por favor, confira a imagem e os documentos em anexo.</p>
+                <p>Segue nosso <strong>Pedido de Compra (${compra.numero})</strong> referente à solicitação cotada.</p>
+                ${poImageBase64 ? '<p>Por favor, confira o PDF do pedido e os documentos em anexo.</p>' : '<p>Confira abaixo os itens solicitados e os documentos em anexo.</p>'}
+                ${itemsHtml}
                 <br>
                 <p>Qualquer dúvida, estamos à disposição.</p>
                 <br>
@@ -124,7 +160,7 @@ export default defineEventHandler(async (event) => {
         
         // Adiciona os anexos da compra (orçamentos vencedores)
         if (compra.anexos && compra.anexos.length > 0) {
-            const anexosParaEnviar = compra.anexos.filter(a => anexosSelecionados.includes(a.id))
+            const anexosParaEnviar = autoSend ? compra.anexos : compra.anexos.filter(a => anexosSelecionados.includes(a.id))
             anexosParaEnviar.forEach((anexo: any) => {
                 const anexoPath = path.join(process.cwd(), 'public', anexo.url)
                 if (fs.existsSync(anexoPath)) {
