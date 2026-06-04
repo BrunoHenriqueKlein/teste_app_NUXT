@@ -327,10 +327,24 @@
                   ></v-checkbox-btn>
                 </td>
                 <td style="white-space: nowrap;">
-                  <div class="font-weight-bold">{{ item.peca?.codigo || '-' }}</div>
+                  <v-text-field
+                    v-if="item.peca"
+                    v-model="item.peca.codigo"
+                    density="compact"
+                    variant="underlined"
+                    hide-details
+                    style="min-width: 120px;"
+                  ></v-text-field>
+                  <div v-else class="font-weight-bold">-</div>
                 </td>
                 <td>
-                  <div class="text-body-2">{{ item.peca?.descricao || (item.descricao.includes(' - Peça: ') ? item.descricao.split(' - Peça: ')[1] : item.descricao) }}</div>
+                  <v-text-field
+                    v-model="item.descricao"
+                    density="compact"
+                    variant="underlined"
+                    hide-details
+                    style="min-width: 150px;"
+                  ></v-text-field>
                 </td>
                 <td>
                   <div class="text-caption">{{ item.descricao.includes('SERVIÇO: ') ? item.descricao.split(' - ')[0].replace('SERVIÇO: ', '') : '-' }}</div>
@@ -338,7 +352,17 @@
                 <td class="text-center">
                   <div class="text-caption">{{ item.peca?.material || '-' }}</div>
                 </td>
-                <td class="text-center">{{ item.quantidade }}</td>
+                <td class="text-center">
+                  <v-text-field
+                    v-model.number="item.quantidade"
+                    type="number"
+                    variant="underlined"
+                    density="compact"
+                    hide-details
+                    style="min-width: 60px;"
+                    @update:model-value="recacheTotals"
+                  ></v-text-field>
+                </td>
                 <td>
                   <v-text-field
                     v-model.number="item.valorUnitario"
@@ -620,7 +644,7 @@
                 <td style="padding: 5px; border: 1px solid #000; text-align: right;">{{ formatCurrency(item.valorUnitario) }}</td>
                 <td style="padding: 5px; border: 1px solid #000; text-align: center;">{{ item.aliqICMS || 0 }}%</td>
                 <td style="padding: 5px; border: 1px solid #000; text-align: center;">{{ item.aliqIPI || 0 }}%</td>
-                <td style="padding: 5px; border: 1px solid #000; text-align: right;">{{ formatCurrency((item.quantidade * item.valorUnitario) + ((item.quantidade * item.valorUnitario) * ((item.aliqIPI || 0) / 100))) }}</td>
+                <td style="padding: 5px; border: 1px solid #000; text-align: right;">{{ formatCurrency((item.quantidade * item.valorUnitario) + ((item.quantidade * item.valorUnitario) * ((item.aliqIPI || 0) / 100)) + ((item.quantidade * item.valorUnitario) * ((item.aliqICMS || 0) / 100))) }}</td>
             </tr>
           </table>
 
@@ -1045,7 +1069,8 @@ const formatCurrency = (value) => {
 const calculateItemTotal = (item) => {
   const base = (item.valorUnitario || 0) * (item.quantidade || 0)
   const ipi = base * ((item.aliqIPI || 0) / 100)
-  return base + ipi
+  const icms = base * ((item.aliqICMS || 0) / 100)
+  return base + ipi + icms
 }
 
 // totalPedidoCalculado agora é declarado mais abaixo para suportar fatiamento (split) de pedidos.
@@ -1370,7 +1395,7 @@ const emitirOC = async () => {
         ...item,
         valorIPI: (item.valorUnitario * item.quantidade) * (item.aliqIPI / 100),
         valorICMS: (item.valorUnitario * item.quantidade) * (item.aliqICMS / 100),
-        custoLiquido: item.valorUnitario * (1 + (item.aliqIPI / 100))
+        custoLiquido: item.valorUnitario * (1 + (item.aliqIPI / 100) + (item.aliqICMS / 100))
       }))
     }
     
@@ -1430,12 +1455,15 @@ const enviarEmailOC = async () => {
       dataPrevisaoEntrega: dialogDetalhes.value.dataPrevisao,
       itens: selectedItens.map(item => ({
         id: item.id,
+        codigo: item.peca?.codigo,
+        descricao: item.descricao,
+        quantidade: item.quantidade,
         valorUnitario: item.valorUnitario,
         aliqIPI: item.aliqIPI,
         aliqICMS: item.aliqICMS,
         valorIPI: (item.valorUnitario * item.quantidade) * (item.aliqIPI / 100),
         valorICMS: (item.valorUnitario * item.quantidade) * (item.aliqICMS / 100),
-        custoLiquido: item.valorUnitario * (1 + (item.aliqIPI / 100))
+        custoLiquido: item.valorUnitario * (1 + (item.aliqIPI / 100) + (item.aliqICMS / 100))
       }))
     }
 

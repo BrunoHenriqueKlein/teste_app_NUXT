@@ -238,9 +238,11 @@ export default defineEventHandler(async (event) => {
             if (data.itens && Array.isArray(data.itens)) {
                 for (const item of data.itens) {
                     if (item.id) {
-                        await prisma.compraItem.update({
+                        const updatedItem = await prisma.compraItem.update({
                             where: { id: Number(item.id) },
                             data: {
+                                descricao: item.descricao !== undefined ? item.descricao : undefined,
+                                quantidade: item.quantidade !== undefined ? Number(item.quantidade) : undefined,
                                 valorUnitario: Number(item.valorUnitario) || 0,
                                 aliqIPI: Number(item.aliqIPI) || 0,
                                 aliqICMS: Number(item.aliqICMS) || 0,
@@ -249,6 +251,17 @@ export default defineEventHandler(async (event) => {
                                 custoLiquido: Number(item.custoLiquido) || 0
                             }
                         })
+
+                        if (item.codigo && updatedItem.pecaId) {
+                            await prisma.peca.update({
+                                where: { id: updatedItem.pecaId },
+                                data: {
+                                    codigo: item.codigo,
+                                    descricao: item.descricao !== undefined ? item.descricao : undefined,
+                                    quantidade: item.quantidade !== undefined ? Number(item.quantidade) : undefined
+                                }
+                            })
+                        }
                     }
                 }
             }
