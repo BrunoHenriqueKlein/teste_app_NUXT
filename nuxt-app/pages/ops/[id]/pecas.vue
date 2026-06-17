@@ -50,6 +50,14 @@
           >
             Importar
           </v-btn>
+          <v-btn
+            color="white"
+            variant="outlined"
+            prepend-icon="mdi-export"
+            @click="exportBOM"
+          >
+            Exportar
+          </v-btn>
           <input
             type="file"
             ref="fileInput"
@@ -719,8 +727,9 @@
     </v-snackbar>
   </div>
 </template>
-
 <script setup>
+import * as XLSX from 'xlsx'
+
 const route = useRoute()
 const opId = route.params.id
 
@@ -982,6 +991,47 @@ const handleFileUpload = async (event) => {
     loadingImport.value = false
     event.target.value = '' // Limpar input
   }
+}
+
+const exportBOM = () => {
+  if (!pecas.value || pecas.value.length === 0) {
+    showSnackbar('A Lista de Peças está vazia', 'warning')
+    return
+  }
+
+  // Preparar os dados para exportação no mesmo padrão do template de importação
+  const exportData = pecas.value.map(peca => {
+    const row = {
+      'Codigo': peca.codigo,
+      'Descricao': peca.descricao,
+      'Quantidade': peca.quantidade,
+      'Material': peca.material || '',
+      'Subcategoria': peca.subcategoria || '',
+      'Subconjunto': peca.subconjunto || '',
+      'Categoria': peca.categoria || '',
+      'ValorUnitario': peca.valorUnitario || ''
+    }
+
+    if (peca.processos && peca.processos.length > 0) {
+      // Ordenar por sequencia para garantir a ordem correta
+      const processosOrdenados = [...peca.processos].sort((a, b) => a.sequencia - b.sequencia)
+      processosOrdenados.forEach((p, index) => {
+        row[`Processo${index + 1}`] = p.nome
+      })
+    }
+    
+    return row
+  })
+
+  // Criar a planilha
+  const worksheet = XLSX.utils.json_to_sheet(exportData)
+  const workbook = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Lista de Peças')
+
+  // Gerar o arquivo e realizar o download
+  const opNumber = opId || 'OP'
+  XLSX.writeFile(workbook, `BOM_${opNumber}.xlsx`)
+  showSnackbar('Arquivo exportado com sucesso!')
 }
 
 const generateOS = async () => {

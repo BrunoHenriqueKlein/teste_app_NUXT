@@ -311,6 +311,18 @@
                       </v-btn>
                       
                       <v-btn 
+                        v-if="hasPermission('Ordens de Produção', 'canEdit')"
+                        icon 
+                        size="small" 
+                        variant="text" 
+                        color="teal"
+                        @click="openCloneDialog(op)"
+                        title="Clonar OP"
+                      >
+                        <v-icon>mdi-content-copy</v-icon>
+                      </v-btn>
+                      
+                      <v-btn 
                         v-if="hasPermission('Ordens de Produção', 'canDelete')"
                         icon 
                         size="small" 
@@ -494,6 +506,31 @@
       </v-card>
     </v-dialog>
 
+    <!-- Dialog de Clonagem -->
+    <v-dialog v-model="showCloneDialog" max-width="500">
+      <v-card>
+        <v-card-title class="text-h6">Clonar Ordem de Produção</v-card-title>
+        <v-card-text>
+          Você está prestes a clonar a OP <strong>{{ opToClone?.numeroOP }}</strong>.<br><br>
+          Esta ação criará uma nova OP copiando <strong>todos os processos e peças da BOM</strong> original, 
+          porém zerando status, progresso e dados de suprimentos.<br><br>
+          <v-text-field
+            v-model="novoNumeroOP"
+            label="Novo Número da OP *"
+            variant="outlined"
+            required
+            autofocus
+            class="mt-4"
+          />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="outlined" @click="showCloneDialog = false" :disabled="cloning">Cancelar</v-btn>
+          <v-btn color="primary" @click="confirmClone" :loading="cloning" :disabled="!novoNumeroOP">Clonar</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <!-- Dialog de Confirmação -->
     <v-dialog v-model="showDeleteDialog" max-width="400">
       <v-card>
@@ -520,8 +557,12 @@ const saving = ref(false)
 const deleting = ref(false)
 const showOPDialog = ref(false)
 const showDeleteDialog = ref(false)
+const showCloneDialog = ref(false)
+const cloning = ref(false)
 const editingOP = ref(null)
 const opToDelete = ref(null)
+const opToClone = ref(null)
+const novoNumeroOP = ref('')
 const error = ref('')
 const form = ref(null)
 
@@ -762,6 +803,33 @@ const viewProcessos = (op) => {
 const deleteOP = (op) => {
   opToDelete.value = op
   showDeleteDialog.value = true
+}
+
+const openCloneDialog = (op) => {
+  opToClone.value = op
+  novoNumeroOP.value = op.numeroOP + '-CLONE'
+  showCloneDialog.value = true
+}
+
+const confirmClone = async () => {
+  if (!novoNumeroOP.value) return
+  
+  cloning.value = true
+  try {
+    await $fetch(`/api/ops/${opToClone.value.id}/clone`, {
+      method: 'POST',
+      body: { novoNumeroOP: novoNumeroOP.value }
+    })
+    
+    showCloneDialog.value = false
+    loadOPs() // Recarrega a lista
+    alert('OP clonada com sucesso!')
+  } catch (err) {
+    console.error('Erro ao clonar OP:', err)
+    alert('Erro ao clonar OP: ' + (err.data?.message || err.message))
+  } finally {
+    cloning.value = false
+  }
 }
 
 const closeDialog = () => {
