@@ -70,6 +70,26 @@ export default defineEventHandler(async (event) => {
                         vCusto = parseFloat(vCusto)
                     }
 
+                    let vIPI = p.valorIPI
+                    if (vIPI === '' || vIPI === undefined || vIPI === null) {
+                        vIPI = null
+                    } else if (typeof vIPI === 'string') {
+                        vIPI = parseFloat(vIPI.replace(',', '.'))
+                        if (isNaN(vIPI)) vIPI = null
+                    } else {
+                        vIPI = parseFloat(vIPI)
+                    }
+
+                    let vICMS = p.valorICMS
+                    if (vICMS === '' || vICMS === undefined || vICMS === null) {
+                        vICMS = null
+                    } else if (typeof vICMS === 'string') {
+                        vICMS = parseFloat(vICMS.replace(',', '.'))
+                        if (isNaN(vICMS)) vICMS = null
+                    } else {
+                        vICMS = parseFloat(vICMS)
+                    }
+
                     const proc = await tx.processoPeca.upsert({
                         where: { id: p.id || -1 },
                         update: {
@@ -78,7 +98,9 @@ export default defineEventHandler(async (event) => {
                             status: p.status || 'NAO_INICIADO',
                             fornecedorId: fId,
                             tempoEstimado: p.tempoEstimado ? parseInt(p.tempoEstimado) : null,
-                            valorCusto: vCusto
+                            valorCusto: vCusto,
+                            valorIPI: vIPI,
+                            valorICMS: vICMS
                         },
                         create: {
                             pecaId: parseInt(id),
@@ -87,7 +109,9 @@ export default defineEventHandler(async (event) => {
                             status: p.status || 'NAO_INICIADO',
                             fornecedorId: fId,
                             tempoEstimado: p.tempoEstimado ? parseInt(p.tempoEstimado) : null,
-                            valorCusto: vCusto
+                            valorCusto: vCusto,
+                            valorIPI: vIPI,
+                            valorICMS: vICMS
                         }
                     })
                     results.push(proc)
@@ -100,7 +124,12 @@ export default defineEventHandler(async (event) => {
                 });
                 const qty = pecaAtual?.quantidade || 1;
 
-                const totalProcessos = results.reduce((sum, p) => sum + (p.valorCusto || 0), 0)
+                const totalProcessos = results.reduce((sum, p) => {
+                    const c = p.valorCusto || 0;
+                    const ipi = p.valorIPI || 0;
+                    const icms = p.valorICMS || 0;
+                    return sum + c + (c * ipi / 100) + (c * icms / 100);
+                }, 0);
 
                 // 5. Sincronizar Status da Peça (BOM) baseado nos Processos + Compras
                 const todosItensPeca = await tx.compraItem.findMany({ where: { pecaId: parseInt(id) } })

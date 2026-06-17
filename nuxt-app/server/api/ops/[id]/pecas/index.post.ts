@@ -37,6 +37,13 @@ export default defineEventHandler(async (event) => {
 
         const qtd = body.quantidade || 1
         const vUnit = body.valorUnitario ? parseFloat(body.valorUnitario) : null
+        const vIPI = body.valorIPI ? parseFloat(body.valorIPI) : null
+        const vICMS = body.valorICMS ? parseFloat(body.valorICMS) : null
+        
+        let vUnitComImposto = vUnit;
+        if (vUnit) {
+            vUnitComImposto = vUnit + (vUnit * (vIPI || 0) / 100) + (vUnit * (vICMS || 0) / 100);
+        }
 
         const peca = await prisma.peca.create({
             data: {
@@ -50,7 +57,9 @@ export default defineEventHandler(async (event) => {
                 subconjunto: body.subconjunto,
                 statusSuprimento: body.statusSuprimento || 'NAO_SOLICITADO',
                 valorUnitario: vUnit,
-                custoTotal: vUnit ? vUnit * qtd : null,
+                valorIPI: vIPI,
+                valorICMS: vICMS,
+                custoTotal: vUnitComImposto ? vUnitComImposto * qtd : null,
                 fornecedorId: body.fornecedorId ? parseInt(body.fornecedorId) : null,
                 status: estoqueItem ? 'EM_ESTOQUE' : 'NAO_INICIADA'
             }

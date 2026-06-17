@@ -23,6 +23,21 @@ export default defineEventHandler(async (event) => {
         if (body.valorUnitario !== undefined && body.valorUnitario !== null) {
             newVUnit = parseFloat(body.valorUnitario)
         }
+        
+        let newVIPI = existing?.valorIPI || null
+        if (body.valorIPI !== undefined) {
+            newVIPI = body.valorIPI ? parseFloat(body.valorIPI) : null
+        }
+        
+        let newVICMS = existing?.valorICMS || null
+        if (body.valorICMS !== undefined) {
+            newVICMS = body.valorICMS ? parseFloat(body.valorICMS) : null
+        }
+
+        let vUnitComImposto = newVUnit;
+        if (newVUnit) {
+            vUnitComImposto = newVUnit + (newVUnit * (newVIPI || 0) / 100) + (newVUnit * (newVICMS || 0) / 100);
+        }
 
         const updatedPeca = await prisma.peca.update({
             where: { id: parseInt(id) },
@@ -37,7 +52,9 @@ export default defineEventHandler(async (event) => {
                 subconjunto: body.subconjunto,
                 statusSuprimento: body.statusSuprimento,
                 valorUnitario: newVUnit,
-                custoTotal: newVUnit * newQtd,
+                valorIPI: newVIPI,
+                valorICMS: newVICMS,
+                custoTotal: vUnitComImposto * newQtd,
                 fornecedorId: body.fornecedorId ? parseInt(body.fornecedorId) : undefined
             }
         })

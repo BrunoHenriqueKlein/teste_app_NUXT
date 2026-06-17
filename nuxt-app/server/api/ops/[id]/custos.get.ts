@@ -40,21 +40,48 @@ export default defineEventHandler(async (event) => {
         let totalICMSServicos = 0
 
         for (const peca of op.pecas) {
-            // 1. Custos de Materiais (via itens de compra vinculados)
-            for (const itemCompra of peca.compras) {
-                const subtotal = itemCompra.valorUnitario * itemCompra.quantidade
+            // 1. Custos de Materiais (via itens de compra vinculados ou estimado da engenharia)
+            let custoCompraDaPeca = 0
+            let ipiCompraDaPeca = 0
+            let icmsCompraDaPeca = 0
+            let temCompraValida = false
+
+            if (peca.compras && peca.compras.length > 0) {
+                for (const itemCompra of peca.compras) {
+                    if (itemCompra.valorUnitario > 0) {
+                        temCompraValida = true
+                        const ipiAbsoluto = itemCompra.valorIPI || 0
+                        const icmsAbsoluto = itemCompra.valorICMS || 0
+                        custoCompraDaPeca += (itemCompra.valorUnitario * itemCompra.quantidade) + ipiAbsoluto + icmsAbsoluto
+                        ipiCompraDaPeca += ipiAbsoluto
+                        icmsCompraDaPeca += icmsAbsoluto
+                    }
+                }
+            }
+
+            if (temCompraValida) {
+                custoBrutoMateriais += custoCompraDaPeca
+                totalIPIMateriais += ipiCompraDaPeca
+                totalICMSMateriais += icmsCompraDaPeca
+            } else if (peca.categoria === 'COMPRADO' && peca.valorUnitario) {
+                const ipiAbsoluto = peca.valorUnitario * ((peca.valorIPI || 0) / 100)
+                const icmsAbsoluto = peca.valorUnitario * ((peca.valorICMS || 0) / 100)
+                const subtotal = (peca.valorUnitario + ipiAbsoluto + icmsAbsoluto) * peca.quantidade
                 custoBrutoMateriais += subtotal
-                totalIPIMateriais += (itemCompra.valorIPI || 0)
-                totalICMSMateriais += (itemCompra.valorICMS || 0)
+                totalIPIMateriais += ipiAbsoluto * peca.quantidade
+                totalICMSMateriais += icmsAbsoluto * peca.quantidade
             }
 
             // 2. Custos de Serviços (via processos da peça)
             for (const processo of peca.processos) {
                 if (processo.valorCusto) {
-                    const subtotalServico = processo.valorCusto * peca.quantidade
+                    const ipiAbsoluto = processo.valorCusto * ((processo.valorIPI || 0) / 100)
+                    const icmsAbsoluto = processo.valorCusto * ((processo.valorICMS || 0) / 100)
+                    const subtotalServico = (processo.valorCusto + ipiAbsoluto + icmsAbsoluto) * peca.quantidade
+                    
                     custoBrutoServicos += subtotalServico
-                    totalIPIServicos += (processo.valorIPI || 0) * peca.quantidade
-                    totalICMSServicos += (processo.valorICMS || 0) * peca.quantidade
+                    totalIPIServicos += ipiAbsoluto * peca.quantidade
+                    totalICMSServicos += icmsAbsoluto * peca.quantidade
                 }
             }
         }

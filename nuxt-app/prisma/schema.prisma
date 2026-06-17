@@ -233,6 +233,8 @@ model Peca {
   subconjunto      String?          @map("subconjunto") // Grupo para Kits de Montagem
   statusSuprimento SuprimentoStatus @default(NAO_SOLICITADO)
   valorUnitario    Float?           @map("valor_unitario")
+  valorIPI         Float?           @map("valor_ipi")
+  valorICMS        Float?           @map("valor_icms")
   custoTotal       Float?           @map("custo_total")
   fornecedorId     Int?             @map("fornecedor_id")
   anexos           PecaAnexo[]

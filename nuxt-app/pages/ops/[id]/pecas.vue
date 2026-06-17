@@ -331,7 +331,13 @@
 
         <template v-slot:item.valorUnitario="{ item }">
           <div :class="item.categoria === 'FABRICADO' ? 'text-primary' : ''">
-            {{ item.valorUnitario ? (item.valorUnitario).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '-' }}
+            <template v-if="item.valorUnitario">
+              {{ (item.valorUnitario + (item.valorUnitario * (item.valorIPI || 0) / 100) + (item.valorUnitario * (item.valorICMS || 0) / 100)).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }}
+              <v-tooltip activator="parent" location="top" v-if="item.valorIPI || item.valorICMS">
+                Base: {{ item.valorUnitario.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }} | IPI: {{ item.valorIPI || 0 }}% | ICMS: {{ item.valorICMS || 0 }}%
+              </v-tooltip>
+            </template>
+            <span v-else>-</span>
           </div>
         </template>
 
@@ -536,7 +542,7 @@
             </v-col>
           </v-row>
           <v-row>
-            <v-col cols="8">
+            <v-col cols="12">
               <v-select
                 v-model="dialogPeca.data.fornecedorId"
                 :items="filteredFornecedores"
@@ -554,6 +560,26 @@
                 label="Vlr. Unit."
                 type="number"
                 prefix="R$"
+                variant="outlined"
+                density="compact"
+              ></v-text-field>
+            </v-col>
+            <v-col cols="4">
+              <v-text-field
+                v-model.number="dialogPeca.data.valorIPI"
+                label="IPI"
+                type="number"
+                suffix="%"
+                variant="outlined"
+                density="compact"
+              ></v-text-field>
+            </v-col>
+            <v-col cols="4">
+              <v-text-field
+                v-model.number="dialogPeca.data.valorICMS"
+                label="ICMS"
+                type="number"
+                suffix="%"
                 variant="outlined"
                 density="compact"
               ></v-text-field>
@@ -657,6 +683,28 @@
                         variant="outlined"
                         density="compact"
                         prefix="R$"
+                        placeholder="0,00"
+                      ></v-text-field>
+                    </v-col>
+                    <v-col cols="12" md="2">
+                      <v-text-field
+                        v-model.number="proc.valorIPI"
+                        label="IPI"
+                        type="number"
+                        variant="outlined"
+                        density="compact"
+                        suffix="%"
+                        placeholder="0,00"
+                      ></v-text-field>
+                    </v-col>
+                    <v-col cols="12" md="2">
+                      <v-text-field
+                        v-model.number="proc.valorICMS"
+                        label="ICMS"
+                        type="number"
+                        variant="outlined"
+                        density="compact"
+                        suffix="%"
                         placeholder="0,00"
                       ></v-text-field>
                     </v-col>
@@ -932,6 +980,8 @@ const openAddPecaDialog = () => {
       categoria: 'FABRICADO',
       statusSuprimento: 'NAO_SOLICITADO',
       valorUnitario: null,
+      valorIPI: null,
+      valorICMS: null,
       fornecedorId: null
     }
   }
@@ -1069,7 +1119,9 @@ const addProcess = () => {
     nome: '',
     status: 'NAO_INICIADO',
     fornecedorId: null,
-    valorCusto: null
+    valorCusto: null,
+    valorIPI: null,
+    valorICMS: null
   })
 }
 
