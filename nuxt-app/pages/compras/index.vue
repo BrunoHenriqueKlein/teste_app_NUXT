@@ -155,12 +155,12 @@
                 title="Registrar Recebimento (NF)"
               ></v-btn>
               <v-btn
-                icon="mdi-printer"
+                icon="mdi-image-outline"
                 variant="text"
-                color="primary"
+                color="grey"
                 size="small"
-                @click="prepararImpressao(item)"
-                title="Imprimir OC"
+                @click="baixarImagemOC(item)"
+                title="Exportar PDF"
               ></v-btn>
             </template>
           </v-data-table>
@@ -187,14 +187,6 @@
               </v-chip>
             </template>
             <template v-slot:item.acoes_oc="{ item }">
-              <v-btn
-                icon="mdi-eye"
-                variant="text"
-                color="primary"
-                size="small"
-                @click="verDetalhesOC(item)"
-                title="Ver Detalhes"
-              ></v-btn>
               <v-btn
                 icon="mdi-image-outline"
                 variant="text"
