@@ -125,39 +125,64 @@
       </v-data-table>
     </v-card>
 
-    <!-- Diálogo 1: Seleção de Fornecedor -->
-    <v-dialog v-model="dialogBudget.show" max-width="500px">
+    <!-- Diálogo 1: Seleção de Fornecedor por Peça -->
+    <v-dialog v-model="dialogBudget.show" max-width="900px" persistent>
       <v-card>
         <v-card-title class="pa-4 bg-primary text-white">Solicitar Orçamento</v-card-title>
         <v-card-text class="pa-4">
-          <p class="mb-4">Selecione o fornecedor para a <strong>OS {{ dialogBudget.os?.numero }}</strong>.</p>
-          <v-select
-            v-model="dialogBudget.fornecedorId"
-            :items="suggestedFornecedores"
-            item-title="nome"
-            item-value="id"
-            label="Escolha o Fornecedor"
-            variant="outlined"
-            placeholder="Selecione um fornecedor"
-          ></v-select>
+          <p class="mb-4">Selecione um fornecedor para cada item da <strong>OS {{ dialogBudget.os?.numero }}</strong>.</p>
+          
+          <v-table density="compact" class="border">
+            <thead>
+              <tr class="bg-grey-lighten-4">
+                <th class="text-left">Cód.</th>
+                <th class="text-left">Descrição</th>
+                <th class="text-center">Qtd</th>
+                <th class="text-left" style="width: 250px;">Fornecedor Sugerido</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in dialogBudget.os?.itens" :key="item.id">
+                <td class="font-weight-medium">{{ item.peca?.codigo }}</td>
+                <td>{{ item.peca?.descricao }}</td>
+                <td class="text-center">{{ item.peca?.quantidade }}</td>
+                <td class="pa-1">
+                  <v-select
+                    v-model="dialogBudget.itemFornecedorMap[item.pecaId]"
+                    :items="suggestedFornecedores"
+                    item-title="nome"
+                    item-value="id"
+                    density="compact"
+                    variant="outlined"
+                    hide-details
+                    placeholder="Selecione"
+                  ></v-select>
+                </td>
+              </tr>
+            </tbody>
+          </v-table>
         </v-card-text>
         <v-card-actions class="pa-4">
           <v-spacer></v-spacer>
           <v-btn variant="text" @click="dialogBudget.show = false">Cancelar</v-btn>
-          <v-btn color="primary" variant="flat" :loading="loadingPreview" :disabled="!dialogBudget.fornecedorId" @click="loadEmailPreview">
-            Gerar Rascunho
+          <v-btn color="primary" variant="flat" :loading="loadingPreview" :disabled="!isAllItemsMapped" @click="loadEmailPreview">
+            Gerar Rascunhos
           </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
-    <!-- Diálogo 2: Revisão e Edição de E-mail -->
+    <!-- Diálogo 2: Revisão de E-mails (Carrossel) -->
     <v-dialog v-model="dialogEmail.show" max-width="800px" persistent>
-      <v-card>
-        <v-card-title class="pa-4 bg-success text-white">Revisar e Enviar E-mail</v-card-title>
+      <v-card v-if="currentEmailPreview">
+        <v-card-title class="pa-4 bg-success text-white d-flex align-center">
+          <span>Revisar E-mail: {{ currentEmailPreview.fornecedorNome }}</span>
+          <v-spacer></v-spacer>
+          <span class="text-body-2">Rascunho {{ emailCurrentIndex + 1 }} de {{ dialogEmail.emails.length }}</span>
+        </v-card-title>
         <v-card-text class="pa-4">
           <v-text-field
-            v-model="dialogEmail.subject"
+            v-model="currentEmailPreview.subject"
             label="Assunto do E-mail"
             variant="outlined"
             density="comfortable"
@@ -165,7 +190,7 @@
           ></v-text-field>
 
           <v-textarea
-            v-model="dialogEmail.html"
+            v-model="currentEmailPreview.html"
             label="Corpo do E-mail (HTML)"
             variant="outlined"
             rows="12"
@@ -175,20 +200,31 @@
           ></v-textarea>
           
           <v-alert
-            v-if="dialogEmail.attachmentsCount"
+            v-if="currentEmailPreview.attachmentsCount"
             type="info"
             variant="tonal"
             density="compact"
             class="mt-4"
           >
-            <strong>{{ dialogEmail.attachmentsCount }} desenhor/anexos</strong> serão enviados automaticamente com este e-mail.
+            <strong>{{ currentEmailPreview.attachmentsCount }} desenho(s)/anexo(s)</strong> serão enviados para este fornecedor.
           </v-alert>
         </v-card-text>
-        <v-card-actions class="pa-4">
-          <v-btn variant="text" @click="dialogEmail.show = false">Voltar</v-btn>
+        <v-card-actions class="pa-4 bg-grey-lighten-4">
+          <v-btn variant="text" @click="dialogEmail.show = false" :disabled="sendingEmail">Cancelar</v-btn>
           <v-spacer></v-spacer>
-          <v-btn color="success" variant="flat" :loading="sendingEmail" @click="sendFinalEmail">
-            Enviar Agora
+          <div class="d-flex align-center gap-2">
+            <v-btn icon="mdi-chevron-left" variant="tonal" :disabled="emailCurrentIndex === 0 || sendingEmail" @click="emailCurrentIndex--"></v-btn>
+            <v-btn icon="mdi-chevron-right" variant="tonal" :disabled="emailCurrentIndex === dialogEmail.emails.length - 1 || sendingEmail" @click="emailCurrentIndex++"></v-btn>
+          </div>
+          <v-btn 
+            color="success" 
+            variant="flat" 
+            class="ml-4"
+            :loading="sendingEmail" 
+            @click="sendFinalEmail"
+            v-if="emailCurrentIndex === dialogEmail.emails.length - 1"
+          >
+            Enviar Todos
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -311,7 +347,7 @@ const filters = ref({
 const dialogBudget = ref({
   show: false,
   os: null,
-  fornecedorId: null
+  itemFornecedorMap: {}
 })
 
 const dialogOS = ref({
@@ -325,11 +361,25 @@ const sendingEmail = ref(false)
 
 const dialogEmail = ref({
   show: false,
-  subject: '',
-  html: '',
-  attachmentsCount: 0,
-  osId: null,
-  fornecedorId: null
+  emails: [],
+  osId: null
+})
+const emailCurrentIndex = ref(0)
+
+const currentEmailPreview = computed(() => {
+  if (!dialogEmail.value.emails || dialogEmail.value.emails.length === 0) return null
+  return dialogEmail.value.emails[emailCurrentIndex.value]
+})
+
+const isAllItemsMapped = computed(() => {
+  if (!dialogBudget.value.os || !dialogBudget.value.os.itens) return false
+  const totalItens = dialogBudget.value.os.itens.length
+  const mappedItens = Object.keys(dialogBudget.value.itemFornecedorMap).length
+  
+  if (totalItens === 0) return false
+  
+  // Verifica se todos os IDs possuem um valor selecionado
+  return dialogBudget.value.os.itens.every(item => !!dialogBudget.value.itemFornecedorMap[item.pecaId])
 })
 
 const snackbar = ref({ show: false, text: '', color: 'success' })
@@ -345,10 +395,7 @@ const headers = [
 
 
 
-const selectedSupplierEmail = computed(() => {
-  const f = fornecedores.value.find(forn => forn.id === dialogBudget.value.fornecedorId)
-  return f?.email || ''
-})
+
 
 const suggestedFornecedores = computed(() => {
   if (dialogBudget.value.showAll || !dialogBudget.value.os) return fornecedores.value
@@ -420,12 +467,31 @@ const loadFornecedores = async () => {
   }
 }
 
-const openBudgetDialog = (os) => {
-  dialogBudget.value = {
-    show: true,
-    os,
-    fornecedorId: null,
-    showAll: false
+const openBudgetDialog = async (os) => {
+  // Buscar detalhes da OS para garantir que `itens` e `peca` estão populados
+  loading.value = true
+  try {
+    const osDetalhada = await $fetch(`/api/pcp/ordens-servico/${os.id}`)
+    
+    // Pré-selecionar o fornecedor caso ele exista no ProcessoPeca ou deixar vazio
+    const initialMap = {}
+    if (osDetalhada.itens) {
+      osDetalhada.itens.forEach(item => {
+        if (item.fornecedorId) {
+          initialMap[item.pecaId] = item.fornecedorId
+        }
+      })
+    }
+
+    dialogBudget.value = {
+      show: true,
+      os: osDetalhada,
+      itemFornecedorMap: initialMap
+    }
+  } catch (error) {
+    showSnackbar('Erro ao carregar itens da OS.', 'error')
+  } finally {
+    loading.value = false
   }
 }
 
@@ -436,19 +502,18 @@ const loadEmailPreview = async () => {
       method: 'POST',
       body: {
         osId: dialogBudget.value.os.id,
-        fornecedorId: dialogBudget.value.fornecedorId,
+        itemFornecedorMap: dialogBudget.value.itemFornecedorMap,
         preview: true
       }
     })
     
     dialogEmail.value = {
       show: true,
-      subject: data.subject,
-      html: data.html,
-      attachmentsCount: data.attachmentsCount,
+      emails: data.emails || [],
       osId: dialogBudget.value.os.id,
-      fornecedorId: dialogBudget.value.fornecedorId
+      itemFornecedorMap: dialogBudget.value.itemFornecedorMap
     }
+    emailCurrentIndex.value = 0
     dialogBudget.value.show = false
   } catch (error) {
     showSnackbar('Erro ao gerar rascunho: ' + (error.data?.statusMessage || error.message), 'error')
@@ -464,23 +529,22 @@ const sendFinalEmail = async () => {
       method: 'POST',
       body: {
         osId: dialogEmail.value.osId,
-        fornecedorId: dialogEmail.value.fornecedorId,
-        subject: dialogEmail.value.subject,
-        html: dialogEmail.value.html,
+        itemFornecedorMap: dialogEmail.value.itemFornecedorMap,
+        emails: dialogEmail.value.emails,
         preview: false
       }
     })
     
     if (res.emailEnviado) {
-      showSnackbar(res.message || 'E-mail enviado e Pedido de Compra gerado!', 'success')
+      showSnackbar(res.message || 'E-mails enviados e Pedido de Compra gerado!', 'success')
     } else {
       showSnackbar(res.message || 'Pedido gerado, mas ocorreu erro no SMTP!', 'warning')
     }
     
     dialogEmail.value.show = false
-    loadOrdens() // recarregar
+    loadOrdens() // Atualiza os status
   } catch (error) {
-    showSnackbar('Erro ao enviar: ' + (error.data?.statusMessage || error.data?.message || error.message), 'error')
+    showSnackbar('Erro ao enviar e-mails: ' + (error.data?.statusMessage || error.message), 'error')
   } finally {
     sendingEmail.value = false
   }
