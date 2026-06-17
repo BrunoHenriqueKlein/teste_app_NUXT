@@ -135,9 +135,20 @@
                   </v-col>
                   <v-col cols="6">
                     <div class="text-caption text-grey">Início Real</div>
-                    <div class="text-body-2 font-weight-medium" :class="{ 'text-primary': task.dataInicio }">
-                      <v-icon size="14" :color="task.dataInicio ? 'primary' : 'grey'">mdi-calendar-check</v-icon>
-                      {{ formatDate(task.dataInicio) }}
+                    <div v-if="task.status === 'EM_ANDAMENTO' || task.status === 'CONCLUIDO'" class="d-flex align-center">
+                      <v-text-field
+                        v-model="task.dataInicioEdit"
+                        type="date"
+                        density="compact"
+                        variant="underlined"
+                        hide-details
+                        class="pt-0 mt-0"
+                        @update:model-value="task.hasChanged = true"
+                      />
+                    </div>
+                    <div v-else class="text-body-2 font-weight-medium text-grey pt-2">
+                      <v-icon size="14" color="grey">mdi-calendar-check</v-icon>
+                      Não iniciada
                     </div>
                   </v-col>
                 </v-row>
@@ -389,7 +400,12 @@ const fetchTasks = async () => {
       params: { global: showGlobal.value },
       headers: authHeaders.value
     })
-    tasks.value = data.map(t => ({ ...t, updating: false, hasChanged: false }))
+    tasks.value = data.map(t => ({ 
+      ...t, 
+      dataInicioEdit: t.dataInicio ? new Date(t.dataInicio).toISOString().split('T')[0] : null,
+      updating: false, 
+      hasChanged: false 
+    }))
   } catch (error) {
     console.error('Erro ao buscar tarefas:', error)
   } finally {
@@ -425,11 +441,11 @@ const saveProgress = async (task) => {
       method: 'PUT',
       body: { 
         progresso: task.progresso,
-        // Ao mudar o progresso para 100, concluímos a tarefa automaticamente?
-        // Vamos deixar o usuário concluir explicitamente no botão
+        dataInicio: task.dataInicioEdit
       },
       headers: authHeaders.value
     })
+    task.dataInicio = task.dataInicioEdit ? new Date(task.dataInicioEdit + 'T00:00:00') : null
     task.hasChanged = false
     
     // Se chegou a 100, avisar que pode concluir
