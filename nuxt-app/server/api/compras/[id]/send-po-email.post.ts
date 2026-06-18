@@ -159,18 +159,24 @@ export default defineEventHandler(async (event) => {
         }
         
         // Adiciona os anexos da compra (orçamentos vencedores)
-        if (compra.anexos && compra.anexos.length > 0) {
-            const anexosParaEnviar = autoSend ? compra.anexos : compra.anexos.filter(a => anexosSelecionados.includes(a.id))
-            anexosParaEnviar.forEach((anexo: any) => {
-                const anexoPath = path.join(process.cwd(), 'public', anexo.url)
-                if (fs.existsSync(anexoPath)) {
-                    attachments.push({
-                        filename: anexo.nome,
-                        path: anexoPath
-                    })
-                }
+        let anexosParaEnviar: any[] = []
+        if (autoSend && compra.anexos && compra.anexos.length > 0) {
+            anexosParaEnviar = compra.anexos
+        } else if (anexosSelecionados && anexosSelecionados.length > 0) {
+            anexosParaEnviar = await prisma.compraAnexo.findMany({
+                where: { id: { in: anexosSelecionados } }
             })
         }
+
+        anexosParaEnviar.forEach((anexo: any) => {
+            const anexoPath = path.join(process.cwd(), 'public', anexo.url)
+            if (fs.existsSync(anexoPath)) {
+                attachments.push({
+                    filename: anexo.nome,
+                    path: anexoPath
+                })
+            }
+        })
 
         // 7. Enviar o e-mail via SMTP
         const nodemailer = await import('nodemailer')

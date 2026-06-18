@@ -161,9 +161,23 @@ export default defineEventHandler(async (event) => {
 
                 // 3. Transferir os itens selecionados para a nova OC
                 for (const itemId of data.splitItemIds) {
+                    const itemData = data.itens?.find((i: any) => Number(i.id) === Number(itemId))
+                    
+                    let updateData: any = { compraId: newOC.id }
+                    if (itemData) {
+                        if (itemData.descricao !== undefined) updateData.descricao = itemData.descricao
+                        if (itemData.quantidade !== undefined) updateData.quantidade = Number(itemData.quantidade)
+                        if (itemData.valorUnitario !== undefined) updateData.valorUnitario = Number(itemData.valorUnitario) || 0
+                        if (itemData.aliqIPI !== undefined) updateData.aliqIPI = Number(itemData.aliqIPI) || 0
+                        if (itemData.aliqICMS !== undefined) updateData.aliqICMS = Number(itemData.aliqICMS) || 0
+                        if (itemData.valorIPI !== undefined) updateData.valorIPI = Number(itemData.valorIPI) || 0
+                        if (itemData.valorICMS !== undefined) updateData.valorICMS = Number(itemData.valorICMS) || 0
+                        if (itemData.custoLiquido !== undefined) updateData.custoLiquido = Number(itemData.custoLiquido) || 0
+                    }
+
                     const item = await prisma.compraItem.update({
                         where: { id: Number(itemId) },
-                        data: { compraId: newOC.id },
+                        data: updateData,
                         include: { peca: true }
                     })
 
@@ -184,9 +198,32 @@ export default defineEventHandler(async (event) => {
                                 data: {
                                     status: 'EM_ANDAMENTO',
                                     fornecedorId: newOC.fornecedorId,
-                                    valorCusto: item.valorUnitario
+                                    valorCusto: item.valorUnitario,
+                                    valorIPI: item.aliqIPI,
+                                    valorICMS: item.aliqICMS
                                 }
                             })
+
+                            // Recalcula Peca (BOM)
+                            const pecaAtual = await prisma.peca.findUnique({
+                                where: { id: item.pecaId },
+                                include: { processos: true }
+                            })
+                            if (pecaAtual) {
+                                const custoTotalProc = pecaAtual.processos.reduce((sum: number, p: any) => {
+                                    const c = p.valorCusto || 0
+                                    const ipi = p.valorIPI || 0
+                                    const icms = p.valorICMS || 0
+                                    return sum + c + (c * ipi / 100) + (c * icms / 100)
+                                }, 0)
+                                await prisma.peca.update({
+                                    where: { id: pecaAtual.id },
+                                    data: {
+                                        valorUnitario: custoTotalProc,
+                                        custoTotal: custoTotalProc * pecaAtual.quantidade
+                                    }
+                                })
+                            }
                         }
                     }
                 }
@@ -211,7 +248,12 @@ export default defineEventHandler(async (event) => {
                     })
                 }
 
-                return { success: true, newOCId: newOC.id, message: 'Fatiamento de pedido realizado com sucesso!' }
+                const completeNewOC = await prisma.compra.findUnique({
+                    where: { id: newOC.id },
+                    include: { itens: true }
+                })
+
+                return { success: true, newOCId: newOC.id, newOC: completeNewOC, message: 'Fatiamento de pedido realizado com sucesso!' }
             }
 
             let finalNumero = currentCompra?.numero
@@ -321,7 +363,11 @@ export default defineEventHandler(async (event) => {
                             if (processo && item.valorUnitario > 0) {
                                 await prisma.processoPeca.update({
                                     where: { id: processo.id },
-                                    data: { valorCusto: item.valorUnitario }
+                                    data: { 
+                                        valorCusto: item.valorUnitario,
+                                        valorIPI: item.aliqIPI,
+                                        valorICMS: item.aliqICMS
+                                    }
                                 })
 
                                 // Recalcula Peca (BOM)
@@ -330,7 +376,12 @@ export default defineEventHandler(async (event) => {
                                     include: { processos: true }
                                 })
                                 if (pecaAtual) {
-                                    const custoTotalProc = pecaAtual.processos.reduce((sum: number, p: any) => sum + (p.valorCusto || 0), 0)
+                                    const custoTotalProc = pecaAtual.processos.reduce((sum: number, p: any) => {
+                                        const c = p.valorCusto || 0
+                                        const ipi = p.valorIPI || 0
+                                        const icms = p.valorICMS || 0
+                                        return sum + c + (c * ipi / 100) + (c * icms / 100)
+                                    }, 0)
                                     await prisma.peca.update({
                                         where: { id: pecaAtual.id },
                                         data: {

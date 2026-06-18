@@ -120,7 +120,7 @@ export default defineEventHandler(async (event) => {
                 // 4. Somar todos os custos e atualizar a Peça pai
                 const pecaAtual = await tx.peca.findUnique({
                     where: { id: parseInt(id) },
-                    select: { quantidade: true }
+                    select: { quantidade: true, status: true, statusSuprimento: true }
                 });
                 const qty = pecaAtual?.quantidade || 1;
 
@@ -141,13 +141,23 @@ export default defineEventHandler(async (event) => {
 
                 const prontaParaEstoque = globalmenteCompleta && todosProcessosConcluidos
 
+                let novoStatusSuprimento = pecaAtual?.statusSuprimento || 'NAO_SOLICITADO'
+                let novoStatus = pecaAtual?.status || 'NAO_INICIADA'
+
+                if (globalmenteCompleta) novoStatusSuprimento = 'RECEBIDO'
+                else if (algumRecebido) novoStatusSuprimento = 'RECEBIDO_PARCIAL'
+                else if (novoStatusSuprimento === 'RECEBIDO' || novoStatusSuprimento === 'RECEBIDO_PARCIAL') novoStatusSuprimento = todosItensPeca.length > 0 ? 'COMPRADO' : 'NAO_SOLICITADO'
+
+                if (prontaParaEstoque) novoStatus = 'EM_ESTOQUE'
+                else if (novoStatus === 'EM_ESTOQUE') novoStatus = algumRecebido ? 'AGUARDANDO_RECEBIMENTO' : (novoStatusSuprimento === 'COMPRADO' ? 'AGUARDANDO_RECEBIMENTO' : 'NAO_INICIADA')
+
                 await tx.peca.update({
                     where: { id: parseInt(id) },
                     data: {
                         valorUnitario: totalProcessos,
                         custoTotal: totalProcessos * qty,
-                        statusSuprimento: globalmenteCompleta ? 'RECEBIDO' : (algumRecebido ? 'RECEBIDO_PARCIAL' : 'NAO_SOLICITADO'),
-                        status: prontaParaEstoque ? 'EM_ESTOQUE' : (algumRecebido ? 'AGUARDANDO_RECEBIMENTO' : 'NAO_INICIADA')
+                        statusSuprimento: novoStatusSuprimento,
+                        status: novoStatus
                     }
                 })
 

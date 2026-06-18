@@ -339,7 +339,7 @@
                   ></v-text-field>
                 </td>
                 <td>
-                  <div class="text-caption">{{ item.descricao.includes('SERVIÇO: ') ? item.descricao.split(' - ')[0].replace('SERVIÇO: ', '') : '-' }}</div>
+                  <div class="text-caption">{{ item.etapaProcesso || '-' }}</div>
                 </td>
                 <td class="text-center">
                   <div class="text-caption">{{ item.peca?.material || '-' }}</div>
@@ -629,7 +629,7 @@
             <tr v-for="item in chunk" :key="item.id">
                 <td style="padding: 5px; border: 1px solid #000;">{{ item.peca?.codigo || '-' }}</td>
                 <td style="padding: 5px; border: 1px solid #000;">{{ item.peca?.descricao || (item.descricao.includes(' - Peça: ') ? item.descricao.split(' - Peça: ')[1] : item.descricao) }}</td>
-                <td style="padding: 5px; border: 1px solid #000;">{{ item.descricao.includes('SERVIÇO: ') ? item.descricao.split(' - ')[0].replace('SERVIÇO: ', '') : '-' }}</td>
+                <td style="padding: 5px; border: 1px solid #000;">{{ item.etapaProcesso || '-' }}</td>
                 <td style="padding: 5px; border: 1px solid #000; text-align: center;">{{ item.peca?.material || '-' }}</td>
                 <td style="padding: 5px; border: 1px solid #000; text-align: center;">{{ item.quantidade }}</td>
                 <td style="padding: 5px; border: 1px solid #000; text-align: center;">PÇ</td>
@@ -1345,8 +1345,18 @@ const verDetalhesRequisicao = (item) => {
     anexosSelecionados: [],
     isVisualizado: false
   }
-  // Inicializa todos como selecionados
-  dialogDetalhes.value.requisicao.itens.forEach(i => i.selected = true)
+  // Inicializa todos como selecionados e ajusta a descrição para itens de serviço
+  dialogDetalhes.value.requisicao.itens.forEach(i => {
+    i.selected = true
+    if (i.descricao?.startsWith('SERVIÇO:')) {
+      i.etapaProcesso = i.descricao.split(' - ')[0].replace('SERVIÇO: ', '')
+      if (i.peca) {
+        i.descricao = i.peca.descricao || i.descricao
+      }
+    } else {
+      i.etapaProcesso = '-'
+    }
+  })
   selecionarTodosItens.value = true
   loadFornecedores()
 }
