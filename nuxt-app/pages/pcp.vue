@@ -140,7 +140,7 @@
     </v-card>
 
     <!-- Diálogo 1: Seleção de Fornecedor por Peça -->
-    <v-dialog v-model="dialogBudget.show" max-width="900px" persistent>
+    <v-dialog v-model="dialogBudget.show" max-width="1200px" persistent>
       <v-card>
         <v-card-title class="pa-4 bg-primary text-white">Solicitar Orçamento</v-card-title>
         <v-card-text class="pa-4">
@@ -157,7 +157,7 @@
           <v-table density="compact" class="border">
             <thead>
               <tr class="bg-grey-lighten-4">
-                <th class="text-left">Cód.</th>
+                <th class="text-left" style="min-width: 180px; white-space: nowrap;">Cód.</th>
                 <th class="text-left">Descrição</th>
                 <th class="text-center">Qtd</th>
                 <th class="text-left">Desenhos / Anexos</th>
@@ -166,7 +166,7 @@
             </thead>
             <tbody>
               <tr v-for="item in dialogBudget.os?.itens" :key="item.id">
-                <td class="font-weight-medium">{{ item.peca?.codigo }}</td>
+                <td class="font-weight-medium" style="white-space: nowrap;">{{ item.peca?.codigo }}</td>
                 <td>{{ item.peca?.descricao }}</td>
                 <td class="text-center">{{ item.peca?.quantidade }}</td>
                 <td>
@@ -434,7 +434,7 @@ const handleDrawingUploadBudget = async (event) => {
   formData.append('file', file)
 
   try {
-    const uploadedAnexo = await $fetch(`/api/pecas/${currentPecaForUploadBudget.value.id}/upload`, {
+    const result = await $fetch(`/api/pecas/${currentPecaForUploadBudget.value.id}/desenho`, {
       method: 'POST',
       body: formData
     })
@@ -442,7 +442,7 @@ const handleDrawingUploadBudget = async (event) => {
     if (!currentPecaForUploadBudget.value.anexos) {
       currentPecaForUploadBudget.value.anexos = []
     }
-    currentPecaForUploadBudget.value.anexos.push(uploadedAnexo)
+    currentPecaForUploadBudget.value.anexos.push(result.anexo)
     
     showSnackbar('Arquivo anexado com sucesso!', 'success')
   } catch (error) {
