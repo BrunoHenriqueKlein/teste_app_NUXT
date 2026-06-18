@@ -18,7 +18,9 @@ export default defineEventHandler(async (event) => {
                 op: true,
                 itens: {
                     include: {
-                        peca: true,
+                        peca: {
+                            include: { anexos: true }
+                        },
                         fornecedorRef: true
                     },
                     orderBy: { sequencia: 'asc' }

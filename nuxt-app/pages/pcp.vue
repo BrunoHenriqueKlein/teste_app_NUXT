@@ -132,12 +132,21 @@
         <v-card-text class="pa-4">
           <p class="mb-4">Selecione um fornecedor para cada item da <strong>OS {{ dialogBudget.os?.numero }}</strong>.</p>
           
+          <input 
+            type="file" 
+            ref="fileInputBudget" 
+            style="display: none" 
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.zip" 
+            @change="handleDrawingUploadBudget" 
+          />
+          
           <v-table density="compact" class="border">
             <thead>
               <tr class="bg-grey-lighten-4">
                 <th class="text-left">Cód.</th>
                 <th class="text-left">Descrição</th>
                 <th class="text-center">Qtd</th>
+                <th class="text-left">Desenhos / Anexos</th>
                 <th class="text-left" style="width: 250px;">Fornecedor Sugerido</th>
               </tr>
             </thead>
@@ -146,6 +155,31 @@
                 <td class="font-weight-medium">{{ item.peca?.codigo }}</td>
                 <td>{{ item.peca?.descricao }}</td>
                 <td class="text-center">{{ item.peca?.quantidade }}</td>
+                <td>
+                  <div class="d-flex flex-wrap align-center gap-1">
+                    <v-chip
+                      v-for="anexo in item.peca?.anexos"
+                      :key="anexo.id"
+                      size="x-small"
+                      color="primary"
+                      variant="outlined"
+                      class="mr-1"
+                      prepend-icon="mdi-paperclip"
+                      @click="viewDrawing(anexo.url)"
+                      style="cursor: pointer"
+                    >
+                      {{ anexo.nome }}
+                    </v-chip>
+                    <v-btn
+                      icon="mdi-plus"
+                      size="x-small"
+                      variant="tonal"
+                      color="primary"
+                      @click="triggerDrawingUploadBudget(item.peca)"
+                      title="Anexar arquivo"
+                    ></v-btn>
+                  </div>
+                </td>
                 <td class="pa-1">
                   <v-select
                     v-model="dialogBudget.itemFornecedorMap[item.pecaId]"
@@ -358,6 +392,49 @@ const dialogOS = ref({
 const fornecedores = ref([])
 const loadingPreview = ref(false)
 const sendingEmail = ref(false)
+
+const fileInputBudget = ref(null)
+const currentPecaForUploadBudget = ref(null)
+
+const viewDrawing = (url) => {
+  if (url) {
+    window.open(url, '_blank')
+  }
+}
+
+const triggerDrawingUploadBudget = (peca) => {
+  currentPecaForUploadBudget.value = peca
+  if (fileInputBudget.value) {
+    fileInputBudget.value.click()
+  }
+}
+
+const handleDrawingUploadBudget = async (event) => {
+  const file = event.target.files[0]
+  if (!file || !currentPecaForUploadBudget.value) return
+
+  const formData = new FormData()
+  formData.append('file', file)
+
+  try {
+    const uploadedAnexo = await $fetch(`/api/pecas/${currentPecaForUploadBudget.value.id}/upload`, {
+      method: 'POST',
+      body: formData
+    })
+
+    if (!currentPecaForUploadBudget.value.anexos) {
+      currentPecaForUploadBudget.value.anexos = []
+    }
+    currentPecaForUploadBudget.value.anexos.push(uploadedAnexo)
+    
+    showSnackbar('Arquivo anexado com sucesso!', 'success')
+  } catch (error) {
+    showSnackbar('Erro ao anexar arquivo', 'error')
+  } finally {
+    event.target.value = '' 
+    currentPecaForUploadBudget.value = null
+  }
+}
 
 const dialogEmail = ref({
   show: false,
