@@ -39,6 +39,20 @@
           </v-col>
           <v-col cols="12" sm="4" md="3">
             <v-select
+              v-model="filters.opId"
+              :items="opsList"
+              item-title="label"
+              item-value="id"
+              label="Filtrar por OP"
+              variant="outlined"
+              density="comfortable"
+              clearable
+              hide-details
+              @update:model-value="loadOrdens"
+            ></v-select>
+          </v-col>
+          <v-col cols="12" sm="4" md="3">
+            <v-select
               v-model="filters.status"
               :items="['NAO_INICIADO', 'EM_ANDAMENTO', 'AGUARDANDO', 'CONCLUIDO', 'BLOQUEADO', 'CANCELADO']"
               label="Status Específico"
@@ -375,8 +389,11 @@ const types = ref([])
 const activeTab = ref('ativas')
 const filters = ref({
   tipo: null,
-  status: null
+  status: null,
+  opId: null
 })
+
+const opsList = ref([])
 
 const dialogBudget = ref({
   show: false,
@@ -501,6 +518,7 @@ const loadOrdens = async () => {
   try {
     const params = {}
     if (filters.value.tipo) params.tipo = filters.value.tipo
+    if (filters.value.opId) params.opId = filters.value.opId
     
     // Se tiver filtro de status explícito, usa ele. Se não, usa a lógica da aba.
     if (filters.value.status) {
@@ -685,10 +703,31 @@ const showSnackbar = (text, color = 'success') => {
   snackbar.value = { show: true, text, color }
 }
 
+const loadOpsList = async () => {
+  try {
+    const data = await $fetch('/api/ops')
+    // Mapear os dados para um formato legível
+    if (data && data.ops) {
+      opsList.value = data.ops.map(op => ({
+        id: op.id,
+        label: `OP ${op.numeroOP} - ${op.cliente}`
+      }))
+    } else if (Array.isArray(data)) {
+      opsList.value = data.map(op => ({
+        id: op.id,
+        label: `OP ${op.numeroOP} - ${op.cliente}`
+      }))
+    }
+  } catch (error) {
+    console.error('Erro ao carregar lista de OPs', error)
+  }
+}
+
 onMounted(() => {
-  loadOrdens()
-  loadFornecedores()
   loadSettings()
+  loadFornecedores()
+  loadOpsList()
+  loadOrdens()
 })
 </script>
 
