@@ -14,6 +14,10 @@ export default defineEventHandler(async (event) => {
             where.statusSuprimento = { in: statuses }
         }
 
+        if (query.opId) {
+            where.opId = parseInt(query.opId as string)
+        }
+
         const demandas = await prisma.peca.findMany({
             where,
             include: {

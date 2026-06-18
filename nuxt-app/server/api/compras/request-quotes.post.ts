@@ -226,8 +226,8 @@ export default defineEventHandler(async (event) => {
         let successMessage = ''
         
         if (directPurchase || emailsSent > 0) {
-            // Cria a OC como SOLICITADA (direta) ou AGUARDANDO (cotação)
-            const statusCompra = directPurchase ? 'SOLICITADA' : 'AGUARDANDO'
+            // Cria a OC como SOLICITADA (direta) ou COTACAO (cotação)
+            const statusCompra = directPurchase ? 'SOLICITADA' : 'COTACAO'
             const fornecedorName = directPurchase ? 'Compra Direta / Mercado Livre' : 'Múltiplos / Cotação'
             
             const count = await prisma.compra.count()

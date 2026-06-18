@@ -913,12 +913,13 @@ const loading = ref(false)
 const saving = ref(false)
 
 const requisicoesEngenharia = computed(() => {
-  return compras.value.filter(c => c.status === 'SOLICITADA')
+  return compras.value.filter(c => c.status === 'SOLICITADA' || c.status === 'COTACAO')
 })
 
 const activeOrders = computed(() => {
   return compras.value.filter(o => 
     o.status !== 'SOLICITADA' && 
+    o.status !== 'COTACAO' && 
     o.status !== 'RECEBIDA_TOTAL' && 
     o.status !== 'CANCELADA'
   )

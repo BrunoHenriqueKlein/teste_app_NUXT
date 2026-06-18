@@ -30,6 +30,39 @@
       </template>
     </PageHeader>
 
+    <!-- Filtros -->
+    <v-card variant="outlined" class="mt-4 mb-4">
+      <v-card-text class="py-2">
+        <v-row dense align="center">
+          <v-col cols="12" sm="4" md="3">
+            <v-select
+              v-model="filters.opId"
+              :items="opsList"
+              item-title="label"
+              item-value="id"
+              label="Filtrar por OP"
+              variant="outlined"
+              density="comfortable"
+              clearable
+              hide-details
+              @update:model-value="loadData"
+            ></v-select>
+          </v-col>
+          <v-spacer></v-spacer>
+          <v-col cols="auto">
+            <v-btn
+              color="primary"
+              variant="flat"
+              prepend-icon="mdi-refresh"
+              @click="loadData"
+            >
+              Atualizar
+            </v-btn>
+          </v-col>
+        </v-row>
+      </v-card-text>
+    </v-card>
+
     <v-card variant="outlined" class="mt-4">
       <v-data-table
         v-model="selectedItems"
@@ -162,6 +195,12 @@
 const demandas = ref([])
 const selectedItems = ref([])
 const fornecedores = ref([])
+
+const filters = ref({
+  opId: null
+})
+const opsList = ref([])
+
 const loading = ref(false)
 const saving = ref(false)
 
@@ -194,8 +233,14 @@ const headers = [
 const loadData = async () => {
   loading.value = true
   try {
+    const params = new URLSearchParams()
+    params.append('status', 'NAO_SOLICITADO')
+    if (filters.value.opId) {
+      params.append('opId', filters.value.opId)
+    }
+
     const [data, forns] = await Promise.all([
-      $fetch('/api/compras/demandas?status=NAO_SOLICITADO'),
+      $fetch(`/api/compras/demandas?${params.toString()}`),
       $fetch('/api/fornecedores')
     ])
     
@@ -214,11 +259,6 @@ const loadData = async () => {
     loading.value = false
   }
 }
-
-
-
-
-
 
 const openQuoteDialog = () => {
   dialogQuoteSuppliers.value = {
@@ -311,13 +351,33 @@ const generateDirectPurchase = async () => {
   }
 }
 
-
-
 const showSnackbar = (text, color = 'success') => {
   snackbar.value = { show: true, text, color }
 }
 
-onMounted(loadData)
+const loadOpsList = async () => {
+  try {
+    const data = await $fetch('/api/ops')
+    if (data && data.ops) {
+      opsList.value = data.ops.map(op => ({
+        id: op.id,
+        label: `OP ${op.numeroOP} - ${op.cliente}`
+      }))
+    } else if (Array.isArray(data)) {
+      opsList.value = data.map(op => ({
+        id: op.id,
+        label: `OP ${op.numeroOP} - ${op.cliente}`
+      }))
+    }
+  } catch (error) {
+    console.error('Erro ao carregar lista de OPs', error)
+  }
+}
+
+onMounted(() => {
+  loadOpsList()
+  loadData()
+})
 </script>
 
 <style scoped>
