@@ -13,9 +13,7 @@ export default defineEventHandler(async (event: H3Event) => {
         const updatedOS = await prisma.ordemServico.update({
             where: { id },
             data: {
-                status: body.status,
-                // Poderíamos adicionar dataFinalizacao se for CONCLUIDO
-                ...(body.status === 'CONCLUIDO' ? { dataFinalizacao: new Date() } : {})
+                status: body.status
             }
         })
 

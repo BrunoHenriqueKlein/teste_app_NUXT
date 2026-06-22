@@ -485,12 +485,19 @@ export default defineEventHandler(async (event) => {
                     }
                 }
 
-                // Se houver OS vinculada e tudo foi recebido, finaliza a OS
-                if (updatedCompra.osId && totalItensPendentes === 0 && data.status === 'RECEBIDA_TOTAL') {
-                    await prisma.ordemServico.update({
-                        where: { id: updatedCompra.osId },
-                        data: { status: 'CONCLUIDO' }
+                // Se houver OS vinculada, verifica se todos os seus processos foram concluídos
+                if (updatedCompra.osId) {
+                    const processosDaOS = await prisma.processoPeca.findMany({
+                        where: { osId: updatedCompra.osId }
                     })
+                    const todosProcessosDaOSConcluidos = processosDaOS.length > 0 && processosDaOS.every((p: any) => p.status === 'CONCLUIDO')
+                    
+                    if (todosProcessosDaOSConcluidos) {
+                        await prisma.ordemServico.update({
+                            where: { id: updatedCompra.osId },
+                            data: { status: 'CONCLUIDO' }
+                        })
+                    }
                 }
             }
 
