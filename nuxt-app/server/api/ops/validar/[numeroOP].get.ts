@@ -25,7 +25,12 @@ export default defineEventHandler(async (event) => {
     try {
         const op = await prisma.oP.findUnique({
             where: { numeroOP: numeroOP },
-            select: { id: true, numeroOP: true, status: true }
+            select: { 
+                id: true, 
+                numeroOP: true, 
+                status: true,
+                pecas: { select: { codigo: true } } 
+            }
         })
 
         if (!op) {
@@ -34,10 +39,14 @@ export default defineEventHandler(async (event) => {
                 statusMessage: `Ordem de Produção ${numeroOP} não encontrada.`
             })
         }
+        
+        // Extrair apenas os códigos e separar por '|', e colocar '|' nas pontas para facilitar o match exato
+        const codigos = op.pecas ? '|' + op.pecas.map((p: any) => p.codigo).join('|') + '|' : ''
 
         return {
             valid: true,
-            op: op
+            op: op,
+            codigos: codigos
         }
     } catch (error) {
         console.error('Erro ao validar OP:', error)

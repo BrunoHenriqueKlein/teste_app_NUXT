@@ -528,7 +528,7 @@
               ></v-select>
             </v-col>
           </v-row>
-          <v-row>
+          <v-row v-if="dialogPeca.data.categoria === 'COMPRADO'">
             <v-col cols="12">
               <v-combobox
                 v-model="dialogPeca.data.subcategoria"
@@ -541,7 +541,7 @@
               ></v-combobox>
             </v-col>
           </v-row>
-          <v-row>
+          <v-row v-if="dialogPeca.data.categoria === 'COMPRADO'">
             <v-col cols="12">
               <v-select
                 v-model="dialogPeca.data.fornecedorId"

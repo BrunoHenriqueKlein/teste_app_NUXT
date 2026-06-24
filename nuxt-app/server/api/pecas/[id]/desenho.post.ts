@@ -30,7 +30,7 @@ export default defineEventHandler(async (event) => {
         fileName = file.filename || 'Anexo'
     } else {
         // Suporte para envio binário direto (Macro SW / Script Simulação)
-        const body = await readRawBody(event)
+        const body = await readRawBody(event, false) // <-- False é CRÍTICO para retornar Buffer puro
         if (!body) {
             throw createError({ statusCode: 400, statusMessage: 'Corpo binário vazio' })
         }
@@ -56,14 +56,33 @@ export default defineEventHandler(async (event) => {
         // URL pública
         const url = `/uploads/desenhos/${diskFileName}`
 
-        // Criar registro na nova tabela de anexos
-        const anexo = await prisma.pecaAnexo.create({
-            data: {
-                pecaId: parseInt(pecaId),
-                nome: fileName,
-                url
-            }
+        // Buscar se já existe um anexo com o mesmo nome
+        let anexo = await prisma.pecaAnexo.findFirst({
+            where: { pecaId: parseInt(pecaId), nome: fileName }
         })
+
+        if (anexo) {
+            // Deletar o arquivo antigo do disco, se existir
+            const oldPath = path.join(process.cwd(), 'public', anexo.url)
+            if (fs.existsSync(oldPath)) {
+                fs.unlinkSync(oldPath)
+            }
+
+            // Atualizar o registro com a nova URL
+            anexo = await prisma.pecaAnexo.update({
+                where: { id: anexo.id },
+                data: { url }
+            })
+        } else {
+            // Criar novo registro
+            anexo = await prisma.pecaAnexo.create({
+                data: {
+                    pecaId: parseInt(pecaId),
+                    nome: fileName,
+                    url
+                }
+            })
+        }
 
         return { success: true, anexo }
     } catch (error: any) {

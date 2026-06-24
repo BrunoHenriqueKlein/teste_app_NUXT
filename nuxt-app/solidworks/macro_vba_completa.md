@@ -1,35 +1,46 @@
-# Instruções para Instalação da Macro SolidWorks (V4.0 - BRIDGE STRATEGY)
+# Instruções para Instalação da Macro SolidWorks - Versão Completa (Com Anexos)
 
-Esta versão implementa a **Estratégia de Ponte**, exportando e enviando desenhos (PDF) automaticamente para o servidor via API.
+Esta versão da macro é focada em integrar o SolidWorks com o módulo PCP de forma mais completa. Além de exportar as estruturas (BOM) e criar ordens de serviço, ela gera **automaticamente** arquivos em PDF, DXF e IGS para solicitação de orçamentos e serviços de manufatura.
 
 ## 1. Preparação
 1. No SolidWorks: **Ferramentas > Macro > Nova**.
-2. **Tools > References**: Marque as seguintes:
+2. **Tools > References**: Marque as seguintes bibliotecas:
     - **Microsoft XML, v6.0**
     - **Microsoft Scripting Runtime**
 
-## 2. Ajuste da Interface (`frmProcessos`)
-Certifique-se de que cada controle no seu UserForm tenha exatamente estes nomes:
+## 2. Ajuste da Interface Gráfica (`frmProcessos`)
+Para a versão completa, seu UserForm no VBA precisará ter **todos** os campos abaixo. 
+*Atenção aos nomes de cada controle na propriedade `(Name)`.*
 
 | Tipo de Controle | Nome em (Name) | Descrição |
 | :--- | :--- | :--- |
 | **Label** | `lblProgresso` | Exibe "Item x de y" |
-| **TextBox** | `txtCodPeca` | Código da peça (Editável) |
-| **TextBox** | `txtDescricao` | Para o nome/descrição |
-| **TextBox** | `txtMaterial` | Para o material |
+| **TextBox** | `txtCodPeca` | Código da peça |
+| **TextBox** | `txtDescricao` | Descrição/Nome |
+| **TextBox** | `txtMaterial` | Material da peça |
 | **Label** | `lblQuantidade` | Exibe a quantidade total |
-| **ComboBox** | `cmbCategoria` | FABRICADO/COMPRADO |
-| **ListBox** | `lstProcessos` | Lista as etapas |
+| **ComboBox** | `cmbCategoria` | Categorias: FABRICADO / COMPRADO |
+| **ComboBox** | `cmbSubcategoria`| Subcategoria (Exibida apenas se COMPRADO) |
+| **ListBox** | `lstProcessos` | Etapas do PCP (Exibida apenas se FABRICADO) |
 | **CheckBox** | `chkUsarConfig` | Incluir config no código? |
 | **CheckBox** | `chkApenasConfig` | Usar **apenas** config como código? |
-| **CommandButton**| `btnConfirmar` | Salvar e Próxima |
-| **CommandButton**| `btnPular` | **[NOVO]** Pula sem salvar |
+| **CheckBox** | `chkPDF` | Exportar e Anexar PDF do Desenho? |
+| **CheckBox** | `chkDXF` | Exportar e Anexar DXF (Chapas - Flat Pattern)? |
+| **CheckBox** | `chkIGS` | Exportar e Anexar IGS (Peças Usinadas)? |
+| **CommandButton**| `btnConfirmar` | Salvar e Enviar API |
+| **CommandButton**| `btnPular` | Pular sem salvar |
+| **CommandButton**| `btnVoltar` | Voltar para a peça anterior |
 
-**Configurações de Interface (Propriedades)**:
-1.  Selecione o **Formulário** (`frmProcessos`) e mude **ShowModal** para **False**.
-2.  Selecione a **ListBox** (`lstProcessos`) e mude **MultiSelect** para `1 - fmMultiSelectMulti`.
+**Ajustes das Propriedades**:
+1. Formulário (`frmProcessos`): Mude **ShowModal** para `False`.
+2. ListBox (`lstProcessos`): Mude **MultiSelect** para `1 - fmMultiSelectMulti`.
+3. ComboBox (`cmbSubcategoria`): Deixe a propriedade **Visible** como `False` por padrão no painel de propriedades.
+
+---
 
 ## 3. Código do Módulo Principal (`Module1`)
+Copie e cole no Módulo:
+
 ```vba
 Public swApp As SldWorks.SldWorks
 Sub main()
@@ -44,12 +55,18 @@ Sub main()
 End Sub
 ```
 
+---
+
 ## 4. Código do Formulário (`frmProcessos`)
+Copie e cole o código inteiro abaixo dentro da janela de código do `frmProcessos`:
+
 ```vba
 ' --- VARIÁVEIS DE ESTADO ---
 Private mOP As String
 Private mUrl As String
 Private mProcessoList As String
+Private mCategoriasList As String
+Private mPecasNaOP As String ' Guarda a lista de peças que já existem na OP
 Private mDictComps As Scripting.Dictionary
 Private mChaves As Variant
 Private mIndice As Integer
@@ -71,11 +88,15 @@ Public Sub IniciarComMontagem(swModel As SldWorks.ModelDoc2)
         Unload Me
         Exit Sub
     End If
-    mProcessoList = FetchProcessos()
+    
+    ' Carregar as listas do servidor via API
+    mProcessoList = FetchData("/configuracoes/processos-peca")
+    mCategoriasList = FetchData("/configuracoes/categorias-fornecedor")
+    
     Set mDictComps = New Scripting.Dictionary
     Set mCutListCache = New Scripting.Dictionary
     TraverseAssy swModel
-    If mDictComps.Count = 0 Then
+    If mDictComps.count = 0 Then
         MsgBox "Nenhum componente encontrado."
         Unload Me
         Exit Sub
@@ -86,7 +107,7 @@ Public Sub IniciarComMontagem(swModel As SldWorks.ModelDoc2)
 End Sub
 
 Private Sub ProcessarProximo()
-    If mIndice >= mDictComps.Count Then
+    If mIndice >= mDictComps.count Then
         MsgBox "Processamento concluído!", vbInformation
         Unload Me: Exit Sub
     End If
@@ -124,29 +145,30 @@ Private Sub ProcessarProximo()
         Dim currIdx As Integer: currIdx = 0
         Do While Not swFeat Is Nothing
             If swFeat.GetTypeName2 = "CutListFolder" Then
-                If currIdx = folderIdx Then
-                    Dim swCutFolder As SldWorks.BodyFolder: Set swCutFolder = swFeat.GetSpecificFeature2
-                    ' Capturar o gerenciador de propriedades da Cut-List
-                    Set swCutPropMgr = swFeat.CustomPropertyManager
-                    vBodies = swCutFolder.GetBodies
-                    If Not IsEmpty(vBodies) Then
-                        Dim b As Integer
-                        For b = 0 To UBound(vBodies)
-                            vBodies(b).Select2 True, Nothing
-                        Next b
+                Dim swCutFolderCheck As SldWorks.BodyFolder: Set swCutFolderCheck = swFeat.GetSpecificFeature2
+                If swCutFolderCheck.GetBodyCount > 0 Then
+                    If currIdx = folderIdx Then
+                        Dim swCutFolder As SldWorks.BodyFolder: Set swCutFolder = swCutFolderCheck
+                        Set swCutPropMgr = swFeat.CustomPropertyManager
+                        vBodies = swCutFolder.GetBodies
+                        If Not IsEmpty(vBodies) Then
+                            Dim b As Integer
+                            For b = 0 To UBound(vBodies)
+                                vBodies(b).Select2 True, Nothing
+                            Next b
+                        End If
+                        Exit Do
                     End If
-                    Exit Do
+                    currIdx = currIdx + 1
                 End If
-                currIdx = currIdx + 1
             End If
             Set swFeat = swFeat.GetNextFeature
         Loop
     End If
     
-    Me.lblProgresso.Caption = "Item " & (mIndice + 1) & " de " & mDictComps.Count
+    Me.lblProgresso.Caption = "Item " & (mIndice + 1) & " de " & mDictComps.count
     Me.lblQuantidade.Caption = "Qtd Total: " & qtdTotal
     
-    ' Inteligência de Configuração
     Me.chkUsarConfig.Caption = "Incluir config: " & configName
     Dim configLixo As Boolean
     configLixo = (InStr(LCase(configName), "default") > 0 Or InStr(LCase(configName), "machined") > 0 Or InStr(LCase(configName), "usinado") > 0)
@@ -155,40 +177,31 @@ Private Sub ProcessarProximo()
     
     AtualizarSugestaoCodigo
     
-    Dim desc As String, cat As String, propCod As String
+    Dim desc As String, cat As String, subcat As String, propCod As String
     Dim swCustProp As SldWorks.CustomPropertyManager: Set swCustProp = swCompModel.Extension.CustomPropertyManager(configName)
     
-    ' Tentar pegar CÓDIGO da propriedade (prioridade)
     swCustProp.Get4 "codigo", False, "", propCod
     If propCod = "" Then swCustProp.Get4 "PartNo", False, "", propCod
     If propCod = "" Then swCompModel.Extension.CustomPropertyManager("").Get4 "codigo", False, "", propCod
     If propCod = "" Then swCompModel.Extension.CustomPropertyManager("").Get4 "PartNo", False, "", propCod
     
-    ' Tentar pegar DESCRIÇÃO (prioridade para Cut-List com filtro anti-Sheet)
     If Not swCutPropMgr Is Nothing Then
         Dim v1 As String, v2 As String
         swCutPropMgr.Get4 "descrição", False, "", v1
         swCutPropMgr.Get4 "description", False, "", v2
-        
-        ' Lógica inteligente: Pega a que tiver conteúdo útil (não "Sheet" ou "Folha")
         If v1 <> "" And LCase(v1) <> "sheet" And LCase(v1) <> "folha" Then
             desc = v1
         ElseIf v2 <> "" And LCase(v2) <> "sheet" And LCase(v2) <> "folha" Then
             desc = v2
         Else
-            ' Fallback se ambas forem genéricas ou vazias
             If v1 <> "" Then desc = v1 Else desc = v2
         End If
     End If
-    
-    If desc = "" Then
-        swCustProp.Get4 "nome", False, "", desc
-    End If
-    If desc = "" Then
-        swCompModel.Extension.CustomPropertyManager("").Get4 "nome", False, "", desc
-    End If
+    If desc = "" Then swCustProp.Get4 "nome", False, "", desc
+    If desc = "" Then swCompModel.Extension.CustomPropertyManager("").Get4 "nome", False, "", desc
     
     swCustProp.Get4 "categoria", False, "", cat
+    swCustProp.Get4 "subcategoria", False, "", subcat
     
     On Error Resume Next
     Me.txtDescricao.Text = desc: Me.txtMaterial.Text = ""
@@ -206,21 +219,82 @@ Private Sub ProcessarProximo()
         End If
     End If
     On Error GoTo 0
+    
     Me.cmbCategoria.Clear: Me.cmbCategoria.AddItem "FABRICADO": Me.cmbCategoria.AddItem "COMPRADO"
+    
+    ' Popula Subcategorias e Processos do Servidor
+    PopularListaProcessos swCompModel, configName
+    PopularListaSubcategorias subcat
+    
+    ' Aciona a Lógica de Visibilidade (Através do Change Event)
     If cat = "COMPRADO" Then
         Me.cmbCategoria.ListIndex = 1
     Else
         Me.cmbCategoria.ListIndex = 0
     End If
-    Me.lstProcessos.Clear: PopularProcessosDaPeca swCompModel, configName: PopularListaBanco
+    
+    ' Pré-Setar check boxes de exportação baseados na categoria sugerida
+    If cat = "COMPRADO" Then
+        Me.chkPDF.Value = False
+        Me.chkDXF.Value = False
+        Me.chkIGS.Value = False
+    Else
+        Me.chkPDF.Value = True
+        If InStr(LCase(Me.txtMaterial.Text), "chapa") > 0 Or InStr(LCase(desc), "chapa") > 0 Or folderIdx >= 0 Then
+            Me.chkDXF.Value = True
+            Me.chkIGS.Value = False
+        Else
+            Me.chkDXF.Value = False
+            Me.chkIGS.Value = True
+        End If
+    End If
+    
     Me.Show vbModeless
 End Sub
 
+Private Sub cmbCategoria_Change()
+    If Me.cmbCategoria.Text = "COMPRADO" Then
+        Me.lstProcessos.Visible = False
+        Me.cmbSubcategoria.Visible = True
+    Else
+        Me.lstProcessos.Visible = True
+        Me.cmbSubcategoria.Visible = False
+    End If
+End Sub
+
 Private Sub btnConfirmar_Click()
-    SalvarNoArquivo
+    ' Verifica se a peça já existe na OP atual (ignorando espaços e maiúsculas/minúsculas para evitar falhas)
+    Dim pList As String: pList = Replace(mPecasNaOP, " ", "")
+    Dim searchStr As String: searchStr = "|" & Replace(Me.txtCodPeca.Text, " ", "") & "|"
+    
+    If InStr(1, pList, searchStr, vbTextCompare) > 0 Then
+        Dim resp As Integer
+        resp = MsgBox("A peça '" & Me.txtCodPeca.Text & "' já existe nesta OP!" & vbCrLf & vbCrLf & _
+               "Escolha uma opção:" & vbCrLf & _
+               "- [Sim] para SOBRESCREVER a BOM e os Desenhos" & vbCrLf & _
+               "- [Não] para PULAR esta peça" & vbCrLf & _
+               "- [Cancelar] para EDITAR o código manualmente na tela", vbYesNoCancel + vbExclamation, "Peça Duplicada Identificada")
+               
+        If resp = vbNo Then
+            btnPular_Click
+            Exit Sub
+        ElseIf resp = vbCancel Then
+            Exit Sub
+        End If
+        ' Se clicou em SIM, apenas segue o fluxo para sobrescrever.
+    End If
+
     Dim pecaId As Long
+    SalvarNoArquivo
     pecaId = EnviarParaAPI()
-    If pecaId > 0 Then ExportarEEnviarDesenho pecaId
+    
+    ' Se API respondeu com ID, e exportação foi solicitada, aciona
+    If pecaId > 0 Then
+        ' Adiciona o código na memória para avisar caso a mesma peça apareça novamente neste fluxo
+        mPecasNaOP = mPecasNaOP & "|" & Me.txtCodPeca.Text & "|"
+        ExportarArquivos pecaId
+    End If
+    
     FinalizarItem
 End Sub
 
@@ -228,21 +302,27 @@ Private Sub btnPular_Click()
     FinalizarItem
 End Sub
 
+Private Sub btnVoltar_Click()
+    If mIndice > 0 Then
+        ' Volta 1 casa para retornar à peça anterior (o índice atual reflete a tela ativa)
+        mIndice = mIndice - 1
+        ProcessarProximo
+    Else
+        MsgBox "Este já é o primeiro item da lista.", vbInformation, "Atenção"
+    End If
+End Sub
+
 Private Sub FinalizarItem()
     Dim swApp As SldWorks.SldWorks: Set swApp = Application.SldWorks
     Dim path As String: path = Split(mKeyAtual, "::")(0)
     Dim fechar As Boolean: fechar = True
-    If mIndice + 1 < mDictComps.Count Then
+    If mIndice + 1 < mDictComps.count Then
         If LCase(Split(mChaves(mIndice + 1), "::")(0)) = LCase(path) Then fechar = False
     End If
     If fechar And LCase(path) <> mMainAssyPath Then
         Dim errs As Long, warns As Long
         Dim typeDoc As Long
-        If LCase(Right(path, 7)) = ".sldasm" Then
-            typeDoc = 2
-        Else
-            typeDoc = 1
-        End If
+        If LCase(Right(path, 7)) = ".sldasm" Then typeDoc = 2 Else typeDoc = 1
         Dim swModelFechar As SldWorks.ModelDoc2
         Set swModelFechar = swApp.OpenDoc6(path, typeDoc, 1, "", errs, warns)
         If Not swModelFechar Is Nothing Then swApp.CloseDoc swModelFechar.GetTitle
@@ -258,15 +338,9 @@ Private Sub AtualizarSugestaoCodigo()
     Dim swApp As SldWorks.SldWorks: Set swApp = Application.SldWorks
     Dim swModel As SldWorks.ModelDoc2: Set swModel = swApp.ActiveDoc
     
-    ' Garantir que estamos no modelo certo (caso o usuário tenha trocado de janela)
     If LCase(swModel.GetPathName) <> LCase(path) Then
-        Dim errs As Long, warns As Long
-        Dim typeDoc As Long
-        If LCase(Right(path, 7)) = ".sldasm" Then
-            typeDoc = 2
-        Else
-            typeDoc = 1
-        End If
+        Dim errs As Long, warns As Long, typeDoc As Long
+        If LCase(Right(path, 7)) = ".sldasm" Then typeDoc = 2 Else typeDoc = 1
         Set swModel = swApp.OpenDoc6(path, typeDoc, 1, "", errs, warns)
     End If
     
@@ -296,23 +370,12 @@ Private Sub AtualizarSugestaoCodigo()
         sug = baseName
     End If
     
-    If folderIdx >= 0 Then
-        sug = sug & "." & (folderIdx + 1)
-    End If
-    
+    If folderIdx >= 0 Then sug = sug & "." & (folderIdx + 1)
     Me.txtCodPeca.Text = sug
 End Sub
 
 Private Sub chkUsarConfig_Click(): AtualizarSugestaoCodigo: End Sub
 Private Sub chkApenasConfig_Click(): AtualizarSugestaoCodigo: End Sub
-
-Private Sub cmbCategoria_Change()
-    If Me.cmbCategoria.Text = "COMPRADO" Then
-        Me.lstProcessos.Visible = False
-    Else
-        Me.lstProcessos.Visible = True
-    End If
-End Sub
 
 Private Sub TraverseAssy(swParentDoc As SldWorks.ModelDoc2)
     Dim swAssy As SldWorks.AssemblyDoc: Dim vComps As Variant, i As Integer, j As Integer
@@ -331,7 +394,7 @@ Private Sub TraverseAssy(swParentDoc As SldWorks.ModelDoc2)
                     For j = 0 To UBound(vFolders)
                         Dim fData() As String: fData = Split(vFolders(j), ":")
                         Dim kCorpo As String: kCorpo = path & "::" & conf & "::" & fData(0)
-                        mDictComps(kCorpo) = mDictComps(kCorpo) + CLng(fData(1)) ' Multiplica peça x corpos
+                        mDictComps(kCorpo) = mDictComps(kCorpo) + CLng(fData(1))
                     Next j
                 End If
             Else
@@ -348,8 +411,8 @@ Private Sub TraverseAssy(swParentDoc As SldWorks.ModelDoc2)
                                 If bCount > 0 Then
                                     mDictComps.Add path & "::" & conf & "::" & currIdx, bCount
                                     cacheStr = cacheStr & currIdx & ":" & bCount & "|"
+                                    currIdx = currIdx + 1
                                 End If
-                                currIdx = currIdx + 1
                             End If
                             Set swFeat = swFeat.GetNextFeature
                         Loop
@@ -370,15 +433,12 @@ Private Sub SalvarNoArquivo()
     Dim swApp As SldWorks.SldWorks: Set swApp = Application.SldWorks
     Dim swModel As SldWorks.ModelDoc2: Dim errs As Long, warns As Long
     Dim typeDoc As Long
-    If LCase(Right(path, 7)) = ".sldasm" Then
-        typeDoc = 2
-    Else
-        typeDoc = 1
-    End If
+    If LCase(Right(path, 7)) = ".sldasm" Then typeDoc = 2 Else typeDoc = 1
     Set swModel = swApp.OpenDoc6(path, typeDoc, 1, "", errs, warns)
     If swModel Is Nothing Then Exit Sub
     Dim swCustProp As SldWorks.CustomPropertyManager: Set swCustProp = swModel.Extension.CustomPropertyManager(configName)
     swCustProp.Add3 "categoria", 30, Me.cmbCategoria.Text, 2: swCustProp.Add3 "nome", 30, Me.txtDescricao.Text, 2
+    swCustProp.Add3 "subcategoria", 30, Me.cmbSubcategoria.Text, 2
     Dim i As Integer: For i = 1 To 10: swCustProp.Delete "processo" & i: Next i
     Dim count As Integer: count = 1
     For i = 0 To Me.lstProcessos.ListCount - 1
@@ -390,12 +450,18 @@ End Sub
 Private Function EnviarParaAPI() As Long
     On Error GoTo Erro
     Dim http As Object: Set http = CreateObject("MSXML2.XMLHTTP")
-    Dim escolhidos As String, i As Integer: For i = 0 To Me.lstProcessos.ListCount - 1
-        If Me.lstProcessos.Selected(i) Then escolhidos = escolhidos & """" & Me.lstProcessos.List(i) & ""","
-    Next i
-    If Len(escolhidos) > 0 Then escolhidos = Left(escolhidos, Len(escolhidos) - 1)
+    Dim escolhidos As String, i As Integer
+    If Me.cmbCategoria.Text = "FABRICADO" Then
+        For i = 0 To Me.lstProcessos.ListCount - 1
+            If Me.lstProcessos.Selected(i) Then escolhidos = escolhidos & """" & Me.lstProcessos.List(i) & ""","
+        Next i
+        If Len(escolhidos) > 0 Then escolhidos = Left(escolhidos, Len(escolhidos) - 1)
+    End If
     
-    Dim body As String: body = "{""numeroOP"": """ & mOP & """, ""peca"": {""codigo"": """ & Me.txtCodPeca.Text & """, ""descricao"": """ & Me.txtDescricao.Text & """, ""material"": """ & Me.txtMaterial.Text & """, ""quantidade"": " & mDictComps(mKeyAtual) & ", ""categoria"": """ & Me.cmbCategoria.Text & """, ""subcategoria"": """ & Me.subcategoria & """, ""processos"": [" & escolhidos & "]}}"
+    Dim selSubCat As String: selSubCat = ""
+    If Me.cmbCategoria.Text = "COMPRADO" Then selSubCat = Me.cmbSubcategoria.Text
+    
+    Dim body As String: body = "{""numeroOP"": """ & mOP & """, ""peca"": {""codigo"": """ & Me.txtCodPeca.Text & """, ""descricao"": """ & Me.txtDescricao.Text & """, ""material"": """ & Me.txtMaterial.Text & """, ""quantidade"": " & mDictComps(mKeyAtual) & ", ""categoria"": """ & Me.cmbCategoria.Text & """, ""subcategoria"": """ & selSubCat & """, ""processos"": [" & escolhidos & "]}}"
     
     http.Open "POST", mUrl & "/ops/import-bom", False
     http.setRequestHeader "Content-Type", "application/json"
@@ -403,84 +469,185 @@ Private Function EnviarParaAPI() As Long
     http.send body
     
     If http.Status = 200 Then
-        ' Tentar extrair o pecaId do JSON de resposta (simplificado)
         Dim resp As String: resp = http.responseText
         Dim pos As Long: pos = InStr(resp, """pecaId"":")
-        If pos > 0 Then
-            EnviarParaAPI = CLng(Split(Mid(resp, pos + 9), ",")(0))
-        End If
+        If pos > 0 Then EnviarParaAPI = CLng(Split(Mid(resp, pos + 9), ",")(0))
     End If
     Exit Function
 Erro:
     EnviarParaAPI = 0
 End Function
 
-Private Sub ExportarEEnviarDesenho(pecaId As Long)
+Private Sub ExportarArquivos(pecaId As Long)
     On Error Resume Next
     Dim swApp As SldWorks.SldWorks: Set swApp = Application.SldWorks
     Dim swModel As SldWorks.ModelDoc2: Set swModel = swApp.ActiveDoc
+    Dim tempFolder As String: tempFolder = Environ("TEMP") & "\"
+    Dim tempPath As String
     
-    ' 1. Gerar PDF Temporário
-    Dim tempPath As String: tempPath = Environ("TEMP") & "\desenho_temp.pdf"
+    ' Obter Pasta do 3D para buscar o desenho
+    Dim modelPath As String: modelPath = swModel.GetPathName
+    Dim folderPath As String: folderPath = Left(modelPath, InStrRev(modelPath, "\"))
+    Dim baseName As String: baseName = Mid(modelPath, InStrRev(modelPath, "\") + 1)
+    baseName = Left(baseName, InStrRev(baseName, ".") - 1)
     
-    ' Se for desenho (SLDDRW) aberto, exporta. Se for peça, tentamos abrir o desenho dela.
-    ' Para simplificar nesta V4, assumiremos que o usuário exporta se o desenho estiver aberto
-    ' Ou implementaremos a busca automática do arquivo .slddrw na mesma pasta futuramente.
+    ' 1. Exportar PDF
+    If Me.chkPDF.Value = True Then
+        Dim localPdfPath As String: localPdfPath = folderPath & baseName & ".pdf"
+        Dim drwPath As String: drwPath = folderPath & baseName & ".slddrw"
+        
+        ' TRATATIVA MAIS RÁPIDA E DIRETA:
+        ' Se o PDF já existir na mesma pasta do arquivo 3D, envia ele direto sem abrir o desenho!
+        If Dir(localPdfPath) <> "" Then
+            UploadArquivo pecaId, localPdfPath, Me.txtCodPeca.Text & ".pdf"
+            
+        ' Se não existir, tenta gerar o PDF e salva na mesma pasta (evita bloqueios da pasta TEMP)
+        ElseIf Dir(drwPath) <> "" Then
+            Dim errs As Long, warns As Long
+            Dim swDraw As SldWorks.ModelDoc2
+            
+            Set swDraw = swApp.OpenDoc6(drwPath, 3, 2, "", errs, warns)
+            If Not swDraw Is Nothing Then
+                swApp.ActivateDoc3 swDraw.GetTitle, True, 1, errs
+                
+                Dim vSheets As Variant: vSheets = swDraw.GetSheetNames
+                If Not IsEmpty(vSheets) Then swDraw.ActivateSheet vSheets(0)
+                
+                swDraw.ForceRebuild3 True
+                swDraw.ViewZoomtofit2
+                Dim t As Integer: For t = 1 To 5: DoEvents: Next t
+                
+                ' Salva o PDF na mesma pasta do projeto
+                swDraw.Extension.SaveAs localPdfPath, 0, 0, Nothing, errs, warns
+                
+                swApp.CloseDoc swDraw.GetTitle
+                swApp.ActivateDoc3 swModel.GetTitle, True, 1, errs
+                
+                If Dir(localPdfPath) <> "" Then
+                    UploadArquivo pecaId, localPdfPath, Me.txtCodPeca.Text & ".pdf"
+                End If
+            End If
+        End If
+    End If
     
-    ' Exportação básica de PDF do que estiver na tela
-    swModel.Extension.SaveAs tempPath, 0, 0, Nothing, 0, 0
+    ' 2. Exportar DXF (Flat Pattern para Chapas)
+    If Me.chkDXF.Value = True And swModel.GetType = 1 Then
+        Dim swPart As SldWorks.PartDoc: Set swPart = swModel
+        tempPath = tempFolder & "corte_" & Me.txtCodPeca.Text & ".dxf"
+        
+        ' Exportar Flat Pattern direto do Part
+        ' Opções: 1 (Geometria) + 4 (Linhas de dobra) = 5
+        Dim bRetDXF As Boolean
+        bRetDXF = swPart.ExportToDWG2(tempPath, modelPath, 1, True, Empty, False, False, 5, Empty)
+        
+        If Dir(tempPath) <> "" Then
+            UploadArquivo pecaId, tempPath, Me.txtCodPeca.Text & ".dxf"
+            Kill tempPath
+        End If
+    End If
     
-    If Dir(tempPath) <> "" Then
-        UploadArquivo pecaId, tempPath
-        Kill tempPath
+    ' 3. Exportar IGS (Peças Usinadas)
+    If Me.chkIGS.Value = True And swModel.GetType = 1 Then
+        tempPath = tempFolder & "usinagem_" & Me.txtCodPeca.Text & ".igs"
+        swModel.Extension.SaveAs tempPath, 0, 0, Nothing, 0, 0
+        If Dir(tempPath) <> "" Then
+            UploadArquivo pecaId, tempPath, Me.txtCodPeca.Text & ".igs"
+            Kill tempPath
+        End If
     End If
 End Sub
 
-Private Sub UploadArquivo(pecaId As Long, filePath As String)
-    Dim strBoundary As String: strBoundary = "---------------------------" & Format(Now, "ddmmyyhhmmss")
-    Dim http As Object: Set http = CreateObject("MSXML2.XMLHTTP")
+Private Sub UploadArquivo(pecaId As Long, filePath As String, fileName As String)
+    Dim http As Object
+    ' Usar WinHttp no lugar de MSXML2 para garantir que o array de bytes (PDF Binário) não seja corrompido
+    Set http = CreateObject("WinHttp.WinHttpRequest.5.1")
     
-    ' Ler arquivo binário
     Dim adodbStream As Object: Set adodbStream = CreateObject("ADODB.Stream")
+    
     adodbStream.Type = 1 ' adTypeBinary
     adodbStream.Open
     adodbStream.LoadFromFile filePath
     Dim fileContent As Variant: fileContent = adodbStream.Read
     adodbStream.Close
-
-    ' Construir Multipart (Corpo simplificado para envio binário)
-    ' Nota: Em VBA puro é complexo construir o multipart perfeito com binário.
-    ' Uma alternativa estável é usar o Helper VBA-JSON ou enviar via Base64 se a API suportar.
-    ' Para esta primeira versão, vamos enviar o binário puro com o pecaId na URL.
     
     http.Open "POST", mUrl & "/pecas/" & pecaId & "/desenho", False
-    http.setRequestHeader "Content-Type", "application/pdf" ' Enviando direto por ora
-    http.setRequestHeader "X-File-Name", Me.txtCodPeca.Text & ".pdf"
+    http.setRequestHeader "Content-Type", "application/pdf"
+    http.setRequestHeader "X-File-Name", fileName
     http.send fileContent
 End Sub
 
-Private Sub PopularProcessosDaPeca(swModel As SldWorks.ModelDoc2, configName As String)
-    Dim swCustProp As SldWorks.CustomPropertyManager: Set swCustProp = swModel.Extension.CustomPropertyManager(configName)
-    Dim val As String, i As Integer: For i = 1 To 10
-        swCustProp.Get4 "processo" & i, False, "", val: If val = "" Then swModel.Extension.CustomPropertyManager("").Get4 "processo" & i, False, "", val
-        If val <> "" Then Me.lstProcessos.AddItem val: Me.lstProcessos.Selected(Me.lstProcessos.ListCount - 1) = True
-    Next i
-End Sub
-
-Private Sub PopularListaBanco()
+Private Sub PopularListaProcessos(swModel As SldWorks.ModelDoc2, configName As String)
+    Me.lstProcessos.Clear
     Dim partes() As String: partes = Split(mProcessoList, """nome"": """)
     If UBound(partes) = 0 Then partes = Split(mProcessoList, """nome"":""")
-    Dim i As Integer, nome As String: For i = 1 To UBound(partes)
-        nome = Split(partes(i), """")(0): Dim j As Integer: Dim existe As Boolean: existe = False
-        For j = 0 To Me.lstProcessos.ListCount - 1: If Me.lstProcessos.List(j) = nome Then existe = True: Exit For
-        Next j: If Not existe Then Me.lstProcessos.AddItem nome
+    
+    Dim arrBanco() As String: ReDim arrBanco(0)
+    Dim i As Integer, countBanco As Integer: countBanco = 0
+    For i = 1 To UBound(partes)
+        ReDim Preserve arrBanco(countBanco)
+        arrBanco(countBanco) = Split(partes(i), """")(0)
+        countBanco = countBanco + 1
+    Next i
+    
+    For i = 0 To countBanco - 1
+        Me.lstProcessos.AddItem arrBanco(i)
+    Next i
+    
+    Dim swCustProp As SldWorks.CustomPropertyManager: Set swCustProp = swModel.Extension.CustomPropertyManager(configName)
+    Dim val As String, j As Integer
+    For i = 1 To 10
+        swCustProp.Get4 "processo" & i, False, "", val
+        If val = "" Then swModel.Extension.CustomPropertyManager("").Get4 "processo" & i, False, "", val
+        If val <> "" Then
+            For j = 0 To Me.lstProcessos.ListCount - 1
+                If Me.lstProcessos.List(j) = val Then Me.lstProcessos.Selected(j) = True
+            Next j
+        End If
     Next i
 End Sub
 
-Function ValidarOP(num As String) As Boolean
-    On Error Resume Next: Dim http As Object: Set http = CreateObject("MSXML2.XMLHTTP"): http.Open "GET", mUrl & "/ops/validar/" & num, False: http.setRequestHeader "X-SW-Secret", "someh-sw-integration-2024": http.send: ValidarOP = (http.Status = 200)
+Private Sub PopularListaSubcategorias(valSelecionado As String)
+    Me.cmbSubcategoria.Clear
+    Dim partes() As String: partes = Split(mCategoriasList, """nome"": """)
+    If UBound(partes) = 0 Then partes = Split(mCategoriasList, """nome"":""")
+    
+    Dim i As Integer
+    For i = 1 To UBound(partes)
+        Me.cmbSubcategoria.AddItem Split(partes(i), """")(0)
+    Next i
+    
+    If valSelecionado <> "" Then
+        Me.cmbSubcategoria.Text = valSelecionado
+    Else
+        If Me.cmbSubcategoria.ListCount > 0 Then Me.cmbSubcategoria.ListIndex = 0
+    End If
+End Sub
+
+Function ValidarOP(ByVal num As String) As Boolean
+    On Error Resume Next
+    Dim http As Object
+    Set http = CreateObject("MSXML2.XMLHTTP")
+    http.Open "GET", mUrl & "/ops/validar/" & num & "?t=" & Timer, False
+    http.setRequestHeader "X-SW-Secret", "someh-sw-integration-2024"
+    http.setRequestHeader "Cache-Control", "no-cache"
+    http.setRequestHeader "Pragma", "no-cache"
+    http.send
+    
+    If http.Status = 200 Then
+        mPecasNaOP = http.responseText
+        ValidarOP = True
+    Else
+        ValidarOP = False
+    End If
 End Function
 
-Function FetchProcessos() As String
-    On Error Resume Next: Dim http As Object: Set http = CreateObject("MSXML2.XMLHTTP"): http.Open "GET", mUrl & "/config/processos-peca", False: http.setRequestHeader "X-SW-Secret", "someh-sw-integration-2024": http.send: FetchProcessos = http.responseText
+Function FetchData(endpoint As String) As String
+    On Error Resume Next
+    Dim http As Object
+    Set http = CreateObject("MSXML2.XMLHTTP")
+    http.Open "GET", mUrl & endpoint, False
+    http.setRequestHeader "X-SW-Secret", "someh-sw-integration-2024"
+    http.send
+    FetchData = http.responseText
 End Function
+```
