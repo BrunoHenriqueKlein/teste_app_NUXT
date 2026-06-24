@@ -6,7 +6,8 @@ export default defineEventHandler(async (event) => {
 
     try {
         const where: any = {
-            categoria: 'COMPRADO'
+            categoria: 'COMPRADO',
+            statusSuprimento: { not: 'NAO_SOLICITADO' }
         }
 
         if (query.status) {

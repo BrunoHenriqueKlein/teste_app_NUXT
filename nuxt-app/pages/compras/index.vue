@@ -512,6 +512,7 @@
         </v-card-text>
 
         <v-card-actions class="pa-4 bg-grey-lighten-4">
+          <v-btn color="error" variant="text" @click="cancelarRequisicao" :loading="saving" prepend-icon="mdi-cancel">Cancelar Requisição</v-btn>
           <v-spacer></v-spacer>
           <v-btn variant="text" @click="dialogDetalhes.show = false">Desistir</v-btn>
           <v-btn
@@ -1359,6 +1360,29 @@ const verDetalhesRequisicao = (item) => {
   })
   selecionarTodosItens.value = true
   loadFornecedores()
+}
+
+const cancelarRequisicao = async () => {
+  if (!confirm('Tem certeza que deseja cancelar esta requisição? Ela ficará com o status CANCELADA no histórico.')) return
+  
+  saving.value = true
+  try {
+    await $fetch('/api/compras', {
+      method: 'PUT',
+      body: {
+        id: dialogDetalhes.value.requisicao.id,
+        status: 'CANCELADA'
+      }
+    })
+    snackbar.value = { show: true, text: 'Requisição cancelada com sucesso.', color: 'success' }
+    dialogDetalhes.value.show = false
+    await loadData()
+  } catch (error) {
+    console.error(error)
+    snackbar.value = { show: true, text: 'Erro ao cancelar requisição', color: 'error' }
+  } finally {
+    saving.value = false
+  }
 }
 
 const emitirOC = async () => {

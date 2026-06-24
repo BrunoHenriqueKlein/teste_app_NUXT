@@ -234,7 +234,7 @@ const loadData = async () => {
   loading.value = true
   try {
     const params = new URLSearchParams()
-    params.append('status', 'NAO_SOLICITADO')
+    params.append('status', 'PARA_COTACAO,EM_ORCAMENTO')
     if (filters.value.opId) {
       params.append('opId', filters.value.opId)
     }

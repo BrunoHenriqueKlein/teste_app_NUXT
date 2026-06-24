@@ -35,15 +35,18 @@ export default defineEventHandler(async (event) => {
 
         const opId = pecas[0].opId
 
-        // 2. Atualizar status das peças para PARA_COTACAO
-        await prisma.peca.updateMany({
-            where: { id: { in: pecaIds } },
+        // 2. Atualizar status das peças para PARA_COTACAO apenas se elas ainda não tiverem sido processadas
+        const atualizacao = await prisma.peca.updateMany({
+            where: { 
+                id: { in: pecaIds },
+                statusSuprimento: 'NAO_SOLICITADO' 
+            },
             data: { statusSuprimento: 'PARA_COTACAO' }
         })
 
         return {
             success: true,
-            message: `${pecas.length} itens marcados para cotação. Vá ao PCP para gerar as Ordens de Serviço e solicitar orçamentos.`
+            message: `${atualizacao.count} itens liberados para compra. (Itens que já estavam liberados ou em andamento não sofreram alterações).`
         }
 
     } catch (error: any) {

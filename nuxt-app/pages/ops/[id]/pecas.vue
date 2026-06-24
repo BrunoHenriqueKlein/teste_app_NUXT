@@ -1168,8 +1168,10 @@ const getStatusColor = (status) => {
 const getSuprimentoColor = (status) => {
   const colors = {
     NAO_SOLICITADO: 'grey-darken-1',
+    PARA_COTACAO: 'purple-darken-1',
     EM_ORCAMENTO: 'orange-darken-1',
     COMPRADO: 'blue-darken-2',
+    RECEBIDO_PARCIAL: 'teal',
     RECEBIDO: 'success'
   }
   return colors[status] || 'grey'
