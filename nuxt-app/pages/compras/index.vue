@@ -261,7 +261,18 @@
           </v-alert>
 
           <v-row dense>
-             <v-col cols="12" md="8">
+             <v-col cols="12" md="3">
+               <v-text-field
+                 v-model="dialogDetalhes.numeroSIEGE"
+                 label="Nº Pedido (SIEGE/Opcional)"
+                 placeholder="Ex: 12345"
+                 variant="outlined"
+                 density="compact"
+                 color="primary"
+                 prepend-inner-icon="mdi-pound"
+               ></v-text-field>
+             </v-col>
+             <v-col cols="12" md="5">
                <v-select
                  v-model="dialogDetalhes.fornecedorId"
                  :items="fornecedores"
@@ -679,7 +690,7 @@
                     <td style="padding: 10px; width: 60%; border-right: 1px solid #000; vertical-align: top;">
                         <strong>OBS:</strong> {{ printData.observacoes || '' }}<br/>
                         {{ printData.os ? 'Ref OS: ' + printData.os.numero : '' }}<br/>
-                        {{ printData.op ? 'OP: ' + printData.op.numeroOP + ' - ' + printData.op.cliente : '' }}
+                        {{ printData.op ? 'Ref Máquina: ' + printData.op.codigoMaquina + ' (' + printData.op.numeroOP + ')' : '' }}
                     </td>
                     <td style="padding: 10px; width: 20%; border-right: 1px solid #000; vertical-align: top; text-align: center;">
                         <strong>FRETE:</strong><br/><br/>
@@ -1343,6 +1354,7 @@ const verDetalhesRequisicao = (item) => {
     cnpjTransportadora: item.cnpjTransportadora || '',
     observacoes: item.observacoes || '',
     fornecedorId: item.fornecedorId || null,
+    numeroSIEGE: '',
     anexosSelecionados: [],
     isVisualizado: false
   }
@@ -1406,6 +1418,7 @@ const emitirOC = async () => {
 
     const targetOC = {
       ...dialogDetalhes.value.requisicao,
+      numeroNovo: dialogDetalhes.value.numeroSIEGE || undefined,
       fornecedor: fornecedorObj?.nome || 'Desconhecido',
       fornecedorId: dialogDetalhes.value.fornecedorId,
       fornecedorRef: fornecedorObj,
@@ -1471,6 +1484,7 @@ const enviarEmailOC = async () => {
       splitItemIds: isSplit ? selectedItens.map(i => i.id) : undefined,
       fornecedor: fornecedorObj?.nome || 'Desconhecido',
       fornecedorId: dialogDetalhes.value.fornecedorId,
+      numeroNovo: dialogDetalhes.value.numeroSIEGE || undefined,
       valorTotal: totalPedidoCalculado.value,
       valorFrete: dialogDetalhes.value.valorFrete,
       valorDesconto: dialogDetalhes.value.valorDesconto,
@@ -1514,6 +1528,7 @@ const enviarEmailOC = async () => {
         const originalItem = dialogDetalhes.value.requisicao.itens.find(i => i.id === item.id)
         return {
           ...item,
+          etapaProcesso: originalItem?.etapaProcesso,
           peca: originalItem?.peca,
           descricao: originalItem?.descricao || item.descricao
         }

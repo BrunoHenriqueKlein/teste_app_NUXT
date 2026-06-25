@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
             const compras = await prisma.compra.findMany({
                 include: {
                     op: {
-                        select: { numeroOP: true, cliente: true }
+                        select: { numeroOP: true, cliente: true, codigoMaquina: true }
                     },
                     os: {
                         select: { numero: true, tipo: true, op: { select: { codigoMaquina: true } } }
@@ -122,6 +122,18 @@ export default defineEventHandler(async (event) => {
         const { id, split, ...data } = body
 
         try {
+            if (data.numeroNovo) {
+                const existing = await prisma.compra.findUnique({
+                    where: { numero: data.numeroNovo }
+                })
+                if (existing && existing.id !== Number(id)) {
+                    throw createError({
+                        statusCode: 400,
+                        statusMessage: `O número de pedido '${data.numeroNovo}' já está em uso em outra Ordem de Compra.`
+                    })
+                }
+            }
+
             const currentCompra = await prisma.compra.findUnique({
                 where: { id: Number(id) },
                 include: { itens: true }
@@ -130,19 +142,23 @@ export default defineEventHandler(async (event) => {
             if (split && data.splitItemIds && Array.isArray(data.splitItemIds)) {
                 // --- LÓGICA DE SPLIT (Dividir Pedido) ---
 
-                // 1. Gerar novo número de OC
-                const lastOC = await prisma.compra.findFirst({
-                    where: { numero: { startsWith: 'OC-' } },
-                    orderBy: { numero: 'desc' }
-                })
-                let nextNum = 1
-                if (lastOC) {
-                    const parts = lastOC.numero.split('-')
-                    const lastNum = parseInt(parts[parts.length - 1])
-                    if (!isNaN(lastNum)) nextNum = lastNum + 1
+                // 1. Gerar novo número de OC ou utilizar o fornecido
+                let newOCNumero = data.numeroNovo
+
+                if (!newOCNumero) {
+                    const lastOC = await prisma.compra.findFirst({
+                        where: { numero: { startsWith: 'OC-' } },
+                        orderBy: { numero: 'desc' }
+                    })
+                    let nextNum = 1
+                    if (lastOC) {
+                        const parts = lastOC.numero.split('-')
+                        const lastNum = parseInt(parts[parts.length - 1])
+                        if (!isNaN(lastNum)) nextNum = lastNum + 1
+                    }
+                    const year = new Date().getFullYear()
+                    newOCNumero = `OC-${year}-${nextNum.toString().padStart(4, '0')}`
                 }
-                const year = new Date().getFullYear()
-                const newOCNumero = `OC-${year}-${nextNum.toString().padStart(4, '0')}`
 
                 // 2. Criar a nova compra (OC)
                 const newOC = await prisma.compra.create({
@@ -258,23 +274,27 @@ export default defineEventHandler(async (event) => {
 
             let finalNumero = currentCompra?.numero
 
-            // Se o status mudar para PEDIDO_EMITIDO e ainda for uma REQ, gera o número da OC
+            // Se o status mudar para PEDIDO_EMITIDO e ainda for uma REQ, atualiza o número
             if (data.status === 'PEDIDO_EMITIDO' && (finalNumero?.startsWith('REQ') || !finalNumero)) {
-                // Busca a última OC para seguir a sequência
-                const lastOC = await prisma.compra.findFirst({
-                    where: { numero: { startsWith: 'OC-' } },
-                    orderBy: { numero: 'desc' }
-                })
+                if (data.numeroNovo) {
+                    finalNumero = data.numeroNovo
+                } else {
+                    // Busca a última OC para seguir a sequência caso o número não seja fornecido manualmente
+                    const lastOC = await prisma.compra.findFirst({
+                        where: { numero: { startsWith: 'OC-' } },
+                        orderBy: { numero: 'desc' }
+                    })
 
-                let nextNum = 1
-                if (lastOC) {
-                    const parts = lastOC.numero.split('-')
-                    const lastNum = parseInt(parts[parts.length - 1])
-                    if (!isNaN(lastNum)) nextNum = lastNum + 1
+                    let nextNum = 1
+                    if (lastOC) {
+                        const parts = lastOC.numero.split('-')
+                        const lastNum = parseInt(parts[parts.length - 1])
+                        if (!isNaN(lastNum)) nextNum = lastNum + 1
+                    }
+
+                    const year = new Date().getFullYear()
+                    finalNumero = `OC-${year}-${nextNum.toString().padStart(4, '0')}`
                 }
-
-                const year = new Date().getFullYear()
-                finalNumero = `OC-${year}-${nextNum.toString().padStart(4, '0')}`
             }
 
             if (data.itens && Array.isArray(data.itens)) {
