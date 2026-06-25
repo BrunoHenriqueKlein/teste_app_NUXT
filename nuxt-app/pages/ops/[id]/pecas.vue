@@ -236,14 +236,28 @@
         </template>
 
         <template v-slot:item.statusSuprimento="{ item }">
-          <v-chip
-            :color="getSuprimentoColor(item.statusSuprimento)"
-            size="x-small"
-            variant="flat"
-            class="text-uppercase"
-          >
-            {{ item.statusSuprimento.replace('_', ' ') }}
-          </v-chip>
+          <div class="d-flex flex-column align-center">
+            <v-chip
+              :color="getSuprimentoColor(item.statusSuprimento)"
+              size="x-small"
+              variant="flat"
+              class="text-uppercase"
+            >
+              {{ item.statusSuprimento.replace('_', ' ') }}
+            </v-chip>
+            <div v-if="item.compras && item.compras.length > 0" class="mt-1 d-flex flex-column gap-1 align-center">
+              <v-chip
+                v-for="comp in item.compras"
+                :key="comp.id"
+                color="indigo-darken-1"
+                variant="outlined"
+                size="x-small"
+                prepend-icon="mdi-file-document-outline"
+              >
+                {{ comp.compra?.numero }}
+              </v-chip>
+            </div>
+          </div>
         </template>
 
         <template v-slot:item.estoque="{ item }">

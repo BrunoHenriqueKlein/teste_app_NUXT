@@ -18,6 +18,11 @@ export default defineEventHandler(async (event) => {
                 processos: true,
                 anexos: true,
                 fornecedor: true,
+                compras: {
+                    include: {
+                        compra: { select: { numero: true } }
+                    }
+                },
                 _count: {
                     select: { processos: true }
                 }

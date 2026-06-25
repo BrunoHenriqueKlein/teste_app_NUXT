@@ -156,6 +156,15 @@
             </template>
             <template v-slot:item.acoes_oc="{ item }">
               <v-btn
+                v-if="item.anexos && item.anexos.length > 0"
+                icon="mdi-paperclip"
+                variant="text"
+                color="info"
+                size="small"
+                @click="abrirAnexos(item)"
+                title="Ver Orçamentos Anexados"
+              ></v-btn>
+              <v-btn
                 icon="mdi-truck-check"
                 variant="text"
                 color="success"
@@ -209,6 +218,15 @@
               </v-chip>
             </template>
             <template v-slot:item.acoes_oc="{ item }">
+              <v-btn
+                v-if="item.anexos && item.anexos.length > 0"
+                icon="mdi-paperclip"
+                variant="text"
+                color="info"
+                size="small"
+                @click="abrirAnexos(item)"
+                title="Ver Orçamentos Anexados"
+              ></v-btn>
               <v-btn
                 icon="mdi-image-outline"
                 variant="text"
@@ -930,6 +948,29 @@
       </v-card>
     </v-dialog>
 
+    <!-- Diálogo de Orçamentos Anexados -->
+    <v-dialog v-model="dialogAnexos.show" max-width="500px">
+      <v-card v-if="dialogAnexos.compra">
+        <v-card-title class="bg-primary text-white d-flex justify-space-between align-center">
+          Orçamentos Anexados ({{ dialogAnexos.compra.numero }})
+          <v-btn icon="mdi-close" variant="text" color="white" @click="dialogAnexos.show = false"></v-btn>
+        </v-card-title>
+        <v-card-text class="pa-4">
+          <v-list density="compact" class="bg-grey-lighten-4 rounded" border>
+            <v-list-item v-for="anexo in dialogAnexos.compra.anexos" :key="anexo.id">
+              <template v-slot:prepend>
+                <v-icon color="error">mdi-file-pdf-box</v-icon>
+              </template>
+              <v-list-item-title class="text-truncate">{{ anexo.nome }}</v-list-item-title>
+              <template v-slot:append>
+                <v-btn icon="mdi-download" variant="text" size="small" :href="anexo.url" target="_blank"></v-btn>
+              </template>
+            </v-list-item>
+          </v-list>
+        </v-card-text>
+      </v-card>
+    </v-dialog>
+
     <v-snackbar v-model="snackbar.show" :color="snackbar.color">{{ snackbar.text }}</v-snackbar>
   </div>
 </template>
@@ -1027,6 +1068,16 @@ const dialogDemanda = ref({
     statusSuprimento: '' 
   }
 })
+
+const dialogAnexos = ref({
+  show: false,
+  compra: null
+})
+
+const abrirAnexos = (compra) => {
+  dialogAnexos.value.compra = compra
+  dialogAnexos.value.show = true
+}
 
 const filteredFornecedoresDemandas = computed(() => {
   if (!dialogDemanda.value.data.subcategoria) return fornecedores.value

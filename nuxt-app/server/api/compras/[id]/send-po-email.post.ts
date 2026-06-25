@@ -147,15 +147,45 @@ export default defineEventHandler(async (event) => {
             })
         }
 
-        // Adicionar OC como PDF
+        // Adicionar OC como PDF e Salvar fisicamente para a Engenharia
         if (poImageBase64) {
             // Remove the data URI prefix if it exists
             const base64Data = poImageBase64.includes('base64,') ? poImageBase64.split('base64,')[1] : poImageBase64;
+            const pdfBuffer = Buffer.from(base64Data, 'base64')
+            
             attachments.push({
                 filename: `${compra.numero}.pdf`,
-                content: Buffer.from(base64Data, 'base64'),
+                content: pdfBuffer,
                 contentType: 'application/pdf'
             })
+            
+            // Salvar no disco para vincular na engenharia (BOM)
+            const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'compras')
+            if (!fs.existsSync(uploadsDir)) {
+                fs.mkdirSync(uploadsDir, { recursive: true })
+            }
+            const filename = `OC-${compra.numero.replace(/[^a-zA-Z0-9-]/g, '-')}-${Date.now()}.pdf`
+            const filePath = path.join(uploadsDir, filename)
+            fs.writeFileSync(filePath, pdfBuffer)
+            
+            // Vincular na Peça
+            for (const item of compra.itens) {
+                if (item.pecaId) {
+                    // Verifica se já não foi salvo nesta peça
+                    const existe = await prisma.pecaAnexo.findFirst({
+                        where: { pecaId: item.pecaId, nome: `Pedido de Compra - ${compra.numero}.pdf` }
+                    })
+                    if (!existe) {
+                        await prisma.pecaAnexo.create({
+                            data: {
+                                pecaId: item.pecaId,
+                                nome: `Pedido de Compra - ${compra.numero}.pdf`,
+                                url: `/uploads/compras/${filename}`
+                            }
+                        })
+                    }
+                }
+            }
         }
         
         // Adiciona os anexos da compra (orçamentos vencedores)
