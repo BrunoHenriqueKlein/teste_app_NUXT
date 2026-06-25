@@ -58,7 +58,24 @@ export default defineEventHandler(async (event) => {
                 fornecedorId: body.fornecedorId ? parseInt(body.fornecedorId) : undefined
             }
         })
-        console.log(`✅ Peça ${id} atualizada com sucesso`)
+        
+        // Sincronizar atualizações de quantidade e descrição nas requisições de compra em aberto
+        await prisma.compraItem.updateMany({
+            where: {
+                pecaId: parseInt(id),
+                compra: {
+                    status: {
+                        in: ['SOLICITADA', 'COTACAO']
+                    }
+                }
+            },
+            data: {
+                quantidade: newQtd,
+                descricao: body.descricao
+            }
+        })
+
+        console.log(`✅ Peça ${id} atualizada com sucesso (e itens de compra sincronizados)`)
         return updatedPeca
     } catch (error: any) {
         if (error.statusCode && error.statusCode < 500) throw error

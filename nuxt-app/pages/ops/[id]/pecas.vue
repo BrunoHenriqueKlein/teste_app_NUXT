@@ -12,7 +12,7 @@
       <template #actions>
           <v-btn
             v-if="hasPermission('PCP', 'canEdit')"
-            color="white"
+            :color="temProcessoPendenteOS ? 'warning' : 'white'"
             variant="flat"
             prepend-icon="mdi-factory"
             @click="generateOS"
@@ -422,8 +422,9 @@
               icon="mdi-pencil"
               variant="text"
               size="small"
-              color="grey-darken-1"
-              title="Editar Peça"
+              :color="isPecaBloqueada(item) ? 'grey-lighten-2' : 'grey-darken-1'"
+              :title="isPecaBloqueada(item) ? 'Edição bloqueada: Peça já está no fluxo de compras' : 'Editar Peça'"
+              :disabled="isPecaBloqueada(item)"
               @click="openEditPeca(item)"
             ></v-btn>
             <v-btn
@@ -431,8 +432,9 @@
               icon="mdi-delete"
               variant="text"
               size="small"
-              color="error"
-              title="Excluir Peça"
+              :color="isPecaBloqueada(item) ? 'grey-lighten-2' : 'error'"
+              :title="isPecaBloqueada(item) ? 'Exclusão bloqueada: Peça já está no fluxo de compras' : 'Excluir Peça'"
+              :disabled="isPecaBloqueada(item)"
               @click="confirmDeletePeca(item)"
             ></v-btn>
           </div>
@@ -822,6 +824,12 @@ const pecaPronta = (peca) => {
   return false
 }
 
+const isPecaBloqueada = (peca) => {
+  // Bloqueia edição se a peça já foi comprada ou recebida (mesmo que parcialmente)
+  const statusBloqueados = ['COMPRADO', 'RECEBIDO_PARCIAL', 'RECEBIDO']
+  return statusBloqueados.includes(peca.statusSuprimento)
+}
+
 const kitsGrouped = computed(() => {
   const groups = {}
   pecas.value.forEach(p => {
@@ -846,6 +854,12 @@ const prontidaoGeral = computed(() => {
   if (pecas.value.length === 0) return 0
   const prontos = pecas.value.filter(p => pecaPronta(p)).length
   return Math.round((prontos / pecas.value.length) * 100)
+})
+
+const temProcessoPendenteOS = computed(() => {
+  return pecas.value.some(peca => 
+    peca.processos && peca.processos.some(p => p.osId === null)
+  )
 })
 
 const getProntidaoColor = computed(() => {
@@ -1002,6 +1016,10 @@ const openAddPecaDialog = () => {
 }
 
 const openEditPeca = (peca) => {
+  if (isPecaBloqueada(peca)) {
+    showSnackbar('Esta peça não pode mais ser editada pois já passou pelo setor de suprimentos.', 'warning')
+    return
+  }
   dialogPeca.value = {
     show: true,
     isEdit: true,
@@ -1153,7 +1171,6 @@ const saveProcessos = async () => {
     showSnackbar('Processos salvos com sucesso!')
     dialogProcessos.value.show = false
     await loadPecas()
-    await generateOS()
   } catch (error) {
     showSnackbar('Erro ao salvar processos', 'error')
   } finally {
