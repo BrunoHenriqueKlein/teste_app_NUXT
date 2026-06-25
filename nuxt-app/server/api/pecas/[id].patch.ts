@@ -70,8 +70,7 @@ export default defineEventHandler(async (event) => {
                 }
             },
             data: {
-                quantidade: newQtd,
-                descricao: body.descricao
+                quantidade: newQtd
             }
         })
 

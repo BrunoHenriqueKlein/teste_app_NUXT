@@ -168,24 +168,8 @@ export default defineEventHandler(async (event) => {
             const filePath = path.join(uploadsDir, filename)
             fs.writeFileSync(filePath, pdfBuffer)
             
-            // Vincular na Peça
-            for (const item of compra.itens) {
-                if (item.pecaId) {
-                    // Verifica se já não foi salvo nesta peça
-                    const existe = await prisma.pecaAnexo.findFirst({
-                        where: { pecaId: item.pecaId, nome: `Pedido de Compra - ${compra.numero}.pdf` }
-                    })
-                    if (!existe) {
-                        await prisma.pecaAnexo.create({
-                            data: {
-                                pecaId: item.pecaId,
-                                nome: `Pedido de Compra - ${compra.numero}.pdf`,
-                                url: `/uploads/compras/${filename}`
-                            }
-                        })
-                    }
-                }
-            }
+            // O PDF foi salvo na pasta uploads/compras, mas NÃO será anexado à lista de desenhos da Peça (BOM)
+            // para não poluir os desenhos mecânicos.
         }
         
         // Adiciona os anexos da compra (orçamentos vencedores)
