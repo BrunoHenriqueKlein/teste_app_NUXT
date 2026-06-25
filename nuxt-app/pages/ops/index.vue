@@ -198,10 +198,13 @@
                     </v-icon>
                   </th>
                   <th class="text-left cursor-pointer" @click="toggleSort('progresso')">
-                    Progresso
+                    Cronograma
                     <v-icon v-if="filters.sortBy === 'progresso'" size="14">
                       {{ filters.sortOrder === 'asc' ? 'mdi-arrow-up' : 'mdi-arrow-down' }}
                     </v-icon>
+                  </th>
+                  <th class="text-left">
+                    Materiais
                   </th>
                   <th class="text-left cursor-pointer" @click="toggleSort('dataEntrega')">
                     Entrega
@@ -240,14 +243,31 @@
                     </v-chip>
                   </td>
                   <td>
-                    <div class="d-flex align-center gap-2" style="min-width: 120px;">
-                      <v-progress-linear 
-                        :model-value="op.progresso || 0" 
-                        :color="getProgressColor(op.progresso || 0)"
-                        height="8"
-                        rounded
-                      />
-                      <span class="text-caption font-weight-medium">{{ op.progresso || 0 }}%</span>
+                    <div class="d-flex flex-column gap-1" style="min-width: 120px;">
+                      <div class="text-caption text-grey">Cronograma</div>
+                      <div class="d-flex align-center gap-2">
+                        <v-progress-linear 
+                          :model-value="op.progresso || 0" 
+                          :color="getProgressColor(op.progresso || 0)"
+                          height="6"
+                          rounded
+                        />
+                        <span class="text-caption font-weight-medium">{{ op.progresso || 0 }}%</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="d-flex flex-column gap-1" style="min-width: 120px;">
+                      <div class="text-caption text-grey">BOM</div>
+                      <div class="d-flex align-center gap-2">
+                        <v-progress-linear 
+                          :model-value="op.progressoMateriais || 0" 
+                          color="cyan-darken-1"
+                          height="6"
+                          rounded
+                        />
+                        <span class="text-caption font-weight-medium">{{ op.progressoMateriais || 0 }}%</span>
+                      </div>
                     </div>
                   </td>
                   <td>

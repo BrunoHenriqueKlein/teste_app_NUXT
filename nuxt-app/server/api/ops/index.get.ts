@@ -1,3 +1,4 @@
+import { defineEventHandler, getQuery, createError } from 'h3'
 import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
@@ -89,12 +90,31 @@ export default defineEventHandler(async (event) => {
             name: true,
             email: true
           }
+        },
+        pecas: {
+          select: { status: true, statusSuprimento: true }
         }
       },
       orderBy
     })
 
-    return ops
+    const opsComProgresso = ops.map((op: any) => {
+      let prontidaoGeral = 0
+      if (op.pecas && op.pecas.length > 0) {
+        const prontos = op.pecas.filter((p: any) => 
+          ['CONCLUIDA', 'EM_ESTOQUE'].includes(p.status) || p.statusSuprimento === 'RECEBIDO'
+        ).length
+        prontidaoGeral = Math.round((prontos / op.pecas.length) * 100)
+      }
+      
+      const { pecas, ...opSemPecas } = op
+      return {
+        ...opSemPecas,
+        progressoMateriais: prontidaoGeral
+      }
+    })
+
+    return opsComProgresso
   } catch (error) {
     console.error('Erro ao carregar OPs:', error)
     throw createError({
