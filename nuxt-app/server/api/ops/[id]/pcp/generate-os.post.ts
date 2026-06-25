@@ -57,12 +57,14 @@ export default defineEventHandler(async (event: H3Event) => {
         // 3. Processar cada grupo
         for (const [tipo, itensGroup] of Object.entries(grupos)) {
             const itens = itensGroup as any[]
-            // Verificar se já existe uma OS "Aberta" deste tipo para esta OP
+            // Verificar se já existe uma OS "Aberta e Intacta" (NAO_INICIADO) deste tipo para esta OP.
+            // Se já estiver EM_ANDAMENTO ou CONCLUIDO (ex: já foi para cotação/compra), devemos ignorar
+            // e criar uma OS nova para não quebrar o escopo de compras já fechadas.
             const osExistente = await prisma.ordemServico.findFirst({
                 where: {
                     opId: parseInt(opId),
                     tipo: tipo as string,
-                    status: { not: 'CONCLUIDO' }
+                    status: 'NAO_INICIADO'
                 }
             })
 
