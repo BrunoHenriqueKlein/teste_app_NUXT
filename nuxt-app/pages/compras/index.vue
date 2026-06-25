@@ -129,7 +129,7 @@
       <v-tabs-window-item value="pedidos">
         <v-card variant="outlined">
           <v-data-table
-            :headers="headers"
+            :headers="headersPedidos"
             :items="activeOrders"
             :loading="loading"
             hover
@@ -139,6 +139,15 @@
             </template>
             <template v-slot:item.op="{ item }">
               <span class="text-primary font-weight-bold">#{{ item.op?.numeroOP }}</span>
+            </template>
+            <template v-slot:item.previsao="{ item }">
+              <div v-if="item.dataPrevisaoEntrega" class="d-flex flex-column align-start">
+                <span class="font-weight-bold">{{ formatDate(item.dataPrevisaoEntrega) }}</span>
+                <v-chip :color="getPrevisaoStatus(item.dataPrevisaoEntrega).color" size="x-small" :prepend-icon="getPrevisaoStatus(item.dataPrevisaoEntrega).icon" class="mt-1">
+                  {{ getPrevisaoStatus(item.dataPrevisaoEntrega).text }}
+                </v-chip>
+              </div>
+              <div v-else class="text-grey text-caption">Não informada</div>
             </template>
             <template v-slot:item.status="{ item }">
               <v-chip :color="getStatusColor(item.status)" size="small">
@@ -170,7 +179,7 @@
       <v-tabs-window-item value="finalizadas">
         <v-card variant="outlined">
           <v-data-table
-            :headers="headers"
+            :headers="headersFinalizadas"
             :items="finalizedOrders"
             :loading="loading"
             hover
@@ -180,6 +189,19 @@
             </template>
             <template v-slot:item.op="{ item }">
               <span class="text-primary font-weight-bold">#{{ item.op?.numeroOP }}</span>
+            </template>
+            <template v-slot:item.datasEntrega="{ item }">
+              <div class="d-flex flex-column align-start">
+                <div class="text-caption">
+                  <span class="text-grey font-weight-bold">Previsto:</span> {{ item.dataPrevisaoEntrega ? formatDate(item.dataPrevisaoEntrega) : '-' }}
+                </div>
+                <div class="text-caption">
+                  <span class="text-grey font-weight-bold">Recebido:</span> {{ item.dataEntregaReal ? formatDate(item.dataEntregaReal) : '-' }}
+                </div>
+                <v-chip v-if="item.dataPrevisaoEntrega && item.dataEntregaReal" :color="getRecebimentoStatus(item.dataPrevisaoEntrega, item.dataEntregaReal).color" size="x-small" :prepend-icon="getRecebimentoStatus(item.dataPrevisaoEntrega, item.dataEntregaReal).icon" class="mt-1">
+                  {{ getRecebimentoStatus(item.dataPrevisaoEntrega, item.dataEntregaReal).text }}
+                </v-chip>
+              </div>
             </template>
             <template v-slot:item.status="{ item }">
               <v-chip color="success" size="small" variant="tonal">
@@ -956,6 +978,39 @@ const isDelayed = (date) => {
   return new Date(date) < today
 }
 
+const getPrevisaoStatus = (date) => {
+  if (!date) return { text: 'Não Informada', color: 'grey', icon: 'mdi-help-circle-outline' }
+  const target = new Date(date)
+  const now = new Date()
+  
+  target.setHours(0, 0, 0, 0)
+  now.setHours(0, 0, 0, 0)
+  
+  const diffTime = target.getTime() - now.getTime()
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  
+  if (diffDays < 0) return { text: 'Atrasado', color: 'error', icon: 'mdi-alert-circle' }
+  if (diffDays <= 3) return { text: 'Atenção (Próximo)', color: 'warning', icon: 'mdi-clock-alert-outline' }
+  return { text: 'No Prazo', color: 'success', icon: 'mdi-check-circle-outline' }
+}
+
+const getRecebimentoStatus = (previsao, recebido) => {
+  if (!previsao || !recebido) return { text: '-', color: 'grey', icon: '' }
+  
+  const prev = new Date(previsao)
+  const real = new Date(recebido)
+  
+  prev.setHours(0, 0, 0, 0)
+  real.setHours(0, 0, 0, 0)
+  
+  const diffTime = real.getTime() - prev.getTime()
+  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24))
+  
+  if (diffDays > 0) return { text: `Atrasado em ${diffDays} dia(s)`, color: 'error', icon: 'mdi-alert-circle' }
+  if (diffDays < 0) return { text: `Adiantado em ${Math.abs(diffDays)} dia(s)`, color: 'success', icon: 'mdi-clock-fast' }
+  return { text: 'No prazo exato', color: 'success', icon: 'mdi-check-circle' }
+}
+
 const dialog = ref({
   show: false,
   data: { opId: null, fornecedor: '', itens: [] }
@@ -1005,11 +1060,21 @@ const headersRequisicoes = [
   { title: 'Ações', key: 'acoes', align: 'center', sortable: false }
 ]
 
-const headers = [
+const headersPedidos = [
   { title: 'Pedido', key: 'numero' },
   { title: 'OP', key: 'op' },
   { title: 'Fornecedor', key: 'fornecedor' },
   { title: 'Previsão de Entrega', key: 'previsao' },
+  { title: 'Status', key: 'status' },
+  { title: 'Itens', key: '_count.itens', align: 'center' },
+  { title: 'Ações', key: 'acoes_oc', align: 'center', sortable: false }
+]
+
+const headersFinalizadas = [
+  { title: 'Pedido', key: 'numero' },
+  { title: 'OP', key: 'op' },
+  { title: 'Fornecedor', key: 'fornecedor' },
+  { title: 'Prazos / Recebimento', key: 'datasEntrega' },
   { title: 'Status', key: 'status' },
   { title: 'NF', key: 'numeroNF' },
   { title: 'Itens', key: '_count.itens', align: 'center' },

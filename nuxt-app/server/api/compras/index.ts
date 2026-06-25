@@ -437,7 +437,9 @@ export default defineEventHandler(async (event) => {
                                         statusSuprimento: 'COMPRADO',
                                         status: 'AGUARDANDO_RECEBIMENTO',
                                         valorUnitario: item.valorUnitario,
-                                        custoTotal: item.valorUnitario * pecaAtual.quantidade,
+                                        valorIPI: item.aliqIPI,
+                                        valorICMS: item.aliqICMS,
+                                        custoTotal: item.custoLiquido * pecaAtual.quantidade,
                                         fornecedorId: fornecedorId // Tenta vincular o fornecedor na peça também
                                     }
                                 })
