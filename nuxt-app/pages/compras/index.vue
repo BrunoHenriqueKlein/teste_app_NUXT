@@ -71,22 +71,35 @@
       </v-col>
     </v-row>
 
-    <v-tabs v-model="tab" color="primary" class="mb-4">
-      <v-tab value="requisicoes">
-        <v-badge :content="requisicoesEngenharia.length" color="error" :model-value="requisicoesEngenharia.length > 0" class="mr-2">
-          Requisições da Engenharia
-        </v-badge>
-      </v-tab>
-      <v-tab value="pedidos">Pedidos de Compra (OCs)</v-tab>
-      <v-tab value="finalizadas">Finalizadas / Recebidas</v-tab>
-    </v-tabs>
+    <div class="d-flex align-center justify-space-between mb-4">
+      <v-tabs v-model="tab" color="primary">
+        <v-tab value="requisicoes">
+          <v-badge :content="filteredRequisicoes.length" color="error" :model-value="filteredRequisicoes.length > 0" class="mr-2">
+            Requisições da Engenharia
+          </v-badge>
+        </v-tab>
+        <v-tab value="pedidos">Pedidos de Compra (OCs)</v-tab>
+        <v-tab value="finalizadas">Finalizadas / Recebidas</v-tab>
+      </v-tabs>
+
+      <v-text-field
+        v-model="searchQuery"
+        append-inner-icon="mdi-magnify"
+        label="Buscar OS, OP, Fornecedor, Processo..."
+        single-line
+        hide-details
+        variant="outlined"
+        density="compact"
+        style="max-width: 400px"
+      ></v-text-field>
+    </div>
 
     <v-tabs-window v-model="tab">
       <v-tabs-window-item value="requisicoes">
         <v-card variant="outlined">
           <v-data-table
             :headers="headersRequisicoes"
-            :items="requisicoesEngenharia"
+            :items="filteredRequisicoes"
             :loading="loading"
             hover
           >
@@ -130,7 +143,7 @@
         <v-card variant="outlined">
           <v-data-table
             :headers="headersPedidos"
-            :items="activeOrders"
+            :items="filteredPedidos"
             :loading="loading"
             hover
           >
@@ -189,7 +202,7 @@
         <v-card variant="outlined">
           <v-data-table
             :headers="headersFinalizadas"
-            :items="finalizedOrders"
+            :items="filteredFinalizadas"
             :loading="loading"
             hover
           >
@@ -1006,6 +1019,27 @@ const finalizedOrders = computed(() => {
     o.status === 'CANCELADA'
   )
 })
+
+const searchQuery = ref('')
+
+const applyGlobalFilter = (list) => {
+  if (!searchQuery.value) return list
+  const lowerQuery = searchQuery.value.toLowerCase()
+  return list.filter(item => {
+    const matchNumero = item.numero?.toLowerCase().includes(lowerQuery)
+    const matchFornecedor = item.fornecedor?.toLowerCase().includes(lowerQuery)
+    const matchOP = item.op?.numeroOP?.toLowerCase().includes(lowerQuery) || item.op?.codigoMaquina?.toLowerCase().includes(lowerQuery)
+    const matchOS = item.os?.numero?.toLowerCase().includes(lowerQuery) || item.os?.tipo?.toLowerCase().includes(lowerQuery)
+    const matchItens = item.itens?.some(i => i.descricao?.toLowerCase().includes(lowerQuery) || i.peca?.descricao?.toLowerCase().includes(lowerQuery) || i.peca?.codigo?.toLowerCase().includes(lowerQuery))
+    
+    return matchNumero || matchFornecedor || matchOP || matchOS || matchItens
+  })
+}
+
+const filteredRequisicoes = computed(() => applyGlobalFilter(requisicoesEngenharia.value))
+const filteredPedidos = computed(() => applyGlobalFilter(activeOrders.value))
+const filteredFinalizadas = computed(() => applyGlobalFilter(finalizedOrders.value))
+
 
 const formatDate = (date) => {
   if (!date) return '-'
