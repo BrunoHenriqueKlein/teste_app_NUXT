@@ -347,6 +347,7 @@
                           class="gantt-bar planned"
                           :style="getGanttBarStyle(processo.dataInicioPrevista, processo.dataTerminoPrevista)"
                         >
+                          <div class="bar-label exterior-left">{{ processo.nome }}</div>
                           <div class="bar-label">Previsto: {{ formatDate(processo.dataInicioPrevista) }} - {{ formatDate(processo.dataTerminoPrevista) }}</div>
                         </div>
 
@@ -357,6 +358,7 @@
                           :style="getGanttBarStyle(processo.dataInicio, processo.dataFim || new Date())"
                           :class="getActualBarClass(processo)"
                         >
+                          <div class="bar-label exterior-left">{{ processo.nome }}</div>
                           <div class="gantt-progress" :style="{ width: `${processo.progresso}%` }"></div>
                           <div class="bar-label exterior">
                             {{ processo.status === 'CONCLUIDO' ? 'Concluído' : 'Real' }}: {{ formatDate(processo.dataInicio) }} - {{ processo.dataFim ? formatDate(processo.dataFim) : 'Em andamento' }}
@@ -1268,6 +1270,15 @@ onMounted(() => {
   text-shadow: none;
   left: 100%;
   margin-left: 8px;
+}
+
+.bar-label.exterior-left {
+  text-shadow: none;
+  left: auto;
+  right: 100%;
+  margin-right: 8px;
+  color: #424242 !important;
+  font-weight: 700;
 }
 
 .planned .bar-label {
