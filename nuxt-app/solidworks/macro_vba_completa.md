@@ -73,6 +73,7 @@ Private mIndice As Integer
 Private mKeyAtual As String ' Chave: Path::Config::FolderIdx (-1 = Peça, 0+ = Cut-List)
 Private mMainAssyPath As String
 Private mCutListCache As Scripting.Dictionary
+Private mCurrentBodies As Variant ' Guarda os corpos do Cut-List atual para exportação
 
 ' --- INICIALIZAÇÃO ---
 Public Sub IniciarComMontagem(swModel As SldWorks.ModelDoc2)
@@ -113,6 +114,7 @@ Private Sub ProcessarProximo()
     End If
     
     mKeyAtual = mChaves(mIndice)
+    mCurrentBodies = Empty
     Dim qtdTotal As Long: qtdTotal = mDictComps(mKeyAtual)
     Dim partes() As String: partes = Split(mKeyAtual, "::")
     Dim path As String: path = partes(0): Dim configName As String: configName = partes(1): Dim folderIdx As Integer: folderIdx = CInt(partes(2))
@@ -152,6 +154,7 @@ Private Sub ProcessarProximo()
                         Set swCutPropMgr = swFeat.CustomPropertyManager
                         vBodies = swCutFolder.GetBodies
                         If Not IsEmpty(vBodies) Then
+                            mCurrentBodies = vBodies
                             Dim b As Integer
                             For b = 0 To UBound(vBodies)
                                 vBodies(b).Select2 True, Nothing
@@ -479,6 +482,7 @@ Erro:
 End Function
 
 Private Sub ExportarArquivos(pecaId As Long)
+    Dim selIdx As Integer
     On Error Resume Next
     Dim swApp As SldWorks.SldWorks: Set swApp = Application.SldWorks
     Dim swModel As SldWorks.ModelDoc2: Set swModel = swApp.ActiveDoc
@@ -532,27 +536,100 @@ Private Sub ExportarArquivos(pecaId As Long)
     
     ' 2. Exportar DXF (Flat Pattern para Chapas)
     If Me.chkDXF.Value = True And swModel.GetType = 1 Then
-        Dim swPart As SldWorks.PartDoc: Set swPart = swModel
-        tempPath = tempFolder & "corte_" & Me.txtCodPeca.Text & ".dxf"
+        Dim localDxfPath As String: localDxfPath = folderPath & Me.txtCodPeca.Text & ".dxf"
         
-        ' Exportar Flat Pattern direto do Part
-        ' Opções: 1 (Geometria) + 4 (Linhas de dobra) = 5
-        Dim bRetDXF As Boolean
-        bRetDXF = swPart.ExportToDWG2(tempPath, modelPath, 1, True, Empty, False, False, 5, Empty)
-        
-        If Dir(tempPath) <> "" Then
-            UploadArquivo pecaId, tempPath, Me.txtCodPeca.Text & ".dxf"
-            Kill tempPath
+        ' Se o DXF já existir, envia ele direto!
+        If Dir(localDxfPath) <> "" Then
+            UploadArquivo pecaId, localDxfPath, Me.txtCodPeca.Text & ".dxf"
+            
+        ' Se não existir, tenta gerar o DXF
+        Else
+            tempPath = tempFolder & "corte_" & Me.txtCodPeca.Text & ".dxf"
+            Dim swPart As SldWorks.PartDoc: Set swPart = swModel
+            
+            ' A abertura do PDF logo acima cancelou todas as seleções da tela!
+            ' O SolidWorks exige que a FEATURE de Padrão Plano (Flat Pattern) esteja selecionada para exportar o corpo correto.
+            swModel.ClearSelection2 True
+            Dim bFeatSelected As Boolean: bFeatSelected = False
+            
+            If Not IsEmpty(mCurrentBodies) Then
+                ' Varre as features de Flat Pattern para encontrar qual pertence a este corpo
+                Dim featMgr As SldWorks.FeatureManager: Set featMgr = swModel.FeatureManager
+                Dim fpFolder As SldWorks.FlatPatternFolder: Set fpFolder = featMgr.GetFlatPatternFolder
+                
+                If Not fpFolder Is Nothing Then
+                    Dim flatPatterns As Variant: flatPatterns = fpFolder.GetFlatPatterns
+                    If Not IsEmpty(flatPatterns) Then
+                        Dim fpIdx As Integer
+                        For fpIdx = 0 To UBound(flatPatterns)
+                            Dim swFeat As SldWorks.Feature: Set swFeat = flatPatterns(fpIdx)
+                            Dim fpData As SldWorks.FlatPatternFeatureData: Set fpData = swFeat.GetDefinition
+                            
+                            If Not fpData Is Nothing Then
+                                fpData.AccessSelections swModel, Nothing
+                                Dim fixedFace As SldWorks.Face2: Set fixedFace = fpData.FixedFace2
+                                If Not fixedFace Is Nothing Then
+                                    Dim faceBody As SldWorks.Body2: Set faceBody = fixedFace.GetBody
+                                    If faceBody.Name = mCurrentBodies(0).Name Then
+                                        fpData.ReleaseSelectionAccess
+                                        swFeat.Select2 True, 0
+                                        bFeatSelected = True
+                                        Exit For
+                                    End If
+                                End If
+                                fpData.ReleaseSelectionAccess
+                            End If
+                        Next fpIdx
+                    End If
+                End If
+                
+                ' Fallback: se não achar a feature, seleciona o corpo 3D
+                If Not bFeatSelected Then
+                    For selIdx = 0 To UBound(mCurrentBodies)
+                        mCurrentBodies(selIdx).Select2 True, Nothing
+                    Next selIdx
+                End If
+            End If
+            
+            ' Exportar Flat Pattern direto do Part
+            ' Opções: 1 (Geometria) + 4 (Linhas de dobra) = 5
+            Dim bRetDXF As Boolean
+            bRetDXF = swPart.ExportToDWG2(tempPath, modelPath, 1, True, Empty, False, False, 5, Empty)
+            
+            If Dir(tempPath) <> "" Then
+                UploadArquivo pecaId, tempPath, Me.txtCodPeca.Text & ".dxf"
+                Kill tempPath
+            End If
         End If
     End If
     
     ' 3. Exportar IGS (Peças Usinadas)
     If Me.chkIGS.Value = True And swModel.GetType = 1 Then
-        tempPath = tempFolder & "usinagem_" & Me.txtCodPeca.Text & ".igs"
-        swModel.Extension.SaveAs tempPath, 0, 0, Nothing, 0, 0
-        If Dir(tempPath) <> "" Then
-            UploadArquivo pecaId, tempPath, Me.txtCodPeca.Text & ".igs"
-            Kill tempPath
+        Dim localIgsPath As String: localIgsPath = folderPath & Me.txtCodPeca.Text & ".igs"
+        
+        ' Se o IGS já existir, usa ele!
+        If Dir(localIgsPath) <> "" Then
+            UploadArquivo pecaId, localIgsPath, Me.txtCodPeca.Text & ".igs"
+            
+        ' Se não existir, tenta gerar o IGS do corpo isolado
+        Else
+            tempPath = tempFolder & "usinagem_" & Me.txtCodPeca.Text & ".igs"
+            
+            ' Garantir que o corpo alvo seja o único selecionado no momento da exportação!
+            swModel.ClearSelection2 True
+            If Not IsEmpty(mCurrentBodies) Then
+                For selIdx = 0 To UBound(mCurrentBodies)
+                    mCurrentBodies(selIdx).Select2 True, Nothing
+                Next selIdx
+            End If
+            
+            Dim errsIGS As Long, warnsIGS As Long
+            swModel.Extension.SaveAs tempPath, 0, 1, Nothing, errsIGS, warnsIGS
+            
+            If Dir(tempPath) <> "" Then
+                UploadArquivo pecaId, tempPath, Me.txtCodPeca.Text & ".igs"
+                Kill tempPath
+            End If
         End If
     End If
 End Sub
@@ -650,4 +727,4 @@ Function FetchData(endpoint As String) As String
     http.send
     FetchData = http.responseText
 End Function
-```
+-xxx-
