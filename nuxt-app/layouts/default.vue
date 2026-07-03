@@ -192,8 +192,6 @@ const navigation = [
   { title: 'Dashboard', icon: 'mdi-view-dashboard', route: '/', moduleName: 'Dashboard', isUniversal: true },
   { title: 'Tarefas', icon: 'mdi-clipboard-check-multiple', route: '/tarefas', moduleName: 'Tarefas', isUniversal: true },
   { title: 'Ordens de Produção', icon: 'mdi-clipboard-list', route: '/ops', moduleName: 'Ordens de Produção' },
-  { title: 'Processos', icon: 'mdi-cog', route: '/processos', moduleName: 'Processos' },
-  { title: 'Peças (BOM)', icon: 'mdi-cogs', route: '/pecas', moduleName: 'Peças' },
   { title: 'PCP', icon: 'mdi-factory', route: '/pcp', moduleName: 'PCP' },
   { title: 'Estoque', icon: 'mdi-warehouse', route: '/estoque', moduleName: 'Estoque' },
   { title: 'Fornecedores', icon: 'mdi-account-group', route: '/fornecedores', moduleName: 'Fornecedores' },
