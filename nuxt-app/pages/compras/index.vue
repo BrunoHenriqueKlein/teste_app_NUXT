@@ -178,12 +178,22 @@
                 title="Ver Orçamentos Anexados"
               ></v-btn>
               <v-btn
+                v-if="!item.itens || item.itens.length > 0"
                 icon="mdi-truck-check"
                 variant="text"
                 color="success"
                 size="small"
                 @click="abrirRecebimento(item)"
                 title="Registrar Recebimento (NF)"
+              ></v-btn>
+              <v-btn
+                v-else
+                icon="mdi-delete-empty"
+                variant="text"
+                color="error"
+                size="small"
+                @click="cancelarPedidoVazio(item)"
+                title="Cancelar Pedido Vazio"
               ></v-btn>
               <v-btn
                 icon="mdi-image-outline"
@@ -1544,6 +1554,26 @@ const cancelarRequisicao = async () => {
     snackbar.value = { show: true, text: 'Erro ao cancelar requisição', color: 'error' }
   } finally {
     saving.value = false
+  }
+}
+
+const cancelarPedidoVazio = async (item) => {
+  if (!confirm(`Este pedido (${item.numero}) não possui itens. Deseja cancelá-lo definitivamente?`)) return
+  
+  try {
+    await $fetch('/api/compras', {
+      method: 'PUT',
+      body: {
+        id: item.id,
+        status: 'CANCELADA'
+      },
+      headers: authHeaders.value
+    })
+    showSnackbar('Pedido vazio cancelado com sucesso!', 'success')
+    await loadCompras()
+  } catch (error) {
+    console.error(error)
+    showSnackbar('Erro ao cancelar pedido', 'error')
   }
 }
 
