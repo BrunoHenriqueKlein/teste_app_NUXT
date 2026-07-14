@@ -187,6 +187,15 @@
                 title="Registrar Recebimento (NF)"
               ></v-btn>
               <v-btn
+                v-if="!item.itens || item.itens.length > 0"
+                icon="mdi-backup-restore"
+                variant="text"
+                color="warning"
+                size="small"
+                @click="devolverParaRequisicao(item)"
+                title="Devolver para Requisição"
+              ></v-btn>
+              <v-btn
                 v-else
                 icon="mdi-delete-empty"
                 variant="text"
@@ -1574,6 +1583,26 @@ const cancelarPedidoVazio = async (item) => {
   } catch (error) {
     console.error(error)
     showSnackbar('Erro ao cancelar pedido', 'error')
+  }
+}
+
+const devolverParaRequisicao = async (item) => {
+  if (!confirm(`Deseja cancelar o pedido ${item.numero} e devolver os itens para a fila de Requisições da Engenharia? O status voltará para orçamento.`)) return
+  
+  saving.value = true
+  try {
+    await $fetch(`/api/compras/${item.id}/reverter`, {
+      method: 'POST',
+      headers: authHeaders.value
+    })
+    showSnackbar('Pedido devolvido para Requisições com sucesso!', 'success')
+    await loadCompras()
+    await loadDemandas()
+  } catch (error) {
+    console.error(error)
+    showSnackbar('Erro ao reverter pedido', 'error')
+  } finally {
+    saving.value = false
   }
 }
 
