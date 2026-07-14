@@ -12,7 +12,7 @@
       <v-col cols="12" md="6" lg="5" xl="4">
         <v-card border class="elevation-1 bg-white">
           <v-card-title class="bg-blue-grey-lighten-5 text-subtitle-2 font-weight-bold d-flex align-center">
-            <v-icon size="small" class="mr-2" color="primary">mdi-chart-pie</v-icon> Meu Status de Trabalho (PCP)
+            <v-icon size="small" class="mr-2" color="primary">mdi-chart-pie</v-icon> Meu Status de Trabalho
           </v-card-title>
           <v-card-text class="pt-3 pb-3">
             <div class="d-flex align-center justify-space-between mb-3">
@@ -57,6 +57,17 @@
                   <span class="text-caption font-weight-bold text-red-darken-3">{{ myWorkload.pieNaoIniciadasAtrasadas }}</span>
                 </div>
               </div>
+            </div>
+
+            <v-divider class="mb-3"></v-divider>
+
+            <div class="d-flex justify-space-between text-caption mb-1">
+              <span class="text-grey-darken-1">Total de Tarefas Ativas:</span>
+              <span class="font-weight-bold">{{ myWorkload.totalTarefasPendentes }}</span>
+            </div>
+            <div class="d-flex justify-space-between text-caption mb-3">
+              <span class="text-grey-darken-1">Dias Acumulados (Carga):</span>
+              <span class="font-weight-bold text-orange-darken-3">{{ myWorkload.totalDiasAcumulados }} dias</span>
             </div>
 
             <v-alert density="compact" :type="myWorkload.statusCarga === 'LIVRE' ? 'success' : 'info'" variant="tonal" class="text-caption ma-0 py-1">
