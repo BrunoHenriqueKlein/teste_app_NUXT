@@ -300,8 +300,10 @@
             <template v-slot:bottom></template>
         <!-- Customização das Colunas -->
         <template v-slot:item.peca="{ item }">
-          <div class="font-weight-bold text-primary">{{ item.codigo }}</div>
-          <div class="text-caption text-grey-darken-1">{{ item.descricao }}</div>
+          <div style="white-space: normal; word-break: break-all; overflow-wrap: break-word;">
+            <div class="font-weight-bold text-primary">{{ item.codigo }}</div>
+            <div class="text-caption text-grey-darken-1 mt-1">{{ item.descricao }}</div>
+          </div>
         </template>
 
         <template v-slot:item.categoria="{ item }">
@@ -379,7 +381,7 @@
         <template v-slot:item.desenho="{ item }">
           <div class="d-flex flex-column align-center">
             <!-- Lista de Anexos Existentes -->
-            <div v-if="item.anexos && item.anexos.length > 0" class="d-flex flex-wrap gap-1 mb-1 justify-center">
+            <div v-if="item.anexos && item.anexos.length > 0" class="d-flex flex-column gap-1 mb-1 align-center">
               <v-chip
                 v-for="anexo in item.anexos"
                 :key="anexo.id"
@@ -1112,17 +1114,17 @@ const breadcrumbs = [
 ]
 
 const headers = [
-  { title: 'Peça', key: 'peca', sortable: true },
-  { title: 'Qtd', key: 'quantidade', align: 'end' },
-  { title: 'Categoria', key: 'categoria', align: 'center' },
-  { title: 'Material', key: 'material' },
-  { title: 'Desenho', key: 'desenho', align: 'center', sortable: false },
-  { title: 'Processos', key: 'processos', align: 'center', sortable: false },
-  { title: 'Status', key: 'status', align: 'center' },
-  { title: 'Suprimento', key: 'statusSuprimento', align: 'center' },
-  { title: 'Estoque', key: 'estoque', align: 'center' },
-  { title: 'Valores', key: 'valores', align: 'end' },
-  { title: 'Ações', key: 'acoes', align: 'center', sortable: false }
+  { title: 'Peça', key: 'peca', sortable: true, minWidth: '300px' },
+  { title: 'Qtd', key: 'quantidade', align: 'end', width: '60px' },
+  { title: 'Categoria', key: 'categoria', align: 'center', width: '100px' },
+  { title: 'Material', key: 'material', width: '100px' },
+  { title: 'Desenho', key: 'desenho', align: 'center', sortable: false, width: '120px' },
+  { title: 'Processos', key: 'processos', align: 'center', sortable: false, width: '90px' },
+  { title: 'Status', key: 'status', align: 'center', width: '120px' },
+  { title: 'Suprimento', key: 'statusSuprimento', align: 'center', width: '120px' },
+  { title: 'Estoque', key: 'estoque', align: 'center', width: '130px' },
+  { title: 'Valores', key: 'valores', align: 'end', width: '110px' },
+  { title: 'Ações', key: 'acoes', align: 'center', sortable: false, width: '100px' }
 ]
 
 const pecasDisponiveis = computed(() => {
