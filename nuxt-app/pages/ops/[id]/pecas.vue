@@ -293,24 +293,15 @@
             item-value="id"
             show-select
             hover
+            density="compact"
             items-per-page="-1"
             no-data-text="Nenhuma peça encontrada."
           >
             <template v-slot:bottom></template>
         <!-- Customização das Colunas -->
-        <template v-slot:item.codigo="{ item }">
+        <template v-slot:item.peca="{ item }">
           <div class="font-weight-bold text-primary">{{ item.codigo }}</div>
-        </template>
-
-        <template v-slot:item.status="{ item }">
-          <v-chip
-            :color="getStatusColor(item.status)"
-            size="small"
-            variant="flat"
-            class="text-uppercase"
-          >
-            {{ item.status.replace('_', ' ') }}
-          </v-chip>
+          <div class="text-caption text-grey-darken-1">{{ item.descricao }}</div>
         </template>
 
         <template v-slot:item.categoria="{ item }">
@@ -321,6 +312,17 @@
             class="text-uppercase"
           >
             {{ item.categoria }}
+          </v-chip>
+        </template>
+
+        <template v-slot:item.status="{ item }">
+          <v-chip
+            :color="getStatusColor(item.status)"
+            size="small"
+            variant="flat"
+            class="text-uppercase"
+          >
+            {{ item.status.replace('_', ' ') }}
           </v-chip>
         </template>
 
@@ -432,21 +434,21 @@
           </div>
         </template>
 
-        <template v-slot:item.valorUnitario="{ item }">
-          <div :class="item.categoria === 'FABRICADO' ? 'text-primary' : ''">
-            <template v-if="item.valorUnitario">
-              {{ (item.valorUnitario + (item.valorUnitario * (item.valorIPI || 0) / 100) + (item.valorUnitario * (item.valorICMS || 0) / 100)).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }}
-              <v-tooltip activator="parent" location="top" v-if="item.valorIPI || item.valorICMS">
-                Base: {{ item.valorUnitario.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }} | IPI: {{ item.valorIPI || 0 }}% | ICMS: {{ item.valorICMS || 0 }}%
-              </v-tooltip>
-            </template>
-            <span v-else>-</span>
-          </div>
-        </template>
-
-        <template v-slot:item.custoTotal="{ item }">
-          <div :class="item.categoria === 'FABRICADO' ? 'text-primary font-weight-bold' : ''">
-            {{ item.custoTotal ? (item.custoTotal).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '-' }}
+        <template v-slot:item.valores="{ item }">
+          <div class="d-flex flex-column align-end" :class="item.categoria === 'FABRICADO' ? 'text-primary' : ''">
+            <div class="font-weight-bold">
+              {{ item.custoTotal ? (item.custoTotal).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '-' }}
+            </div>
+            <div class="text-caption text-grey" style="white-space: nowrap;">
+              {{ item.quantidade }}x 
+              <template v-if="item.valorUnitario">
+                {{ (item.valorUnitario + (item.valorUnitario * (item.valorIPI || 0) / 100) + (item.valorUnitario * (item.valorICMS || 0) / 100)).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }}
+                <v-tooltip activator="parent" location="top" v-if="item.valorIPI || item.valorICMS">
+                  Base: {{ item.valorUnitario.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }} | IPI: {{ item.valorIPI || 0 }}% | ICMS: {{ item.valorICMS || 0 }}%
+                </v-tooltip>
+              </template>
+              <span v-else>?</span>
+            </div>
           </div>
         </template>
 
@@ -1110,17 +1112,16 @@ const breadcrumbs = [
 ]
 
 const headers = [
-  { title: 'Código', key: 'codigo', sortable: true },
-  { title: 'Descrição', key: 'descricao', sortable: true },
+  { title: 'Peça', key: 'peca', sortable: true },
+  { title: 'Qtd', key: 'quantidade', align: 'end' },
   { title: 'Categoria', key: 'categoria', align: 'center' },
+  { title: 'Material', key: 'material' },
   { title: 'Desenho', key: 'desenho', align: 'center', sortable: false },
   { title: 'Processos', key: 'processos', align: 'center', sortable: false },
-  { title: 'Suprimento', key: 'statusSuprimento', align: 'center' },
-  { title: 'Qtd', key: 'quantidade', align: 'end' },
-  { title: 'Valor Unit.', key: 'valorUnitario', align: 'end' },
-  { title: 'Custo Total', key: 'custoTotal', align: 'end' },
-  { title: 'Material', key: 'material' },
   { title: 'Status', key: 'status', align: 'center' },
+  { title: 'Suprimento', key: 'statusSuprimento', align: 'center' },
+  { title: 'Estoque', key: 'estoque', align: 'center' },
+  { title: 'Valores', key: 'valores', align: 'end' },
   { title: 'Ações', key: 'acoes', align: 'center', sortable: false }
 ]
 
@@ -1501,4 +1502,10 @@ onMounted(() => {
 <style scoped>
 .gap-1 { gap: 4px; }
 .gap-2 { gap: 8px; }
+
+:deep(.v-data-table th),
+:deep(.v-data-table td) {
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+}
 </style>
