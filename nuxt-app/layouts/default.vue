@@ -197,6 +197,7 @@ const navigation = [
   { title: 'Fornecedores', icon: 'mdi-account-group', route: '/fornecedores', moduleName: 'Fornecedores' },
   { title: 'Compras', icon: 'mdi-cart', route: '/compras', moduleName: 'Compras' },
   { title: 'Workload', icon: 'mdi-chart-timeline-variant', route: '/workload', moduleName: 'Workload' },
+  { title: 'Inteligência (IA)', icon: 'mdi-brain', route: '/analytics', moduleName: 'Relatórios' },
   { title: 'Relatórios', icon: 'mdi-chart-bar', route: '/relatorios', moduleName: 'Relatórios' },
 ]
 
