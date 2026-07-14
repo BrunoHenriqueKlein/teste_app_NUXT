@@ -42,17 +42,31 @@
     <v-card variant="outlined" class="mt-6">
       <v-card-title class="pa-4 d-flex justify-space-between align-center">
         Status por Ordem de Produção
-        <v-btn icon="mdi-refresh" variant="text" size="small" @click="loadDashboard" :loading="loading"></v-btn>
+        <div class="d-flex align-center gap-4">
+          <v-text-field
+            v-model="search"
+            append-inner-icon="mdi-magnify"
+            label="Buscar OP ou Cliente..."
+            single-line
+            hide-details
+            density="compact"
+            variant="outlined"
+            style="width: 300px"
+          ></v-text-field>
+          <v-btn icon="mdi-refresh" variant="text" size="small" @click="loadDashboard" :loading="loading"></v-btn>
+        </div>
       </v-card-title>
       <v-divider></v-divider>
       <v-data-table
         :headers="headers"
         :items="ops"
+        :search="search"
         :loading="loading"
+        :sort-by="[{ key: 'numeroOP', order: 'desc' }]"
         hover
         no-data-text="Nenhuma OP ativa encontrada."
       >
-        <template v-slot:item.op="{ item }">
+        <template v-slot:item.numeroOP="{ item }">
           <div>
             <div class="font-weight-bold text-primary">#{{ item.numeroOP }}</div>
             <div class="text-caption text-grey">{{ item.cliente }}</div>
@@ -151,10 +165,11 @@
 <script setup>
 const ops = ref([])
 const loading = ref(false)
+const search = ref('')
 const snackbar = ref({ show: false, text: '', color: 'success' })
 
 const headers = [
-  { title: 'OP / Cliente', key: 'op' },
+  { title: 'OP / Cliente', key: 'numeroOP' },
   { title: 'Prazo Entrega', key: 'entrega' },
   { title: 'Progresso Suprimentos', key: 'progresso', width: '300px' },
   { title: 'Contagem', key: 'stats', align: 'center' },

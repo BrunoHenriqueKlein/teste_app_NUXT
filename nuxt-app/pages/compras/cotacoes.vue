@@ -35,7 +35,7 @@
       <v-card-text class="py-2">
         <v-row dense align="center">
           <v-col cols="12" sm="4" md="3">
-            <v-select
+            <v-autocomplete
               v-model="filters.opId"
               :items="opsList"
               item-title="label"
@@ -46,7 +46,7 @@
               clearable
               hide-details
               @update:model-value="loadData"
-            ></v-select>
+            ></v-autocomplete>
           </v-col>
           <v-spacer></v-spacer>
           <v-col cols="auto">
@@ -358,17 +358,20 @@ const showSnackbar = (text, color = 'success') => {
 const loadOpsList = async () => {
   try {
     const data = await $fetch('/api/ops')
+    let rawOps = []
     if (data && data.ops) {
-      opsList.value = data.ops.map(op => ({
-        id: op.id,
-        label: `OP ${op.numeroOP} - ${op.cliente}`
-      }))
+      rawOps = data.ops
     } else if (Array.isArray(data)) {
-      opsList.value = data.map(op => ({
-        id: op.id,
-        label: `OP ${op.numeroOP} - ${op.cliente}`
-      }))
+      rawOps = data
     }
+    
+    // Ordenar decrescente pelo número da OP
+    rawOps.sort((a, b) => b.numeroOP - a.numeroOP)
+
+    opsList.value = rawOps.map(op => ({
+      id: op.id,
+      label: `OP ${op.numeroOP} - ${op.cliente}`
+    }))
   } catch (error) {
     console.error('Erro ao carregar lista de OPs', error)
   }

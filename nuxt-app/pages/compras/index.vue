@@ -278,14 +278,14 @@
       <v-card>
         <v-card-title>Nova Requisição de Compra</v-card-title>
         <v-card-text>
-          <v-select
+          <v-autocomplete
             v-model="dialog.data.opId"
             :items="ops"
             item-title="numeroOP"
             item-value="id"
             label="Vincular à OP"
             variant="outlined"
-          ></v-select>
+          ></v-autocomplete>
           <v-text-field v-model="dialog.data.fornecedor" label="Fornecedor Sugerido" variant="outlined"></v-text-field>
           
           <h3 class="text-subtitle-1 mb-2">Itens para Compra</h3>
@@ -1292,7 +1292,10 @@ const loadFornecedores = async () => {
 
 const loadOPs = async () => {
   try {
-    ops.value = await $fetch('/api/ops')
+    const data = await $fetch('/api/ops')
+    const rawOps = data?.ops || data || []
+    rawOps.sort((a, b) => b.numeroOP - a.numeroOP)
+    ops.value = rawOps
   } catch (error) {}
 }
 
