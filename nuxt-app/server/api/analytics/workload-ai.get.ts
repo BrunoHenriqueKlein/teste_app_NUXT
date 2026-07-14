@@ -36,9 +36,10 @@ export default defineEventHandler(async (event: any) => {
     let naoIniciadas = 0
     let totalTasks = user.opProcessos.length
 
-    let pieEmAndamento = 0
-    let pieNaoIniciadas = 0
-    let pieAtrasadas = 0
+    let pieEmAndamentoEmDia = 0
+    let pieEmAndamentoAtrasadas = 0
+    let pieNaoIniciadasEmDia = 0
+    let pieNaoIniciadasAtrasadas = 0
 
     user.opProcessos.forEach((task: any) => {
       // Regras de Peso: Redução para serviços acompanhados
@@ -69,12 +70,12 @@ export default defineEventHandler(async (event: any) => {
         }
       }
 
-      if (isAtrasada) {
-        pieAtrasadas++
-      } else if (task.status === 'EM_ANDAMENTO') {
-        pieEmAndamento++
+      if (task.status === 'EM_ANDAMENTO') {
+        if (isAtrasada) pieEmAndamentoAtrasadas++
+        else pieEmAndamentoEmDia++
       } else if (task.status === 'NAO_INICIADO') {
-        pieNaoIniciadas++
+        if (isAtrasada) pieNaoIniciadasAtrasadas++
+        else pieNaoIniciadasEmDia++
       }
     })
 
@@ -125,9 +126,10 @@ export default defineEventHandler(async (event: any) => {
       totalTarefasPendentes: totalTasks,
       emAndamento: emAndamento,
       naoIniciadas: naoIniciadas,
-      pieEmAndamento,
-      pieNaoIniciadas,
-      pieAtrasadas,
+      pieEmAndamentoEmDia,
+      pieEmAndamentoAtrasadas,
+      pieNaoIniciadasEmDia,
+      pieNaoIniciadasAtrasadas,
       totalDiasAcumulados: realDaysEstimated,
       tarefasAtrasadas: delayedTasks,
       dataEstimadaLivre: totalTasks === 0 ? new Date() : availableDate,

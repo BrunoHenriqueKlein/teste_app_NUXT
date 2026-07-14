@@ -7,6 +7,67 @@
       icon="mdi-clipboard-check-multiple"
     />
 
+    <!-- Meu Workload (Visível apenas em Minhas Tarefas) -->
+    <v-row v-if="!showGlobal && myWorkload" class="mb-2">
+      <v-col cols="12" md="6" lg="5" xl="4">
+        <v-card border class="elevation-1 bg-white">
+          <v-card-title class="bg-blue-grey-lighten-5 text-subtitle-2 font-weight-bold d-flex align-center">
+            <v-icon size="small" class="mr-2" color="primary">mdi-chart-pie</v-icon> Meu Status de Trabalho (PCP)
+          </v-card-title>
+          <v-card-text class="pt-3 pb-3">
+            <div class="d-flex align-center justify-space-between mb-3">
+              <v-chip size="small" :color="getWorkloadColor(myWorkload.statusCarga)" variant="flat" class="font-weight-bold text-white text-uppercase">
+                {{ myWorkload.statusCarga }}
+              </v-chip>
+              <v-chip v-if="myWorkload.statusAtraso" size="x-small" :color="getDelayColor(myWorkload.statusAtraso)" variant="tonal" class="font-weight-bold text-uppercase" :class="{ 'pulse-alert': myWorkload.statusAtraso === 'Atraso Crítico' }">
+                <v-icon start size="x-small">mdi-alert</v-icon>
+                {{ myWorkload.statusAtraso }}
+              </v-chip>
+            </div>
+
+            <div class="d-flex align-center mb-3 bg-grey-lighten-4 pa-2 rounded border">
+              <div class="shadow-sm mr-4" :style="getUserPieChartStyle(myWorkload)" style="width: 60px; height: 60px; border-radius: 50%;"></div>
+              <div class="d-flex flex-column flex-grow-1">
+                <div class="d-flex justify-space-between align-center mb-1">
+                  <div class="d-flex align-center">
+                    <div style="width:10px;height:10px;border-radius:2px" class="mr-2 bg-light-blue-darken-2"></div>
+                    <span class="text-caption font-weight-medium text-grey-darken-2" style="line-height:1">Em Andamento (Em dia)</span>
+                  </div>
+                  <span class="text-caption font-weight-bold">{{ myWorkload.pieEmAndamentoEmDia }}</span>
+                </div>
+                <div class="d-flex justify-space-between align-center mb-1">
+                  <div class="d-flex align-center">
+                    <div style="width:10px;height:10px;border-radius:2px" class="bg-orange-darken-2 mr-2"></div>
+                    <span class="text-caption font-weight-medium text-grey-darken-2" style="line-height:1">Em Andamento (Atrasada)</span>
+                  </div>
+                  <span class="text-caption font-weight-bold text-orange-darken-3">{{ myWorkload.pieEmAndamentoAtrasadas }}</span>
+                </div>
+                <div class="d-flex justify-space-between align-center mb-1">
+                  <div class="d-flex align-center">
+                    <div style="width:10px;height:10px;border-radius:2px" class="bg-grey-lighten-1 mr-2"></div>
+                    <span class="text-caption font-weight-medium text-grey-darken-2" style="line-height:1">Não Iniciada (Em dia)</span>
+                  </div>
+                  <span class="text-caption font-weight-bold">{{ myWorkload.pieNaoIniciadasEmDia }}</span>
+                </div>
+                <div class="d-flex justify-space-between align-center">
+                  <div class="d-flex align-center">
+                    <div style="width:10px;height:10px;border-radius:2px" class="bg-red-darken-3 mr-2"></div>
+                    <span class="text-caption font-weight-medium text-grey-darken-2" style="line-height:1">Não Iniciada (Atrasada)</span>
+                  </div>
+                  <span class="text-caption font-weight-bold text-red-darken-3">{{ myWorkload.pieNaoIniciadasAtrasadas }}</span>
+                </div>
+              </div>
+            </div>
+
+            <v-alert density="compact" :type="myWorkload.statusCarga === 'LIVRE' ? 'success' : 'info'" variant="tonal" class="text-caption ma-0 py-1">
+              <span class="font-weight-bold">Estimativa Livre: </span>
+              <span>{{ formatDate(myWorkload.dataEstimadaLivre) }}</span>
+            </v-alert>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+
     <!-- Filtros e Busca -->
     <v-row class="mb-4">
       <v-col cols="12">
@@ -413,6 +474,56 @@ const fetchTasks = async () => {
   }
 }
 
+const myWorkload = ref(null)
+
+const fetchWorkload = async () => {
+  try {
+    const res = await $fetch('/api/analytics/workload-ai', {
+      headers: authHeaders.value
+    })
+    if (res && res.success && user.value && user.value.id) {
+      myWorkload.value = res.data.find(w => w.userId === user.value.id) || null
+    }
+  } catch (error) {
+    console.error('Erro ao buscar workload:', error)
+  }
+}
+
+const getUserPieChartStyle = (u) => {
+  if (!u || u.totalTarefasPendentes === 0) return { background: '#e0e0e0' }
+  const total = u.totalTarefasPendentes
+  const pEAD = (u.pieEmAndamentoEmDia / total) * 100
+  const pEAA = (u.pieEmAndamentoAtrasadas / total) * 100
+  const pNID = (u.pieNaoIniciadasEmDia / total) * 100
+  const pNIA = (u.pieNaoIniciadasAtrasadas / total) * 100
+
+  return {
+    background: `conic-gradient(
+      #0288D1 0% ${pEAD}%, 
+      #F57C00 ${pEAD}% ${pEAD + pEAA}%, 
+      #BDBDBD ${pEAD + pEAA}% ${pEAD + pEAA + pNID}%, 
+      #c62828 ${pEAD + pEAA + pNID}% 100%
+    )`
+  }
+}
+
+const getWorkloadColor = (status) => {
+  const colors = {
+    'LIVRE': 'success',
+    'LEVE': 'info',
+    'MODERADO': 'warning',
+    'SOBRECARREGADO': 'error'
+  }
+  return colors[status] || 'grey'
+}
+
+const getDelayColor = (status) => {
+  if (status === 'Atraso Crítico') return 'error'
+  if (status === 'Muitos Atrasos') return 'warning'
+  if (status === 'Pequenos Atrasos') return 'amber-darken-2'
+  return 'success'
+}
+
 const filteredTasks = computed(() => {
   return tasks.value.filter(task => {
     const matchesSearch = !search.value || 
@@ -551,10 +662,15 @@ const executeConfirmedAction = async () => {
     await updateStatus(confirmDialog.value.task, newStatus)
     confirmDialog.value.loading = false
     confirmDialog.value.show = false
+    // Atualiza o workload após mudança de status
+    fetchWorkload()
   }
 }
 
-onMounted(fetchTasks)
+onMounted(() => {
+  fetchTasks()
+  fetchWorkload()
+})
 </script>
 
 <style scoped>

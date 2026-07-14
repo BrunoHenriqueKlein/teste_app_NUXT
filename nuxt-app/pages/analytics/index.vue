@@ -245,30 +245,36 @@
                       </v-chip>
                     </div>
 
-                    <!-- Pizza Chart & Breakdown -->
                     <div class="d-flex align-center mb-4 bg-white pa-2 rounded border">
                       <div class="pie-chart shadow-sm mr-4" :style="getUserPieChartStyle(user)" style="width: 65px; height: 65px;"></div>
                       <div class="d-flex flex-column flex-grow-1">
                         <div class="d-flex justify-space-between align-center mb-1">
                           <div class="d-flex align-center">
-                            <div class="legend-box mr-2 bg-light-blue-darken-2"></div>
-                            <span class="text-caption font-weight-medium text-grey-darken-2" style="line-height:1">Em Andamento</span>
+                            <div class="legend-box bg-light-blue-darken-2 mr-2"></div>
+                            <span class="text-caption font-weight-medium text-grey-darken-2" style="line-height:1">Em Andam. (Em dia)</span>
                           </div>
-                          <span class="text-caption font-weight-bold">{{ user.pieEmAndamento }}</span>
+                          <span class="text-caption font-weight-bold">{{ user.pieEmAndamentoEmDia }}</span>
+                        </div>
+                        <div class="d-flex justify-space-between align-center mb-1">
+                          <div class="d-flex align-center">
+                            <div class="legend-box bg-orange-darken-2 mr-2"></div>
+                            <span class="text-caption font-weight-medium text-grey-darken-2" style="line-height:1">Em Andam. (Atrasada)</span>
+                          </div>
+                          <span class="text-caption font-weight-bold text-orange-darken-3">{{ user.pieEmAndamentoAtrasadas }}</span>
                         </div>
                         <div class="d-flex justify-space-between align-center mb-1">
                           <div class="d-flex align-center">
                             <div class="legend-box bg-grey-lighten-1 mr-2"></div>
-                            <span class="text-caption font-weight-medium text-grey-darken-2" style="line-height:1">Não Iniciado</span>
+                            <span class="text-caption font-weight-medium text-grey-darken-2" style="line-height:1">Não Inic. (Em dia)</span>
                           </div>
-                          <span class="text-caption font-weight-bold">{{ user.pieNaoIniciadas }}</span>
+                          <span class="text-caption font-weight-bold">{{ user.pieNaoIniciadasEmDia }}</span>
                         </div>
                         <div class="d-flex justify-space-between align-center">
                           <div class="d-flex align-center">
                             <div class="legend-box bg-red-darken-3 mr-2"></div>
-                            <span class="text-caption font-weight-medium text-grey-darken-2" style="line-height:1">Atrasadas</span>
+                            <span class="text-caption font-weight-medium text-grey-darken-2" style="line-height:1">Não Inic. (Atrasada)</span>
                           </div>
-                          <span class="text-caption font-weight-bold text-red-darken-3">{{ user.pieAtrasadas }}</span>
+                          <span class="text-caption font-weight-bold text-red-darken-3">{{ user.pieNaoIniciadasAtrasadas }}</span>
                         </div>
                       </div>
                     </div>
@@ -405,17 +411,19 @@ const loadingWorkload = ref(false)
 const workload = ref([])
 
 const getUserPieChartStyle = (user) => {
-  if (user.totalTarefasPendentes === 0) return { background: '#e0e0e0' }
+  if (!user || user.totalTarefasPendentes === 0) return { background: '#e0e0e0' }
   const total = user.totalTarefasPendentes
-  const pEmAndamento = (user.pieEmAndamento / total) * 100
-  const pNaoIniciadas = (user.pieNaoIniciadas / total) * 100
-  // const pAtrasadas = (user.pieAtrasadas / total) * 100
+  const pEAD = (user.pieEmAndamentoEmDia / total) * 100
+  const pEAA = (user.pieEmAndamentoAtrasadas / total) * 100
+  const pNID = (user.pieNaoIniciadasEmDia / total) * 100
+  const pNIA = (user.pieNaoIniciadasAtrasadas / total) * 100
 
   return {
     background: `conic-gradient(
-      #0288D1 0% ${pEmAndamento}%, 
-      #BDBDBD ${pEmAndamento}% ${pEmAndamento + pNaoIniciadas}%, 
-      #c62828 ${pEmAndamento + pNaoIniciadas}% 100%
+      #0288D1 0% ${pEAD}%, 
+      #F57C00 ${pEAD}% ${pEAD + pEAA}%, 
+      #BDBDBD ${pEAD + pEAA}% ${pEAD + pEAA + pNID}%, 
+      #c62828 ${pEAD + pEAA + pNID}% 100%
     )`
   }
 }
