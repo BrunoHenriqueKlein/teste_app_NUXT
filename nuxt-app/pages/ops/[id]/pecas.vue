@@ -4,11 +4,20 @@
     <v-breadcrumbs :items="breadcrumbs" class="px-0 pt-0"></v-breadcrumbs>
 
     <!-- Header Standard -->
-    <PageHeader 
-      title="Lista de Peças (BOM)" 
-      subtitle="Gestão de engenharia e materiais da OP"
-      icon="mdi-cogs"
-    >
+    <PageHeader icon="mdi-cogs">
+      <template #title>
+        <h1 class="text-h5 font-weight-bold mb-1">
+          Lista de Peças (BOM) - OP {{ custos?.op?.numeroOP || '...' }}
+        </h1>
+      </template>
+      <template #subtitle>
+        <div class="text-subtitle-1 font-weight-medium mb-1">
+          Equipamento: {{ custos?.op?.codigoMaquina || '...' }} - {{ custos?.op?.descricaoMaquina || '...' }}
+        </div>
+        <div class="text-caption opacity-80">
+          Cliente: {{ custos?.op?.cliente || '...' }}
+        </div>
+      </template>
       <template #actions>
           <v-btn
             v-if="hasPermission('PCP', 'canEdit')"
@@ -198,16 +207,96 @@
       <!-- Aba 1: BOM Geral -->
       <v-tabs-window-item value="bom">
         <v-card variant="outlined">
+          <v-expansion-panels class="mb-4" variant="accordion">
+            <v-expansion-panel elevation="0" class="border">
+              <v-expansion-panel-title class="text-subtitle-2 text-primary font-weight-bold">
+                <v-icon start color="primary">mdi-filter-variant</v-icon> Filtros Avançados
+              </v-expansion-panel-title>
+              <v-expansion-panel-text>
+                <v-row dense class="mt-2">
+                  <v-col cols="12" md="4">
+                    <v-text-field
+                      v-model="filtrosAvançados.busca"
+                      label="Buscar Código ou Descrição"
+                      prepend-inner-icon="mdi-magnify"
+                      variant="outlined"
+                      density="compact"
+                      hide-details
+                      clearable
+                    ></v-text-field>
+                  </v-col>
+                  <v-col cols="12" md="2">
+                    <v-select
+                      v-model="filtrosAvançados.categoria"
+                      :items="categoriasUnicasBOM"
+                      label="Categoria"
+                      variant="outlined"
+                      density="compact"
+                      hide-details
+                      clearable
+                    ></v-select>
+                  </v-col>
+                  <v-col cols="12" md="2">
+                    <v-select
+                      v-model="filtrosAvançados.subcategoria"
+                      :items="subcategoriasUnicasBOM"
+                      label="Subcategoria"
+                      variant="outlined"
+                      density="compact"
+                      hide-details
+                      clearable
+                    ></v-select>
+                  </v-col>
+                  <v-col cols="12" md="2">
+                    <v-select
+                      v-model="filtrosAvançados.subconjunto"
+                      :items="subconjuntosExistentes"
+                      label="Subconjunto"
+                      variant="outlined"
+                      density="compact"
+                      hide-details
+                      clearable
+                    ></v-select>
+                  </v-col>
+                  <v-col cols="12" md="2">
+                    <v-select
+                      v-model="filtrosAvançados.processo"
+                      :items="processosUnicosBOM"
+                      label="Processo"
+                      variant="outlined"
+                      density="compact"
+                      hide-details
+                      clearable
+                    ></v-select>
+                  </v-col>
+                  <v-col cols="12" md="2">
+                    <v-select
+                      v-model="filtrosAvançados.fornecedor"
+                      :items="fornecedoresUnicos"
+                      label="Fornecedor"
+                      variant="outlined"
+                      density="compact"
+                      hide-details
+                      clearable
+                    ></v-select>
+                  </v-col>
+                </v-row>
+              </v-expansion-panel-text>
+            </v-expansion-panel>
+          </v-expansion-panels>
+
           <v-data-table
             v-model="selected"
             :headers="headers"
-            :items="pecas"
+            :items="pecasFiltradas"
             :loading="loading"
             item-value="id"
             show-select
             hover
-            no-data-text="Nenhuma peça cadastrada. Importe um arquivo Excel para começar."
+            items-per-page="-1"
+            no-data-text="Nenhuma peça encontrada."
           >
+            <template v-slot:bottom></template>
         <!-- Customização das Colunas -->
         <template v-slot:item.codigo="{ item }">
           <div class="font-weight-bold text-primary">{{ item.codigo }}</div>
@@ -813,6 +902,87 @@ const loadingRelease = ref(false)
 const selected = ref([])
 const activeTab = ref('bom')
 const custos = ref(null)
+
+const filtrosAvançados = reactive({
+  busca: '',
+  categoria: null,
+  subcategoria: null,
+  subconjunto: null,
+  processo: null,
+  fornecedor: null
+})
+
+const fornecedoresUnicos = computed(() => {
+  const fSet = new Set()
+  pecas.value.forEach(p => {
+    if (p.fornecedor && p.fornecedor.nome) {
+      fSet.add(p.fornecedor.nome)
+    }
+    if (p.compras && p.compras.length > 0) {
+      p.compras.forEach(c => {
+        if (c.compra && c.compra.fornecedor) fSet.add(c.compra.fornecedor)
+      })
+    }
+    if (p.processos && p.processos.length > 0) {
+      p.processos.forEach(proc => {
+        if (proc.fornecedorRef && proc.fornecedorRef.nome) fSet.add(proc.fornecedorRef.nome)
+      })
+    }
+  })
+  return Array.from(fSet).sort()
+})
+
+const categoriasUnicasBOM = computed(() => {
+  const cSet = new Set()
+  pecas.value.forEach(p => {
+    if (p.categoria) cSet.add(p.categoria)
+  })
+  return Array.from(cSet).sort()
+})
+
+const subcategoriasUnicasBOM = computed(() => {
+  const scSet = new Set()
+  pecas.value.forEach(p => {
+    if (p.subcategoria) scSet.add(p.subcategoria)
+  })
+  return Array.from(scSet).sort()
+})
+
+const processosUnicosBOM = computed(() => {
+  const pSet = new Set()
+  pecas.value.forEach(p => {
+    if (p.processos && p.processos.length > 0) {
+      p.processos.forEach(proc => pSet.add(proc.nome))
+    }
+  })
+  return Array.from(pSet).sort()
+})
+
+const pecasFiltradas = computed(() => {
+  return pecas.value.filter(p => {
+    if (filtrosAvançados.busca) {
+      const q = filtrosAvançados.busca.toLowerCase()
+      const codigoMatch = p.codigo?.toLowerCase().includes(q)
+      const descMatch = p.descricao?.toLowerCase().includes(q)
+      if (!codigoMatch && !descMatch) return false
+    }
+    if (filtrosAvançados.categoria && p.categoria !== filtrosAvançados.categoria) return false
+    if (filtrosAvançados.subcategoria && p.subcategoria !== filtrosAvançados.subcategoria) return false
+    if (filtrosAvançados.subconjunto && p.subconjunto !== filtrosAvançados.subconjunto) return false
+    if (filtrosAvançados.processo) {
+      const temProcesso = p.processos?.some(proc => proc.nome === filtrosAvançados.processo)
+      if (!temProcesso) return false
+    }
+    if (filtrosAvançados.fornecedor) {
+      const f = filtrosAvançados.fornecedor
+      const temFornecedorDireto = p.fornecedor?.nome === f
+      const temCompra = p.compras?.some(c => c.compra?.fornecedor === f)
+      const temProcessoExt = p.processos?.some(proc => proc.fornecedorRef?.nome === f)
+      if (!temFornecedorDireto && !temCompra && !temProcessoExt) return false
+    }
+    return true
+  })
+})
 
 const pecaPronta = (peca) => {
   // Peça está pronta se já estiver em estoque ou concluída no fluxo

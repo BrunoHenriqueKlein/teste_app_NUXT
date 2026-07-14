@@ -8,10 +8,14 @@
               <v-icon color="white" size="28">{{ icon }}</v-icon>
             </v-avatar>
             <div>
-              <h1 class="text-h5 font-weight-bold mb-0">{{ title }}</h1>
-              <div class="text-caption opacity-80" v-if="subtitle">
-                {{ subtitle }}
-              </div>
+              <slot name="title">
+                <h1 v-if="title" class="text-h5 font-weight-bold mb-0">{{ title }}</h1>
+              </slot>
+              <slot name="subtitle">
+                <div class="text-caption opacity-80" v-if="subtitle">
+                  {{ subtitle }}
+                </div>
+              </slot>
             </div>
           </div>
           <div class="d-flex gap-2">
@@ -30,7 +34,7 @@
 defineProps({
   title: {
     type: String,
-    required: true
+    default: ''
   },
   subtitle: {
     type: String,

@@ -99,6 +99,8 @@ export default defineEventHandler(async (event) => {
         return {
             op: {
                 numeroOP: op.numeroOP,
+                codigoMaquina: op.codigoMaquina,
+                descricaoMaquina: op.descricaoMaquina,
                 cliente: op.cliente,
                 orcamentoPrevisto: op.orcamentoPrevisto,
                 valorVenda: op.valorVenda

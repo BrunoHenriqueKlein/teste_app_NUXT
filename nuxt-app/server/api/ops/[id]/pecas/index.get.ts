@@ -15,12 +15,14 @@ export default defineEventHandler(async (event) => {
         const pecas = await prisma.peca.findMany({
             where: { opId: parseInt(opId) },
             include: {
-                processos: true,
+                processos: {
+                    include: { fornecedorRef: true }
+                },
                 anexos: true,
                 fornecedor: true,
                 compras: {
                     include: {
-                        compra: { select: { numero: true } }
+                        compra: { select: { numero: true, fornecedor: true } }
                     }
                 },
                 _count: {
