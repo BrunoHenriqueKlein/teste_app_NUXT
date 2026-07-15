@@ -389,12 +389,13 @@
                 color="info"
                 variant="tonal"
                 @click="viewDrawing(anexo.url)"
-                :title="anexo.nome"
-                class="px-2"
+                :title="'Visualizar: ' + anexo.nome"
+                class="px-2 pr-1"
                 style="max-width: 120px;"
               >
                 <v-icon start size="12">mdi-file-pdf-box</v-icon>
                 <span class="text-truncate" style="font-size: 10px;">{{ truncateName(anexo.nome) }}</span>
+                <v-btn icon="mdi-download" size="x-small" variant="text" class="ml-1" @click.stop="downloadDrawing(anexo.url, anexo.nome)" title="Baixar Arquivo" density="compact" style="height: 16px; width: 16px;"></v-btn>
               </v-chip>
             </div>
             
@@ -484,6 +485,7 @@
                   v-for="anexo in item.anexos"
                   :key="anexo.id"
                   @click="viewDrawing(anexo.url)"
+                  title="Visualizar em nova guia"
                 >
                   <template v-slot:prepend>
                     <v-icon size="small">mdi-file-pdf-box</v-icon>
@@ -491,12 +493,22 @@
                   <v-list-item-title>{{ truncateName(anexo.nome) }}</v-list-item-title>
                   <template v-slot:append>
                     <v-btn
+                      icon="mdi-download"
+                      variant="text"
+                      size="x-small"
+                      color="primary"
+                      @click.stop="downloadDrawing(anexo.url, anexo.nome)"
+                      title="Baixar Arquivo"
+                      class="mr-1"
+                    ></v-btn>
+                    <v-btn
                       v-if="hasPermission('Peças', 'canDelete')"
                       icon="mdi-delete"
                       variant="text"
                       size="x-small"
                       color="error"
                       @click.stop="deleteAttachment(anexo.id)"
+                      title="Remover Anexo"
                     ></v-btn>
                   </template>
                 </v-list-item>
@@ -1469,6 +1481,26 @@ const confirmDeletePeca = async (peca) => {
 
 const viewDrawing = (url) => {
   window.open(url, '_blank')
+}
+
+const downloadDrawing = async (url, name) => {
+  try {
+    const response = await fetch(url)
+    const blob = await response.blob()
+    const objectUrl = window.URL.createObjectURL(blob)
+    
+    const link = document.createElement('a')
+    link.href = objectUrl
+    link.download = name || 'desenho'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    
+    setTimeout(() => window.URL.revokeObjectURL(objectUrl), 1000)
+  } catch (error) {
+    console.error('Erro ao forçar download, abrindo em nova guia:', error)
+    window.open(url, '_blank')
+  }
 }
 
 const deleteAttachment = async (anexoId) => {
