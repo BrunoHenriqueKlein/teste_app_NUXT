@@ -104,9 +104,16 @@ export default defineEventHandler(async (event) => {
                     <div style="font-family: Arial, sans-serif; line-height: 1.6;">
                         <h2>Solicitação de Orçamento</h2>
                         <p>Olá <strong>${forn.contato || forn.nome}</strong>,</p>
-                        <p>Gostaríamos de solicitar um orçamento para os itens listados abaixo, referentes à <strong>Máquina ${os.op.codigoMaquina} (OP ${os.op.numeroOP}) - OS ${os.numero}</strong>.</p>
+                        <p>Gostaríamos de solicitar um orçamento para os itens listados abaixo, referentes à <strong>Máquina ${os.op.codigoMaquina} (OP ${os.op.numeroOP}) - ${os.numero}</strong>.</p>
                         
-                        <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+                        <div style="margin-top: 20px; margin-bottom: 20px;">
+                            <strong>Observações / Escopo do Serviço:</strong>
+                            <p style="margin-top: 8px; padding: 12px; border-left: 4px solid #1a73e8; background-color: #f8f9fa; color: #333; font-style: italic;">
+                                Serviço a ser executado: <strong>${os.tipo}</strong>
+                            </p>
+                        </div>
+
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
                             <thead>
                                 <tr style="background-color: #f5f5f5; border-bottom: 2px solid #ddd;">
                                     <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Código</th>
@@ -212,43 +219,76 @@ export default defineEventHandler(async (event) => {
                 if (!forn || !forn.email) continue
 
                 const itensForn = fornecedorItens[forn.id] || []
-                const attachments = []
-
-                if (fs.existsSync(bannerPath)) {
-                    attachments.push({
-                        filename: 'banner-assinatura.jpg',
-                        path: bannerPath,
-                        cid: 'banner_assinatura'
-                    })
-                }
+                
+                const MAX_ATTACHMENT_SIZE = 15 * 1024 * 1024 // 15MB
+                const physicalAttachments: any[] = []
 
                 for (const item of itensForn) {
                     if (item.peca.anexos && item.peca.anexos.length > 0) {
                         for (const anexo of item.peca.anexos) {
                             const filePath = path.join(process.cwd(), 'public', anexo.url)
                             if (fs.existsSync(filePath)) {
-                                attachments.push({
+                                const stats = fs.statSync(filePath)
+                                physicalAttachments.push({
                                     filename: anexo.nome,
-                                    path: filePath
+                                    path: filePath,
+                                    size: stats.size
                                 })
                             }
                         }
                     }
                 }
 
-                try {
-                    await transporter.sendMail({
-                        from: `"${sender.mailFrom || sender.name}" <${sender.mailUser}>`,
-                        to: forn.email,
-                        bcc: sender.mailUser,
-                        subject: emailData.subject,
-                        html: emailData.html,
-                        attachments
-                    })
-                    totalEnviados++
-                } catch (mailError: any) {
-                    console.error(`❌ Erro no disparo SMTP para ${forn.nome}:`, mailError)
-                    errosEnvio.push(`Falha para ${forn.nome}`)
+                const attachmentChunks: any[][] = []
+                let currentChunk: any[] = []
+                let currentChunkSize = 0
+
+                for (const att of physicalAttachments) {
+                    if (currentChunkSize + att.size > MAX_ATTACHMENT_SIZE && currentChunk.length > 0) {
+                        attachmentChunks.push(currentChunk)
+                        currentChunk = []
+                        currentChunkSize = 0
+                    }
+                    currentChunk.push(att)
+                    currentChunkSize += att.size
+                }
+                if (currentChunk.length > 0) {
+                    attachmentChunks.push(currentChunk)
+                }
+
+                const chunksToIterate = attachmentChunks.length > 0 ? attachmentChunks : [[]]
+
+                for (let i = 0; i < chunksToIterate.length; i++) {
+                    const currentChunkAttachments = [...chunksToIterate[i]]
+                    
+                    if (fs.existsSync(bannerPath)) {
+                        currentChunkAttachments.push({
+                            filename: 'banner-assinatura.jpg',
+                            path: bannerPath,
+                            cid: 'banner_assinatura'
+                        })
+                    }
+
+                    let subjectChunk = emailData.subject
+                    if (chunksToIterate.length > 1) {
+                        subjectChunk += ` (Parte ${i + 1} de ${chunksToIterate.length})`
+                    }
+
+                    try {
+                        await transporter.sendMail({
+                            from: `"${sender.mailFrom || sender.name}" <${sender.mailUser}>`,
+                            to: forn.email,
+                            bcc: sender.mailUser,
+                            subject: subjectChunk,
+                            html: emailData.html,
+                            attachments: currentChunkAttachments
+                        })
+                        
+                        if (i === 0) totalEnviados++
+                    } catch (mailError: any) {
+                        console.error(`❌ Erro no disparo SMTP para ${forn.nome}:`, mailError)
+                        if (i === 0) errosEnvio.push(`Falha para ${forn.nome}`)
+                    }
                 }
             }
         }

@@ -80,19 +80,43 @@ export default defineEventHandler(async (event) => {
         }
 
         const attachments = []
+        let totalSize = 0
+        const MAX_ATTACHMENT_SIZE = 15 * 1024 * 1024 // 15MB
+
         for (const peca of pecas) {
             if (peca.anexos && peca.anexos.length > 0) {
                 for (const anexo of peca.anexos) {
                     const filePath = path.join(process.cwd(), 'public', anexo.url)
                     if (fs.existsSync(filePath)) {
+                        const stats = fs.statSync(filePath)
+                        totalSize += stats.size
                         attachments.push({
                             filename: anexo.nome,
-                            path: filePath
+                            path: filePath,
+                            size: stats.size
                         })
                     }
                 }
             }
         }
+
+        const attachmentChunks: any[][] = []
+        let currentChunk: any[] = []
+        let currentChunkSize = 0
+
+        for (const att of attachments) {
+            if (currentChunkSize + att.size > MAX_ATTACHMENT_SIZE && currentChunk.length > 0) {
+                attachmentChunks.push(currentChunk)
+                currentChunk = []
+                currentChunkSize = 0
+            }
+            currentChunk.push(att)
+            currentChunkSize += att.size
+        }
+        if (currentChunk.length > 0) {
+            attachmentChunks.push(currentChunk)
+        }
+
 
         const deptoMap: Record<string, string> = {
             'ADMINISTRATIVO': 'Administrativo',
@@ -133,8 +157,9 @@ export default defineEventHandler(async (event) => {
                         ${pecasTableBody}
                     </tbody>
                 </table>
-
+                
                 <p style="margin-top: 20px;">Os desenhos técnicos seguem em anexo para análise.</p>
+                
                 <p>Ficamos no aguardo de sua proposta técnica e comercial (favor informar impostos e custos de frete, se houver).</p>
                 <br>
                 <p>Att...</p>
@@ -187,39 +212,57 @@ export default defineEventHandler(async (event) => {
 
         if (!directPurchase) {
             for (const fornecedor of fornecedores) {
-            if (!fornecedor.email) {
-                errors.push(`Fornecedor ${fornecedor.nome} não possui e-mail.`)
-                continue
-            }
-
-            try {
-                // Personaliza o olá para cada fornecedor (opcional)
-                const htmlPersonalizado = finalHtml.replace('<p>Olá,</p>', `<p>Olá <strong>${fornecedor.contato || fornecedor.nome}</strong>,</p>`)
-
-                const bannerPath = path.join(process.cwd(), 'assets', 'imagens', 'banner-assinatura.jpg')
-                const mailAttachments = [...attachments]
-                if (fs.existsSync(bannerPath)) {
-                    mailAttachments.push({
-                        filename: 'banner-assinatura.jpg',
-                        path: bannerPath,
-                        cid: 'banner_assinatura'
-                    })
+                if (!fornecedor.email) {
+                    errors.push(`Fornecedor ${fornecedor.nome} não possui e-mail.`)
+                    continue
                 }
 
-                await transporter.sendMail({
-                    from: `"${sender.mailFrom || sender.name}" <${sender.mailUser}>`,
-                    to: fornecedor.email,
-                    bcc: sender.mailUser,
-                    subject: finalSubject,
-                    html: htmlPersonalizado,
-                    attachments: mailAttachments
-                })
-                emailsSent++
-            } catch (err: any) {
-                console.error(`Erro ao enviar para ${fornecedor.email}:`, err)
-                errors.push(`Erro ao enviar para ${fornecedor.nome}: ${err.message}`)
+                try {
+                    // Personaliza o olá para cada fornecedor (opcional)
+                    const htmlPersonalizado = finalHtml.replace('<p>Olá,</p>', `<p>Olá <strong>${fornecedor.contato || fornecedor.nome}</strong>,</p>`)
+                    const bannerPath = path.join(process.cwd(), 'assets', 'imagens', 'banner-assinatura.jpg')
+                    
+                    let partesEnviadas = 0
+                    
+                    // Se não houver anexos, attachmentChunks estará vazio. Precisamos garantir pelo menos 1 envio se não tiver anexos.
+                    const chunksToIterate = attachmentChunks.length > 0 ? attachmentChunks : [[]]
+
+                    for (let i = 0; i < chunksToIterate.length; i++) {
+                        const currentChunk = chunksToIterate[i]
+                        const mailAttachments = [...currentChunk]
+                        
+                        if (fs.existsSync(bannerPath)) {
+                            mailAttachments.push({
+                                filename: 'banner-assinatura.jpg',
+                                path: bannerPath,
+                                cid: 'banner_assinatura'
+                            })
+                        }
+
+                        let subjectChunk = finalSubject
+                        if (chunksToIterate.length > 1) {
+                            subjectChunk += ` (Parte ${i + 1} de ${chunksToIterate.length})`
+                        }
+
+                        await transporter.sendMail({
+                            from: `"${sender.mailFrom || sender.name}" <${sender.mailUser}>`,
+                            to: fornecedor.email,
+                            bcc: sender.mailUser,
+                            subject: subjectChunk,
+                            html: htmlPersonalizado,
+                            attachments: mailAttachments
+                        })
+                        partesEnviadas++
+                    }
+                    
+                    if (partesEnviadas > 0) {
+                        emailsSent++
+                    }
+                } catch (err: any) {
+                    console.error(`Erro ao enviar para ${fornecedor.email}:`, err)
+                    errors.push(`Erro ao enviar para ${fornecedor.nome}: ${err.message}`)
+                }
             }
-          }
         }
 
         // 7. Criar a Requisição de Compra e Vincular os Itens

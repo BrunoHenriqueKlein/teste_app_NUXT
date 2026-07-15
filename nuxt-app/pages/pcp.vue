@@ -144,7 +144,25 @@
       <v-card>
         <v-card-title class="pa-4 bg-primary text-white">Solicitar Orçamento</v-card-title>
         <v-card-text class="pa-4">
-          <p class="mb-4">Selecione um fornecedor para cada item da <strong>OS {{ dialogBudget.os?.numero }}</strong>.</p>
+          <div class="d-flex flex-wrap align-center gap-4 mb-4">
+            <p class="mb-0">Selecione um fornecedor para cada item da <strong>OS {{ dialogBudget.os?.numero }}</strong>.</p>
+            <v-spacer></v-spacer>
+            <div style="min-width: 300px;">
+              <v-select
+                v-model="bulkFornecedor"
+                :items="suggestedFornecedores"
+                item-title="nome"
+                item-value="id"
+                label="Aplicar a todos os itens"
+                density="compact"
+                variant="outlined"
+                hide-details
+                clearable
+                prepend-inner-icon="mdi-check-all"
+                @update:model-value="applyBulkFornecedor"
+              ></v-select>
+            </div>
+          </div>
           
           <input 
             type="file" 
@@ -400,6 +418,19 @@ const dialogBudget = ref({
   os: null,
   itemFornecedorMap: {}
 })
+
+const bulkFornecedor = ref(null)
+
+const applyBulkFornecedor = (fornecedorId) => {
+  if (!fornecedorId || !dialogBudget.value.os?.itens) return
+  
+  // Atualiza o mapa forçando a reatividade do objeto
+  const newMap = { ...dialogBudget.value.itemFornecedorMap }
+  dialogBudget.value.os.itens.forEach(item => {
+    newMap[item.pecaId] = fornecedorId
+  })
+  dialogBudget.value.itemFornecedorMap = newMap
+}
 
 const dialogOS = ref({
   show: false,
