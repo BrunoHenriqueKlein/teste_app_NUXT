@@ -43,6 +43,17 @@ export default defineEventHandler(async (event) => {
                     localizacao: body.localizacao
                 }
             })
+            try {
+                const { logAction } = await import('../../utils/logger')
+                await logAction(
+                    'Atualização de Estoque',
+                    `Item ${item.codigo} (${item.descricao}) salvo/atualizado no estoque. Nova Quantidade: ${item.quantidade} ${item.unidade}.`,
+                    event.context.user?.id
+                )
+            } catch (e) {
+                console.error('Erro ao registrar log de estoque:', e)
+            }
+
             return item
         } catch (error: any) {
             console.error('❌ Erro detalhado ao salvar estoque:', error)

@@ -41,8 +41,8 @@ export default defineEventHandler(async (event) => {
             }
         })
 
-        // Atualizar OP de forma inteligente
-        await updateOPStatus(parseInt(opId))
+        // Atualizar OP (Status e Progresso)
+        await updateOPStatus(parseInt(opId), event.context.user?.id)
 
         // Criar histórico
         await prisma.processoHistorico.create({

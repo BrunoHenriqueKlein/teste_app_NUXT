@@ -44,6 +44,18 @@ export default defineEventHandler(async (event) => {
             data: { statusSuprimento: 'PARA_COTACAO' }
         })
 
+        try {
+            const { logAction } = await import('../../utils/logger')
+            const numeroOP = pecas[0].op?.numeroOP || 'S/ OP'
+            await logAction(
+                'Liberação de Itens para Compras',
+                `${atualizacao.count} item(ns) da OP ${numeroOP} liberado(s) para o setor de Compras.`,
+                user.id
+            )
+        } catch (e) {
+            console.error('Erro ao registrar log de liberação de itens:', e)
+        }
+
         return {
             success: true,
             message: `${atualizacao.count} itens liberados para compra. (Itens que já estavam liberados ou em andamento não sofreram alterações).`

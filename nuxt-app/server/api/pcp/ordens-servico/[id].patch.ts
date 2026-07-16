@@ -39,6 +39,17 @@ export default defineEventHandler(async (event: H3Event) => {
             })
         }
 
+        try {
+            const { logAction } = await import('../../../utils/logger')
+            await logAction(
+                'Atualização de Ordem de Serviço',
+                `A OS ${updatedOS.numero} teve seu status alterado para ${updatedOS.status}.`,
+                event.context.user?.id
+            )
+        } catch (e) {
+            console.error('Erro ao registrar log de OS:', e)
+        }
+
         return { success: true, os: updatedOS }
     } catch (error: any) {
         throw createError({

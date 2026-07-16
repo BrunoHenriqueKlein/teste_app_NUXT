@@ -99,7 +99,7 @@ export default defineEventHandler(async (event) => {
     })
 
     // Atualizar OP (Status e Progresso) de forma inteligente
-    await updateOPStatus(parseInt(opId))
+    await updateOPStatus(parseInt(opId), event.context.user?.id)
 
     // ✅ ATUALIZAR DATA INICIAL DA OP SE ENVIADO (Mudança no planejamento global)
     if (body.dataInicioOPPrevista) {

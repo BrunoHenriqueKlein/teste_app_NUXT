@@ -84,6 +84,17 @@ export default defineEventHandler(async (event) => {
             })
         }
 
+        try {
+            const { logAction } = await import('../../../utils/logger')
+            await logAction(
+                'Inclusão de Anexo (BOM)',
+                `Anexo '${fileName}' inserido na Peça ID ${pecaId}.`,
+                event.context.user?.id
+            )
+        } catch (e) {
+            console.error('Erro ao registrar log de anexo:', e)
+        }
+
         return { success: true, anexo }
     } catch (error: any) {
         console.error('❌ Erro ao salvar desenho:', error)

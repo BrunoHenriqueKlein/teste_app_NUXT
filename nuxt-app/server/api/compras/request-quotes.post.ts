@@ -323,6 +323,19 @@ export default defineEventHandler(async (event) => {
             }
         }
 
+        try {
+            const { logAction } = await import('../../utils/logger')
+            const fornecedoresNomes = directPurchase ? 'N/A (Requisição Direta)' : fornecedores.map(f => f.nome).join(', ')
+            const acao = directPurchase ? 'Requisição de Compra (BOM)' : 'Solicitação de Orçamento'
+            await logAction(
+                acao,
+                `${acao} para ${pecaIds.length} peça(s). Fornecedor(es): ${fornecedoresNomes}.`,
+                userId
+            )
+        } catch (e) {
+            console.error('Erro ao registrar log de cotação/requisição:', e)
+        }
+
         return {
             success: true,
             message: successMessage,

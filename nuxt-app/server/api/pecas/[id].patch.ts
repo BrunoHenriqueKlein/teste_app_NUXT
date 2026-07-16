@@ -75,6 +75,18 @@ export default defineEventHandler(async (event) => {
         })
 
         console.log(`✅ Peça ${id} atualizada com sucesso (e itens de compra sincronizados)`)
+        
+        try {
+            const { logAction } = await import('../../utils/logger')
+            await logAction(
+                'Edição de Peça',
+                `Peça ${body.codigo} editada. OP ID: ${existing?.opId}`,
+                event.context.user?.id
+            )
+        } catch (e) {
+            console.error('Erro ao registrar log de peca', e)
+        }
+
         return updatedPeca
     } catch (error: any) {
         if (error.statusCode && error.statusCode < 500) throw error

@@ -214,6 +214,17 @@ export default defineEventHandler(async (event) => {
             attachments
         })
 
+        try {
+            const { logAction } = await import('../../../utils/logger')
+            await logAction(
+                'Envio de Pedido de Compra',
+                `Pedido de Compra ${compra.numero} enviado por e-mail para ${compra.fornecedorRef.nome} (${compra.fornecedorRef.email}).`,
+                userId
+            )
+        } catch (e) {
+            console.error('Erro ao registrar log de envio de pedido:', e)
+        }
+
         return {
             success: true,
             message: 'Ordem de Compra enviada por e-mail com sucesso.'

@@ -301,6 +301,18 @@ export default defineEventHandler(async (event) => {
             userMessage += ` (Houve erro no envio para alguns fornecedores)`
         }
 
+        try {
+            const { logAction } = await import('../../utils/logger')
+            const fNomes = fornecedores.map(f => f.nome).join(', ')
+            await logAction(
+                'Solicitação de Orçamento (PCP)',
+                `Solicitado orçamento de ${os.itens.length} peça(s) da OS ${os.id} (OP ${os.op?.numeroOP || 'S/ OP'}) para o(s) fornecedor(es): ${fNomes}.`,
+                userId
+            )
+        } catch (e) {
+            console.error('Erro ao registrar log de orçamento:', e)
+        }
+
         return {
             success: true,
             emailEnviado: totalEnviados > 0,

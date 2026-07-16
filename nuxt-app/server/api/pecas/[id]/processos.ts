@@ -161,6 +161,17 @@ export default defineEventHandler(async (event) => {
                     }
                 })
 
+                try {
+                    const { logAction } = await import('../../../utils/logger')
+                    await logAction(
+                        'Atualização de Processos (BOM)',
+                        `A Peça ID ${id} teve sua lista de processos atualizada. Total de processos configurados: ${results.length}.`,
+                        event.context.user?.id
+                    )
+                } catch (e) {
+                    console.error('Erro ao registrar log de processos da peça:', e)
+                }
+
                 return results
             })
         } catch (error) {

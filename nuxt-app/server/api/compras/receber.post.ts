@@ -61,6 +61,17 @@ export default defineEventHandler(async (event) => {
             }
         }
 
+        try {
+            const { logAction } = await import('../../utils/logger')
+            await logAction(
+                'Recebimento de Materiais',
+                `Recebida NF ${numeroNF} referente ao Pedido de Compra #${updatedCompra.numero}. Total de itens: ${itens.length}.`,
+                event.context.user?.id
+            )
+        } catch (e) {
+            console.error('Erro ao registrar log de recebimento:', e)
+        }
+
         return { success: true, message: 'Recebimento processado com sucesso!' }
     } catch (error: any) {
         throw createError({

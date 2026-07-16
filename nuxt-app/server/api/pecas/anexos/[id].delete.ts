@@ -37,6 +37,17 @@ export default defineEventHandler(async (event) => {
             where: { id: parseInt(id) }
         })
 
+        try {
+            const { logAction } = await import('../../../utils/logger')
+            await logAction(
+                'Exclusão de Anexo (BOM)',
+                `Anexo '${anexo.nome}' removido da Peça ID ${anexo.pecaId}.`,
+                event.context.user?.id
+            )
+        } catch (e) {
+            console.error('Erro ao registrar log de exclusão de anexo:', e)
+        }
+
         return { success: true }
     } catch (error: any) {
         console.error('❌ Erro ao deletar anexo:', error)

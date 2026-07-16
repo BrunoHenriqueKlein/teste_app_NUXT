@@ -228,6 +228,17 @@ export default defineEventHandler(async (event) => {
         })
 
         console.log('📊 Progresso da OP atualizado para:', progressoMedio + '%')
+
+        try {
+          const { logAction } = await import('../../../../utils/logger')
+          await logAction(
+            'Atualização via Cronograma',
+            `OP ${processo.op?.numeroOP || opId} [${processo.op?.codigoMaquina || '-'}] - Progresso ${progressoMedio}%`,
+            event.context.user?.id
+          )
+        } catch (e) {
+          console.error('Erro ao registrar log no Cronograma:', e)
+        }
       }
     } catch (progressError) {
       console.log('⚠️ Não foi possível atualizar progresso da OP:', progressError)

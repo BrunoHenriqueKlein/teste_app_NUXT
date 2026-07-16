@@ -108,6 +108,20 @@ export default defineEventHandler(async (event) => {
                 }
             }
 
+
+
+            try {
+                const { logAction } = await import('../../utils/logger')
+                const fornecedorNome = body.fornecedor || 'N/A'
+                await logAction(
+                    'Criação de Pedido de Compra',
+                    `Pedido de Compra ${compra.numero} gerado para ${fornecedorNome}. Total de itens: ${body.itens?.length || 0}.`,
+                    event.context.user?.id
+                )
+            } catch(e) {
+                console.error('Erro ao registrar log de criação de compra:', e)
+            }
+
             return compra
         } catch (error: any) {
             throw createError({
@@ -268,6 +282,17 @@ export default defineEventHandler(async (event) => {
                     where: { id: newOC.id },
                     include: { itens: true }
                 })
+
+                try {
+                    const { logAction } = await import('../../utils/logger')
+                    await logAction(
+                        'Desmembramento de Pedido',
+                        `Pedido ${currentCompra!.numero} desmembrado. Criado novo pedido ${newOC.numero} com ${data.splitItemIds.length} item(ns).`,
+                        event.context.user?.id
+                    )
+                } catch(e) {
+                    console.error('Erro ao registrar log de desmembramento:', e)
+                }
 
                 return { success: true, newOCId: newOC.id, newOC: completeNewOC, message: 'Fatiamento de pedido realizado com sucesso!' }
             }
@@ -521,6 +546,19 @@ export default defineEventHandler(async (event) => {
                         })
                     }
                 }
+            }
+
+
+
+            try {
+                const { logAction } = await import('../../utils/logger')
+                await logAction(
+                    'Atualização de Pedido de Compra',
+                    `Pedido de Compra ${updatedCompra.numero} atualizado para o status ${updatedCompra.status}.`,
+                    event.context.user?.id
+                )
+            } catch(e) {
+                console.error('Erro ao registrar log de atualização de compra:', e)
             }
 
             return updatedCompra

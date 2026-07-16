@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client'
+import { logAction } from './logger'
 
 const prisma = new PrismaClient()
 
@@ -7,7 +8,7 @@ const prisma = new PrismaClient()
  * Regra: O status da OP reflete o 'vinculoStatusOP' do primeiro processo (menor sequência)
  * que estiver com status 'EM_ANDAMENTO'.
  */
-export async function updateOPStatus(opId: number) {
+export async function updateOPStatus(opId: number, userId?: number) {
     try {
         // 1. Buscar todos os processos da OP
         const processos = await prisma.oPProcesso.findMany({
@@ -53,7 +54,7 @@ export async function updateOPStatus(opId: number) {
         // Se for o início do primeiro processo, garantir data de início real da OP
         const op = await prisma.oP.findUnique({
             where: { id: opId },
-            select: { dataInicio: true, dataInicioPrevista: true, dataPedido: true }
+            select: { numeroOP: true, codigoMaquina: true, dataInicio: true, dataInicioPrevista: true, dataPedido: true }
         })
 
         const algumIniciado = processos.some(p => p.status !== 'NAO_INICIADO')
@@ -74,7 +75,14 @@ export async function updateOPStatus(opId: number) {
             data: dataUpdate
         })
 
-        console.log(`✅ OP ${opId} atualizada: Progresso ${progressoMedio}%, Status: ${novoStatusOP || 'Sem alteração'}`)
+        const detalhes = `OP ${op?.numeroOP || opId} [${op?.codigoMaquina || '-'}] - Progresso ${progressoMedio}%, Status: ${novoStatusOP || 'Sem alteração'}`
+        console.log(`✅ ${detalhes}`)
+        
+        await logAction(
+            'Atualização de Status da OP',
+            detalhes,
+            userId
+        )
     } catch (error) {
         console.error(`❌ Erro ao atualizar status da OP ${opId}:`, error)
     }

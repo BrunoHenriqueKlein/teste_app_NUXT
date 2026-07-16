@@ -205,6 +205,7 @@ const navigation = [
 const adminNavigation = [
   { title: 'Usuários', icon: 'mdi-account-group', route: '/admin/users', isAdminOnly: true },
   { title: 'Configurações', icon: 'mdi-cog', route: '/admin/config', isAdminOnly: true },
+  { title: 'Logs do Sistema', icon: 'mdi-text-box-search-outline', route: '/logs', isAdminOnly: true },
 ]
 
 // Carregar dados

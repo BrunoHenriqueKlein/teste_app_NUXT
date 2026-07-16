@@ -119,6 +119,7 @@ model User {
   userModules          UserModule[]
   resetToken        String?   @map("reset_token")
   resetTokenExpiry  DateTime? @map("reset_token_expiry")
+  systemLogs        SystemLog[]
 
   @@map("users")
 }
@@ -511,4 +512,14 @@ model ConfigTemplateOPItem {
   processo   ConfigProcessoPadrao @relation(fields: [processoId], references: [id])
 
   @@map("config_template_op_itens")
+}
+model SystemLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?     @map("user_id")
+  acao      String
+  detalhes  String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@map("system_logs")
 }
