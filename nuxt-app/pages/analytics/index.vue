@@ -86,6 +86,7 @@
                       OP {{ item.numeroOP }}
                     </v-card-title>
                     <v-card-subtitle class="text-caption font-weight-bold">
+                      <span v-if="item.codigoMaquina" class="text-primary mr-1">[{{ item.codigoMaquina }}]</span>
                       {{ item.maquina }}
                     </v-card-subtitle>
                     <div class="text-caption text-grey">{{ item.cliente }}</div>

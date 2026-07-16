@@ -224,6 +224,7 @@ export default defineEventHandler(async (event: any) => {
     return {
       opId: op.id,
       numeroOP: op.numeroOP,
+      codigoMaquina: op.codigoMaquina,
       maquina: op.descricaoMaquina,
       cliente: op.cliente,
       prazoPrometido: limitDate,
