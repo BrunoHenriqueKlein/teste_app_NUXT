@@ -53,7 +53,8 @@ export default defineEventHandler(async (event) => {
                 const subcategoria = String(row.Subcategoria || row.subcategoria || row.SUBCATEGORIA || '').trim()
                 const subconjunto = String(row.Subconjunto || row.subconjunto || row.SUBCONJUNTO || '').trim()
                 const rawCategoria = String(row.Categoria || row.categoria || row.CATEGORIA || 'FABRICADO').trim().toUpperCase()
-                const categoria = rawCategoria === 'COMPRADO' ? 'COMPRADO' : 'FABRICADO'
+                // Aceita tanto COMPRADO quanto COMERCIAL do CSV para manter compatibilidade com planilhas antigas
+                const categoria = (rawCategoria === 'COMPRADO' || rawCategoria === 'COMERCIAL') ? 'COMERCIAL' : 'FABRICADO'
 
                 if (!codigo || !descricao) {
                     continue // Pula linhas vazias ou inválidas

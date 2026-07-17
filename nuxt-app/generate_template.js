@@ -30,7 +30,7 @@ const ws_data = [
     "-", 
     "Comercial", 
     "Conjunto Motor", 
-    "COMPRADO", 
+    "COMERCIAL", 
     "45.00"
   ]
 ];

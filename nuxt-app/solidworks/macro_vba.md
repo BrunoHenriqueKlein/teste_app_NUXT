@@ -18,7 +18,7 @@ Certifique-se de que cada controle no seu UserForm tenha exatamente estes nomes:
 | **TextBox** | `txtDescricao` | Para o nome/descrição |
 | **TextBox** | `txtMaterial` | Para o material |
 | **Label** | `lblQuantidade` | Exibe a quantidade total |
-| **ComboBox** | `cmbCategoria` | FABRICADO/COMPRADO |
+| **ComboBox** | `cmbCategoria` | FABRICADO/COMERCIAL |
 | **ListBox** | `lstProcessos` | Lista as etapas |
 | **CheckBox** | `chkUsarConfig` | Incluir config no código? |
 | **CheckBox** | `chkApenasConfig` | Usar **apenas** config como código? |
@@ -206,8 +206,8 @@ Private Sub ProcessarProximo()
         End If
     End If
     On Error GoTo 0
-    Me.cmbCategoria.Clear: Me.cmbCategoria.AddItem "FABRICADO": Me.cmbCategoria.AddItem "COMPRADO"
-    If cat = "COMPRADO" Then
+    Me.cmbCategoria.Clear: Me.cmbCategoria.AddItem "FABRICADO": Me.cmbCategoria.AddItem "COMERCIAL"
+    If cat = "COMERCIAL" Then
         Me.cmbCategoria.ListIndex = 1
     Else
         Me.cmbCategoria.ListIndex = 0
@@ -307,7 +307,7 @@ Private Sub chkUsarConfig_Click(): AtualizarSugestaoCodigo: End Sub
 Private Sub chkApenasConfig_Click(): AtualizarSugestaoCodigo: End Sub
 
 Private Sub cmbCategoria_Change()
-    If Me.cmbCategoria.Text = "COMPRADO" Then
+    If Me.cmbCategoria.Text = "COMERCIAL" Then
         Me.lstProcessos.Visible = False
     Else
         Me.lstProcessos.Visible = True

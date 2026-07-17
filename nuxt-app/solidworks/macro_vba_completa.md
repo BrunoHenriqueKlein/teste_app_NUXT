@@ -19,8 +19,8 @@ Para a versão completa, seu UserForm no VBA precisará ter **todos** os campos 
 | **TextBox** | `txtDescricao` | Descrição/Nome |
 | **TextBox** | `txtMaterial` | Material da peça |
 | **Label** | `lblQuantidade` | Exibe a quantidade total |
-| **ComboBox** | `cmbCategoria` | Categorias: FABRICADO / COMPRADO |
-| **ComboBox** | `cmbSubcategoria`| Subcategoria (Exibida apenas se COMPRADO) |
+| **ComboBox** | `cmbCategoria` | Categorias: FABRICADO / COMERCIAL |
+| **ComboBox** | `cmbSubcategoria`| Subcategoria (Exibida apenas se COMERCIAL) |
 | **ListBox** | `lstProcessos` | Etapas do PCP (Exibida apenas se FABRICADO) |
 | **CheckBox** | `chkUsarConfig` | Incluir config no código? |
 | **CheckBox** | `chkApenasConfig` | Usar **apenas** config como código? |
@@ -223,21 +223,21 @@ Private Sub ProcessarProximo()
     End If
     On Error GoTo 0
     
-    Me.cmbCategoria.Clear: Me.cmbCategoria.AddItem "FABRICADO": Me.cmbCategoria.AddItem "COMPRADO"
+    Me.cmbCategoria.Clear: Me.cmbCategoria.AddItem "FABRICADO": Me.cmbCategoria.AddItem "COMERCIAL"
     
     ' Popula Subcategorias e Processos do Servidor
     PopularListaProcessos swCompModel, configName
     PopularListaSubcategorias subcat
     
     ' Aciona a Lógica de Visibilidade (Através do Change Event)
-    If cat = "COMPRADO" Then
+    If cat = "COMERCIAL" Then
         Me.cmbCategoria.ListIndex = 1
     Else
         Me.cmbCategoria.ListIndex = 0
     End If
     
     ' Pré-Setar check boxes de exportação baseados na categoria sugerida
-    If cat = "COMPRADO" Then
+    If cat = "COMERCIAL" Then
         Me.chkPDF.Value = False
         Me.chkDXF.Value = False
         Me.chkIGS.Value = False
@@ -256,7 +256,7 @@ Private Sub ProcessarProximo()
 End Sub
 
 Private Sub cmbCategoria_Change()
-    If Me.cmbCategoria.Text = "COMPRADO" Then
+    If Me.cmbCategoria.Text = "COMERCIAL" Then
         Me.lstProcessos.Visible = False
         Me.cmbSubcategoria.Visible = True
     Else
@@ -462,7 +462,7 @@ Private Function EnviarParaAPI() As Long
     End If
     
     Dim selSubCat As String: selSubCat = ""
-    If Me.cmbCategoria.Text = "COMPRADO" Then selSubCat = Me.cmbSubcategoria.Text
+    If Me.cmbCategoria.Text = "COMERCIAL" Then selSubCat = Me.cmbSubcategoria.Text
     
     Dim body As String: body = "{""numeroOP"": """ & mOP & """, ""peca"": {""codigo"": """ & Me.txtCodPeca.Text & """, ""descricao"": """ & Me.txtDescricao.Text & """, ""material"": """ & Me.txtMaterial.Text & """, ""quantidade"": " & mDictComps(mKeyAtual) & ", ""categoria"": """ & Me.cmbCategoria.Text & """, ""subcategoria"": """ & selSubCat & """, ""processos"": [" & escolhidos & "]}}"
     

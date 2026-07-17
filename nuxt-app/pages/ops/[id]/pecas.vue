@@ -307,12 +307,7 @@
         </template>
 
         <template v-slot:item.categoria="{ item }">
-          <v-chip
-            :color="item.categoria === 'COMPRADO' ? 'blue' : 'orange'"
-            size="x-small"
-            variant="tonal"
-            class="text-uppercase"
-          >
+          <v-chip size="x-small" :color="item.categoria === 'COMERCIAL' ? 'blue' : 'orange'" class="font-weight-bold" variant="outlined">
             {{ item.categoria }}
           </v-chip>
         </template>
@@ -633,10 +628,11 @@
             <v-col cols="6">
               <v-select
                 v-model="dialogPeca.data.categoria"
-                :items="['FABRICADO', 'COMPRADO']"
-                label="Categoria"
+                label="Categoria *"
+                :items="['FABRICADO', 'COMERCIAL']"
                 variant="outlined"
-                density="compact"
+                density="comfortable"
+                :rules="[v => !!v || 'Categoria obrigatória']"
               ></v-select>
             </v-col>
             <v-col cols="6">
@@ -649,7 +645,7 @@
               ></v-select>
             </v-col>
           </v-row>
-          <v-row v-if="dialogPeca.data.categoria === 'COMPRADO'">
+          <v-row v-if="dialogPeca.data.categoria === 'COMERCIAL'">
             <v-col cols="12">
               <v-combobox
                 v-model="dialogPeca.data.subcategoria"
@@ -662,7 +658,7 @@
               ></v-combobox>
             </v-col>
           </v-row>
-          <v-row v-if="dialogPeca.data.categoria === 'COMPRADO'">
+          <v-row v-if="dialogPeca.data.categoria === 'COMERCIAL'">
             <v-col cols="12">
               <v-select
                 v-model="dialogPeca.data.fornecedorId"

@@ -2,7 +2,7 @@
   <div class="pa-4">
     <PageHeader 
       title="Cotações e Orçamentos" 
-      subtitle="Definição de fornecedores, custos e impostos para itens COMPRADOS"
+      subtitle="Definição de fornecedores, custos e impostos para itens COMERCIAIS"
       icon="mdi-calculator"
     >
       <template #actions>

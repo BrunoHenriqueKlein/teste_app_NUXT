@@ -451,7 +451,7 @@ model Arquivo {
 }
 
 enum PecaCategoria {
-  COMPRADO
+  COMERCIAL
   FABRICADO
 }
 

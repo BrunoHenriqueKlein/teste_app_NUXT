@@ -63,7 +63,7 @@ export default defineEventHandler(async (event) => {
                 custoBrutoMateriais += custoCompraDaPeca
                 totalIPIMateriais += ipiCompraDaPeca
                 totalICMSMateriais += icmsCompraDaPeca
-            } else if (peca.categoria === 'COMPRADO' && peca.valorUnitario) {
+            } else if (peca.categoria === 'COMERCIAL' && peca.valorUnitario) {
                 const ipiAbsoluto = peca.valorUnitario * ((peca.valorIPI || 0) / 100)
                 const icmsAbsoluto = peca.valorUnitario * ((peca.valorICMS || 0) / 100)
                 const subtotal = (peca.valorUnitario + ipiAbsoluto + icmsAbsoluto) * peca.quantidade
