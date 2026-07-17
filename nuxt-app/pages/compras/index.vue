@@ -411,6 +411,7 @@
                     @change="toggleSelectAll"
                   ></v-checkbox-btn>
                 </th>
+                <th class="text-left font-weight-bold" style="width: 60px; min-width: 60px;">Item</th>
                 <th class="text-left font-weight-bold" style="width: 200px; min-width: 200px; white-space: nowrap;">Código</th>
                 <th class="text-left font-weight-bold" style="width: 100%;">Descrição</th>
                 <th class="text-left font-weight-bold" style="width: 120px; min-width: 120px; white-space: nowrap;">Etapa / Processo</th>
@@ -431,6 +432,14 @@
                     density="compact"
                     hide-details
                   ></v-checkbox-btn>
+                </td>
+                <td>
+                  <v-text-field
+                    v-model="item.numeroItem"
+                    density="compact"
+                    variant="underlined"
+                    hide-details
+                  ></v-text-field>
                 </td>
                 <td style="white-space: nowrap;">
                   <v-text-field
@@ -631,6 +640,17 @@
           <v-spacer></v-spacer>
           <v-btn variant="text" @click="dialogDetalhes.show = false">Desistir</v-btn>
           <v-btn
+            v-if="!dialogDetalhes.isVisualizado"
+            color="secondary"
+            variant="tonal"
+            :loading="saving"
+            @click="salvarTratativa"
+            prepend-icon="mdi-content-save"
+            class="mr-2"
+          >
+            Salvar Rascunho
+          </v-btn>
+          <v-btn
             v-if="temItensSelecionados && !dialogDetalhes.isVisualizado"
             :color="todosItensSelecionados ? 'success' : 'indigo'"
             variant="flat"
@@ -728,8 +748,9 @@
                 <td colspan="9" style="background-color: #e0e0e0; text-align: center; font-weight: bold; padding: 5px; border-bottom: 1px solid #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact;">PRODUTOS</td>
             </tr>
             <tr style="font-weight: bold; text-align: center;">
+                <td rowspan="2" style="padding: 5px; border: 1px solid #000; width: 4%;">ITEM</td>
                 <td rowspan="2" style="padding: 5px; border: 1px solid #000; width: 12%;">CÓDIGO</td>
-                <td rowspan="2" style="padding: 5px; border: 1px solid #000; width: 32%;">DESCRIÇÃO</td>
+                <td rowspan="2" style="padding: 5px; border: 1px solid #000; width: 28%;">DESCRIÇÃO</td>
                 <td rowspan="2" style="padding: 5px; border: 1px solid #000; width: 12%;">ETAPA / PROCESSO</td>
                 <td rowspan="2" style="padding: 5px; border: 1px solid #000; width: 10%;">MATERIAL</td>
                 <td rowspan="2" style="padding: 5px; border: 1px solid #000; width: 4%;">QTD</td>
@@ -742,7 +763,8 @@
                 <td style="padding: 2px; border: 1px solid #000; font-size: 9px;">(%) ICMS</td>
                 <td style="padding: 2px; border: 1px solid #000; font-size: 9px;">(%) IPI</td>
             </tr>
-            <tr v-for="item in chunk" :key="item.id">
+            <tr v-for="(item, i) in chunk" :key="item.id">
+                <td style="padding: 5px; border: 1px solid #000; text-align: center;">{{ item.numeroItem || (pageIndex * 19 + i + 1) }}</td>
                 <td style="padding: 5px; border: 1px solid #000;">{{ item.peca?.codigo || item.estoque?.codigo || '-' }}</td>
                 <td style="padding: 5px; border: 1px solid #000;">{{ item.peca?.descricao || item.estoque?.descricao || (item.descricao.includes(' - Peça: ') ? item.descricao.split(' - Peça: ')[1] : item.descricao) }}</td>
                 <td style="padding: 5px; border: 1px solid #000;">{{ item.etapaProcesso || '-' }}</td>
@@ -1566,8 +1588,9 @@ const verDetalhesRequisicao = (item) => {
     isVisualizado: false
   }
   // Inicializa todos como selecionados e ajusta a descrição para itens de serviço
-  dialogDetalhes.value.requisicao.itens.forEach(i => {
+  dialogDetalhes.value.requisicao.itens.forEach((i, index) => {
     i.selected = true
+    i.numeroItem = i.numeroItem || String(index + 1)
     if (i.descricao?.startsWith('SERVIÇO:')) {
       i.etapaProcesso = i.descricao.split(' - ')[0].replace('SERVIÇO: ', '')
       if (i.peca) {
@@ -1579,6 +1602,44 @@ const verDetalhesRequisicao = (item) => {
   })
   selecionarTodosItens.value = true
   loadFornecedores()
+}
+
+const salvarTratativa = async () => {
+  saving.value = true
+  try {
+    const fornecedorObj = fornecedores.value.find(f => f.id === dialogDetalhes.value.fornecedorId)
+    await $fetch('/api/compras', {
+      method: 'PUT',
+      body: {
+        id: dialogDetalhes.value.requisicao.id,
+        status: dialogDetalhes.value.requisicao.status,
+        fornecedor: fornecedorObj?.nome || undefined,
+        fornecedorId: dialogDetalhes.value.fornecedorId,
+        valorFrete: dialogDetalhes.value.valorFrete,
+        valorDesconto: dialogDetalhes.value.valorDesconto,
+        formaPagamento: dialogDetalhes.value.formaPagamento,
+        tipoFrete: dialogDetalhes.value.tipoFrete,
+        transportadora: dialogDetalhes.value.transportadora,
+        cnpjTransportadora: dialogDetalhes.value.cnpjTransportadora,
+        observacoes: dialogDetalhes.value.observacoes,
+        dataPrevisaoEntrega: dialogDetalhes.value.dataPrevisao,
+        itens: dialogDetalhes.value.requisicao.itens.map(item => ({
+          ...item,
+          valorIPI: (item.valorUnitario * item.quantidade) * ((item.aliqIPI || 0) / 100),
+          valorICMS: (item.valorUnitario * item.quantidade) * ((item.aliqICMS || 0) / 100),
+          custoLiquido: item.valorUnitario * (1 + ((item.aliqIPI || 0) / 100) + ((item.aliqICMS || 0) / 100))
+        }))
+      },
+      headers: authHeaders.value
+    })
+    showSnackbar('Rascunho / Tratativa salva com sucesso!', 'success')
+    await loadCompras()
+  } catch (error) {
+    showSnackbar('Erro ao salvar rascunho', 'error')
+    console.error(error)
+  } finally {
+    saving.value = false
+  }
 }
 
 const cancelarRequisicao = async () => {
@@ -1595,7 +1656,7 @@ const cancelarRequisicao = async () => {
     })
     snackbar.value = { show: true, text: 'Requisição cancelada com sucesso.', color: 'success' }
     dialogDetalhes.value.show = false
-    await loadData()
+    await loadCompras()
   } catch (error) {
     console.error(error)
     snackbar.value = { show: true, text: 'Erro ao cancelar requisição', color: 'error' }

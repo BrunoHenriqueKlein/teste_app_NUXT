@@ -22,7 +22,8 @@ export default defineEventHandler(async (event) => {
                                 }
                             },
                             estoque: true
-                        }
+                        },
+                        orderBy: { id: 'asc' }
                     },
                     anexos: true,
                     fornecedorRef: true,
@@ -378,6 +379,7 @@ export default defineEventHandler(async (event) => {
                             data: {
                                 descricao: item.descricao !== undefined ? item.descricao : undefined,
                                 quantidade: item.quantidade !== undefined ? Number(item.quantidade) : undefined,
+                                numeroItem: item.numeroItem !== undefined ? String(item.numeroItem) : undefined,
                                 valorUnitario: Number(item.valorUnitario) || 0,
                                 aliqIPI: Number(item.aliqIPI) || 0,
                                 aliqICMS: Number(item.aliqICMS) || 0,
@@ -635,6 +637,7 @@ export default defineEventHandler(async (event) => {
 
             return updatedCompra
         } catch (error: any) {
+            console.error('API Compras PUT error:', error)
             throw createError({
                 statusCode: 500,
                 statusMessage: 'Erro ao atualizar compra: ' + error.message

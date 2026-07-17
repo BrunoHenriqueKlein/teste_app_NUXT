@@ -390,6 +390,7 @@ model CompraItem {
   estoqueId     Int?   @map("estoque_id")
   descricao     String
   quantidade    Int
+  numeroItem    String? @map("numero_item")
   valorUnitario Float
   aliqIPI       Float? @default(0) @map("aliq_ipi")
   aliqICMS      Float? @default(0) @map("aliq_icms")
