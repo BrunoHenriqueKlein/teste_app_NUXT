@@ -1,9 +1,9 @@
 <template>
   <div class="pa-4">
     <PageHeader 
-      title="Cotações e Orçamentos" 
-      subtitle="Definição de fornecedores, custos e impostos para itens COMERCIAIS"
-      icon="mdi-calculator"
+      title="Cotações de Estoque" 
+      subtitle="Definição de fornecedores para itens de Almoxarifado"
+      icon="mdi-warehouse"
     >
       <template #actions>
         <v-btn
@@ -12,11 +12,13 @@
           prepend-icon="mdi-cart-arrow-down"
           class="mr-2"
           :disabled="!selectedItems.length"
+          :loading="saving"
           @click="generateDirectPurchase"
           title="Pula o envio de e-mail e envia para a aba de Requisições."
         >
           Compra Direta / Online ({{ selectedItems.length }})
         </v-btn>
+
         <v-btn
           color="info"
           variant="flat"
@@ -30,38 +32,7 @@
       </template>
     </PageHeader>
 
-    <!-- Filtros -->
-    <v-card variant="outlined" class="mt-4 mb-4">
-      <v-card-text class="py-2">
-        <v-row dense align="center">
-          <v-col cols="12" sm="4" md="3">
-            <v-autocomplete
-              v-model="filters.opId"
-              :items="opsList"
-              item-title="label"
-              item-value="id"
-              label="Filtrar por OP"
-              variant="outlined"
-              density="comfortable"
-              clearable
-              hide-details
-              @update:model-value="loadData"
-            ></v-autocomplete>
-          </v-col>
-          <v-spacer></v-spacer>
-          <v-col cols="auto">
-            <v-btn
-              color="primary"
-              variant="flat"
-              prepend-icon="mdi-refresh"
-              @click="loadData"
-            >
-              Atualizar
-            </v-btn>
-          </v-col>
-        </v-row>
-      </v-card-text>
-    </v-card>
+    <!-- Tabela de Cotações -->
 
     <v-card variant="outlined" class="mt-4">
       <v-data-table
@@ -72,18 +43,18 @@
         show-select
         hover
       >
-        <template v-slot:item.statusSuprimento="{ item }">
+        <template v-slot:item.status="{ item }">
           <v-chip
-            :color="item.statusSuprimento === 'EM_ORCAMENTO' ? 'warning' : 'grey'"
+            :color="item.statusCor"
             size="small"
             variant="flat"
           >
-            {{ item.statusSuprimento === 'EM_ORCAMENTO' ? 'EM COTAÇÃO' : 'NÃO COTADO' }}
+            {{ item.status }}
           </v-chip>
         </template>
 
-        <template v-slot:item.op="{ item }">
-          <span class="text-primary font-weight-bold">{{ item.op?.numeroOP }}</span>
+        <template v-slot:item.numeroCompra="{ item }">
+          <span class="text-orange font-weight-bold">{{ item.numeroCompra }}</span>
         </template>
 
         <template v-slot:item.codigo="{ item }">
@@ -167,15 +138,7 @@
             persistent-hint
           ></v-textarea>
           
-          <v-alert
-            v-if="dialogQuoteEmail.attachmentsCount"
-            type="success"
-            variant="tonal"
-            density="compact"
-            class="mt-4"
-          >
-            <strong>{{ dialogQuoteEmail.attachmentsCount }} desenho(s)/anexo(s)</strong> serão enviados automaticamente com estes e-mails.
-          </v-alert>
+
         </v-card-text>
         <v-card-actions class="pa-4">
           <v-btn variant="text" @click="dialogQuoteEmail.show = false">Voltar</v-btn>
@@ -196,10 +159,7 @@ const demandas = ref([])
 const selectedItems = ref([])
 const fornecedores = ref([])
 
-const filters = ref({
-  opId: null
-})
-const opsList = ref([])
+const search = ref('')
 
 const loading = ref(false)
 const saving = ref(false)
@@ -223,35 +183,25 @@ const sendingEmail = ref(false)
 const snackbar = ref({ show: false, text: '', color: 'success' })
 
 const headers = [
-  { title: 'Status', key: 'statusSuprimento', width: '120px' },
+  { title: 'Status', key: 'status', width: '120px' },
   { title: 'Requisição', key: 'numeroCompra', width: '120px' },
-  { title: 'OP', key: 'op', width: '80px' },
-  { title: 'Código', key: 'codigo', minWidth: '300px', width: '40%' },
+  { title: 'Código', key: 'codigo', width: '120px' },
   { title: 'Descrição', key: 'descricao', minWidth: '150px' },
-  { title: 'Qtd', key: 'quantidade', align: 'end', width: '80px' }
+  { title: 'Material', key: 'material', width: '120px' },
+  { title: 'Quantidade', key: 'quantidade', align: 'end', width: '100px' },
+  { title: 'Categoria', key: 'categoria', width: '120px' },
+  { title: 'Subcategoria', key: 'subcategoria', width: '120px' }
 ]
 
 const loadData = async () => {
   loading.value = true
   try {
-    const params = new URLSearchParams()
-    params.append('status', 'PARA_COTACAO,EM_ORCAMENTO')
-    if (filters.value.opId) {
-      params.append('opId', filters.value.opId)
-    }
-
     const [data, forns] = await Promise.all([
-      $fetch(`/api/compras/demandas?${params.toString()}`),
+      $fetch(`/api/compras/demandas-estoque`),
       $fetch('/api/fornecedores')
     ])
     
-    // Inicializar campos de impostos se não existirem
-    demandas.value = data.map(d => ({
-      ...d,
-      valorUnitario: d.valorUnitario || 0,
-      valorIPI: d.valorIPI || 0,
-      valorICMS: d.valorICMS || 0
-    }))
+    demandas.value = data
     
     fornecedores.value = forns
   } catch (error) {
@@ -271,10 +221,10 @@ const openQuoteDialog = () => {
 const loadQuotePreview = async () => {
   loadingPreview.value = true
   try {
-    const data = await $fetch('/api/compras/request-quotes', {
+    const data = await $fetch('/api/compras/request-quotes-estoque', {
       method: 'POST',
       body: {
-        pecaIds: selectedItems.value,
+        compraItemIds: selectedItems.value,
         fornecedorIds: dialogQuoteSuppliers.value.fornecedorIds,
         preview: true
       }
@@ -297,10 +247,10 @@ const loadQuotePreview = async () => {
 const sendFinalQuoteEmails = async () => {
   sendingEmail.value = true
   try {
-    const res = await $fetch('/api/compras/request-quotes', {
+    const res = await $fetch('/api/compras/request-quotes-estoque', {
       method: 'POST',
       body: {
-        pecaIds: selectedItems.value,
+        compraItemIds: selectedItems.value,
         fornecedorIds: dialogQuoteSuppliers.value.fornecedorIds,
         subject: dialogQuoteEmail.value.subject,
         html: dialogQuoteEmail.value.html,
@@ -325,13 +275,14 @@ const sendFinalQuoteEmails = async () => {
   }
 }
 
+
 const generateDirectPurchase = async () => {
   saving.value = true
   try {
-    const res = await $fetch('/api/compras/request-quotes', {
+    const res = await $fetch('/api/compras/request-quotes-estoque', {
       method: 'POST',
       body: {
-        pecaIds: selectedItems.value,
+        compraItemIds: selectedItems.value,
         directPurchase: true
       }
     })
@@ -356,30 +307,7 @@ const showSnackbar = (text, color = 'success') => {
   snackbar.value = { show: true, text, color }
 }
 
-const loadOpsList = async () => {
-  try {
-    const data = await $fetch('/api/ops')
-    let rawOps = []
-    if (data && data.ops) {
-      rawOps = data.ops
-    } else if (Array.isArray(data)) {
-      rawOps = data
-    }
-    
-    // Ordenar decrescente pelo número da OP
-    rawOps.sort((a, b) => b.numeroOP - a.numeroOP)
-
-    opsList.value = rawOps.map(op => ({
-      id: op.id,
-      label: `OP ${op.numeroOP} - ${op.cliente}`
-    }))
-  } catch (error) {
-    console.error('Erro ao carregar lista de OPs', error)
-  }
-}
-
 onMounted(() => {
-  loadOpsList()
   loadData()
 })
 </script>

@@ -32,6 +32,11 @@ export default defineEventHandler(async (event) => {
                     select: {
                         nome: true
                     }
+                },
+                compras: {
+                    include: { compra: true },
+                    orderBy: { id: 'desc' },
+                    take: 1
                 }
             },
             orderBy: {
@@ -40,8 +45,10 @@ export default defineEventHandler(async (event) => {
                 }
             }
         })
-
-        return demandas
+        return demandas.map(d => ({
+            ...d,
+            numeroCompra: d.compras?.[0]?.compra?.numero || '-'
+        }))
     } catch (error: any) {
         console.error('❌ Erro ao buscar demandas de compra:', error)
         throw createError({

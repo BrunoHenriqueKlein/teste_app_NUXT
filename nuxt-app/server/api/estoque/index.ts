@@ -27,20 +27,30 @@ export default defineEventHandler(async (event) => {
                 where: { codigo: body.codigo },
                 update: {
                     descricao: body.descricao,
+                    material: body.material || '',
                     quantidade: parseInt(body.quantidade) || 0,
                     minEstoque: parseInt(body.minEstoque) || 0,
                     unidade: body.unidade || 'UN',
                     categoria: body.categoria,
-                    localizacao: body.localizacao
+                    subcategoria: body.subcategoria,
+                    localizacao: body.localizacao,
+                    valorUnitario: parseFloat(body.valorUnitario) || 0,
+                    impostoIPI: parseFloat(body.impostoIPI) || 0,
+                    valorTotal: (parseFloat(body.valorUnitario) || 0) * (parseInt(body.quantidade) || 0) * (1 + (parseFloat(body.impostoIPI) || 0) / 100)
                 },
                 create: {
                     codigo: body.codigo,
                     descricao: body.descricao,
+                    material: body.material || '',
                     quantidade: parseInt(body.quantidade) || 0,
                     minEstoque: parseInt(body.minEstoque) || 0,
                     unidade: body.unidade || 'UN',
                     categoria: body.categoria,
-                    localizacao: body.localizacao
+                    subcategoria: body.subcategoria,
+                    localizacao: body.localizacao,
+                    valorUnitario: parseFloat(body.valorUnitario) || 0,
+                    impostoIPI: parseFloat(body.impostoIPI) || 0,
+                    valorTotal: (parseFloat(body.valorUnitario) || 0) * (parseInt(body.quantidade) || 0) * (1 + (parseFloat(body.impostoIPI) || 0) / 100)
                 }
             })
             try {

@@ -41,12 +41,15 @@ export default defineEventHandler(async (event) => {
         // 3. Atualizar o status de cada peça vinculada aos itens recebidos
         for (const item of itens) {
             let currentPecaId = item.pecaId
-            if (!currentPecaId && item.id) {
+            let currentEstoqueId = item.estoqueId
+
+            if (!currentPecaId && !currentEstoqueId && item.id) {
                 const dbItem = await prisma.compraItem.findUnique({
                     where: { id: item.id },
-                    select: { pecaId: true }
+                    select: { pecaId: true, estoqueId: true }
                 })
                 currentPecaId = dbItem?.pecaId
+                currentEstoqueId = dbItem?.estoqueId
             }
 
             if (currentPecaId) {
@@ -58,6 +61,24 @@ export default defineEventHandler(async (event) => {
                         statusSuprimento: 'RECEBIDO'
                     }
                 })
+            } else if (currentEstoqueId) {
+                const estoqueExistente = await prisma.estoque.findUnique({ where: { id: currentEstoqueId } })
+                if (estoqueExistente) {
+                    const novaQuantidade = estoqueExistente.quantidade + (item.quantidade || 0)
+                    const novoValorUnitario = item.valorUnitario || estoqueExistente.valorUnitario || 0
+                    const novoImpostoIPI = item.aliqIPI || estoqueExistente.impostoIPI || 0
+                    const novoValorTotal = novaQuantidade * novoValorUnitario * (1 + novoImpostoIPI / 100)
+
+                    await prisma.estoque.update({
+                        where: { id: currentEstoqueId },
+                        data: {
+                            quantidade: novaQuantidade,
+                            valorUnitario: novoValorUnitario,
+                            impostoIPI: novoImpostoIPI,
+                            valorTotal: novoValorTotal
+                        }
+                    })
+                }
             }
         }
 

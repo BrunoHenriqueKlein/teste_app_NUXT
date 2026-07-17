@@ -77,6 +77,7 @@ enum MovimentacaoTipo {
 }
 
 enum CompraStatus {
+  RASCUNHO
   SOLICITADA
   COTACAO
   APROVADA
@@ -319,12 +320,18 @@ model Estoque {
   id            Int                   @id @default(autoincrement())
   codigo        String                @unique
   descricao     String
+  material      String?               @default("")
   categoria     String
+  subcategoria  String?
   quantidade    Int                   @default(0)
   unidade       String                @default("UN")
   minEstoque    Int                   @default(0)
   localizacao   String?
+  valorUnitario Float?                @default(0) @map("valor_unitario")
+  impostoIPI    Float?                @default(0) @map("imposto_ipi")
+  valorTotal    Float?                @default(0) @map("valor_total")
   movimentacoes EstoqueMovimentacao[]
+  itensCompra   CompraItem[]
 
   @@map("estoque")
 }
@@ -347,7 +354,8 @@ model EstoqueMovimentacao {
 
 model Compra {
   id                  Int          @id @default(autoincrement())
-  opId                Int
+  opId                Int?
+  isEstoque           Boolean      @default(false) @map("is_estoque")
   osId                Int?         @map("os_id")
   numero              String       @unique
   fornecedor          String
@@ -366,7 +374,7 @@ model Compra {
   tipoFrete           String?      @map("tipo_frete")
   transportadora      String?
   cnpjTransportadora  String?      @map("cnpj_transportadora")
-  op                  OP           @relation(fields: [opId], references: [id], onDelete: Cascade)
+  op                  OP?          @relation(fields: [opId], references: [id], onDelete: Cascade)
   os                  OrdemServico? @relation(fields: [osId], references: [id], onDelete: SetNull)
   fornecedorRef       Fornecedor?  @relation("FornecedorCompra", fields: [fornecedorId], references: [id])
   itens               CompraItem[]
@@ -379,6 +387,7 @@ model CompraItem {
   id            Int    @id @default(autoincrement())
   compraId      Int
   pecaId        Int?
+  estoqueId     Int?   @map("estoque_id")
   descricao     String
   quantidade    Int
   valorUnitario Float
@@ -390,6 +399,7 @@ model CompraItem {
   qtdRecebida   Int    @default(0) @map("qtd_recebida")
   compra        Compra @relation(fields: [compraId], references: [id], onDelete: Cascade)
   peca          Peca?  @relation(fields: [pecaId], references: [id], onDelete: SetNull)
+  estoque       Estoque? @relation(fields: [estoqueId], references: [id], onDelete: SetNull)
 
   @@map("compra_itens")
 }

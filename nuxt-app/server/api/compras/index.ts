@@ -20,7 +20,8 @@ export default defineEventHandler(async (event) => {
                                 include: {
                                     anexos: true
                                 }
-                            }
+                            },
+                            estoque: true
                         }
                     },
                     anexos: true,
@@ -50,8 +51,9 @@ export default defineEventHandler(async (event) => {
             const compra = await prisma.compra.create({
                 data: {
                     numero,
-                    opId: body.opId,
+                    opId: body.opId || null,
                     osId: body.osId,
+                    isEstoque: body.isEstoque || false,
                     fornecedor: body.fornecedor,
                     fornecedorId: Number(body.fornecedorId) || null,
                     status: body.status || 'SOLICITADA',
@@ -66,6 +68,7 @@ export default defineEventHandler(async (event) => {
                             descricao: item.descricao,
                             quantidade: item.quantidade,
                             pecaId: item.pecaId,
+                            estoqueId: item.estoqueId || null,
                             valorUnitario: item.valorUnitario || 0,
                             aliqIPI: item.aliqIPI || 0,
                             aliqICMS: item.aliqICMS || 0,
@@ -152,6 +155,51 @@ export default defineEventHandler(async (event) => {
                 where: { id: Number(id) },
                 include: { itens: true }
             })
+
+            if (data.status === 'CANCELADA') {
+                if (currentCompra && currentCompra.itens) {
+                    for (const item of currentCompra.itens) {
+                        if (item.pecaId) {
+                            await prisma.peca.update({
+                                where: { id: item.pecaId },
+                                data: {
+                                    statusSuprimento: 'PARA_COTACAO',
+                                    status: 'AGUARDANDO',
+                                    fornecedorId: null
+                                }
+                            })
+                        }
+                    }
+                }
+                
+                if (currentCompra && currentCompra.osId) {
+                    await prisma.ordemServico.update({
+                        where: { id: currentCompra.osId },
+                        data: { 
+                            status: 'AGUARDANDO',
+                            fornecedorId: null
+                        }
+                    })
+
+                    await prisma.processoPeca.updateMany({
+                        where: { osId: currentCompra.osId },
+                        data: { 
+                            status: 'AGUARDANDO',
+                            fornecedorId: null
+                        }
+                    })
+                }
+
+                await prisma.compraItem.deleteMany({
+                    where: { compraId: Number(id) }
+                })
+                
+                await prisma.compra.delete({
+                    where: { id: Number(id) }
+                })
+
+                return { success: true, message: 'Requisição excluída permanentemente com sucesso.' }
+            }
 
             if (split && data.splitItemIds && Array.isArray(data.splitItemIds)) {
                 // --- LÓGICA DE SPLIT (Dividir Pedido) ---
@@ -528,6 +576,30 @@ export default defineEventHandler(async (event) => {
                             })
 
                             if (!prontaParaEstoque) totalItensPendentes++
+                        } else if (itemAtualizado.estoqueId) {
+                            // Para itens de estoque, atualizamos a quantidade que chegou nesta parcial
+                            // e também atualizamos o valorUnitario no cadastro do estoque baseado no custoLiquido da OC
+                            const estoqueExistente = await prisma.estoque.findUnique({ where: { id: itemAtualizado.estoqueId } })
+                            if (estoqueExistente) {
+                                const novaQuantidade = estoqueExistente.quantidade + Number(rec.qtdEntregue)
+                                const novoValorUnitario = itemAtualizado.valorUnitario || estoqueExistente.valorUnitario || 0
+                                const novoImpostoIPI = itemAtualizado.aliqIPI || estoqueExistente.impostoIPI || 0
+                                const novoValorTotal = novaQuantidade * novoValorUnitario * (1 + novoImpostoIPI / 100)
+
+                                await prisma.estoque.update({
+                                    where: { id: itemAtualizado.estoqueId },
+                                    data: {
+                                        quantidade: novaQuantidade,
+                                        valorUnitario: novoValorUnitario,
+                                        impostoIPI: novoImpostoIPI,
+                                        valorTotal: novoValorTotal
+                                    }
+                                })
+                            }
+                            
+                            if (itemAtualizado.qtdRecebida < itemAtualizado.quantidade) {
+                                totalItensPendentes++
+                            }
                         }
                     }
                 }

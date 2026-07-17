@@ -68,7 +68,7 @@
       >
         <template v-slot:item.numeroOP="{ item }">
           <div>
-            <div class="font-weight-bold text-primary">#{{ item.numeroOP }}</div>
+            <div class="font-weight-bold text-primary">{{ item.numeroOP }}</div>
             <div class="text-caption text-grey">{{ item.cliente }}</div>
           </div>
         </template>
@@ -132,7 +132,7 @@
     <v-dialog v-model="dialogAtrasos.show" max-width="700px">
       <v-card v-if="dialogAtrasos.op">
         <v-card-title class="bg-orange-darken-3 text-white pa-4">
-          Itens em Atraso - OP #{{ dialogAtrasos.op.numeroOP }}
+          Itens em Atraso - OP {{ dialogAtrasos.op.numeroOP }}
         </v-card-title>
         <v-card-text class="pa-0">
           <v-list lines="two">

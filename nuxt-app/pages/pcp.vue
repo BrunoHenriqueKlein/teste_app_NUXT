@@ -94,7 +94,7 @@
         <template v-slot:item.op="{ item }">
           <div class="d-flex flex-column">
             <div>
-              <span class="text-primary font-weight-bold">#{{ item.op.numeroOP }}</span>
+              <span class="text-primary font-weight-bold">{{ item.op.numeroOP }}</span>
               <span class="text-secondary font-weight-bold ml-2">[{{ item.op.codigoMaquina }}]</span>
             </div>
             <div class="font-weight-medium">{{ item.op.descricaoMaquina }}</div>
@@ -340,7 +340,7 @@
               </div>
               <div class="text-right">
                 <div class="font-weight-bold">
-                  OP: #{{ dialogOS.data?.op?.numeroOP }} 
+                  OP: {{ dialogOS.data?.op?.numeroOP }} 
                   <span class="ml-1">[{{ dialogOS.data?.op?.codigoMaquina }}]</span>
                 </div>
                 <div class="text-h6">{{ dialogOS.data?.op?.descricaoMaquina }}</div>

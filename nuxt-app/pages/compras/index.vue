@@ -57,15 +57,17 @@
 
       <v-col cols="12" md="4">
         <v-card 
+          link 
+          to="/compras/cotacoes-estoque" 
           variant="outlined" 
-          class="pa-4 d-flex align-center grey lighten-4" 
+          class="pa-4 d-flex align-center" 
           height="120"
-          style="opacity: 0.7"
+          hover
         >
-          <v-icon size="40" color="orange" class="mr-4">mdi-store-alert</v-icon>
+          <v-icon size="40" color="orange" class="mr-4">mdi-warehouse</v-icon>
           <div>
-            <div class="text-h6 text-grey-darken-2">Gestão de Estoque</div>
-            <div class="text-body-2 text-grey">Em breve: Reposição automática</div>
+            <div class="text-h6">Cotações de Estoque</div>
+            <div class="text-body-2 text-grey">Orçamentos p/ Reposição</div>
           </div>
         </v-card>
       </v-col>
@@ -103,8 +105,14 @@
             :loading="loading"
             hover
           >
+            <template v-slot:item.numero="{ item }">
+              <span class="font-weight-bold text-deep-purple-darken-2">{{ item.numero }}</span>
+            </template>
             <template v-slot:item.op="{ item }">
-              <span class="text-primary font-weight-bold">#{{ item.op?.numeroOP }}</span>
+              <span v-if="item.isEstoque" class="text-orange font-weight-bold">
+                <v-icon size="small" class="mr-1">mdi-warehouse</v-icon> ESTOQUE
+              </span>
+              <span v-else class="text-primary font-weight-bold">{{ item.op?.numeroOP || 'S/ OP' }}</span>
             </template>
             <template v-slot:item.os="{ item }">
               <div v-if="item.os">
@@ -151,7 +159,15 @@
               <div class="font-weight-bold">{{ item.numero }}</div>
             </template>
             <template v-slot:item.op="{ item }">
-              <span class="text-primary font-weight-bold">#{{ item.op?.numeroOP }}</span>
+              <span v-if="item.isEstoque" class="text-orange font-weight-bold">
+                <v-icon size="small" class="mr-1">mdi-warehouse</v-icon> ESTOQUE
+              </span>
+              <span v-else class="text-primary font-weight-bold">{{ item.op?.numeroOP || 'S/ OP' }}</span>
+            </template>
+            <template v-slot:item.emissao="{ item }">
+              <div class="text-grey-darken-2 font-weight-medium">
+                {{ item.dataCompra ? formatDate(item.dataCompra) : (item.dataSolicitacao ? formatDate(item.dataSolicitacao) : '-') }}
+              </div>
             </template>
             <template v-slot:item.previsao="{ item }">
               <div v-if="item.dataPrevisaoEntrega" class="d-flex flex-column align-start">
@@ -229,7 +245,15 @@
               <div class="font-weight-bold">{{ item.numero }}</div>
             </template>
             <template v-slot:item.op="{ item }">
-              <span class="text-primary font-weight-bold">#{{ item.op?.numeroOP }}</span>
+              <span v-if="item.isEstoque" class="text-orange font-weight-bold">
+                <v-icon size="small" class="mr-1">mdi-warehouse</v-icon> ESTOQUE
+              </span>
+              <span v-else class="text-primary font-weight-bold">{{ item.op?.numeroOP || 'S/ OP' }}</span>
+            </template>
+            <template v-slot:item.emissao="{ item }">
+              <div class="text-grey-darken-2 font-weight-medium">
+                {{ item.dataCompra ? formatDate(item.dataCompra) : (item.dataSolicitacao ? formatDate(item.dataSolicitacao) : '-') }}
+              </div>
             </template>
             <template v-slot:item.datasEntrega="{ item }">
               <div class="d-flex flex-column align-start">
@@ -315,7 +339,14 @@
         <v-card-title class="bg-primary text-white d-flex justify-space-between align-center pa-4">
           <div>
             <div class="text-h6">Requisição {{ dialogDetalhes.requisicao.numero }}</div>
-            <div class="text-subtitle-2">OP #{{ dialogDetalhes.requisicao.op?.numeroOP }} - {{ dialogDetalhes.requisicao.op?.cliente }}</div>
+            <div class="text-subtitle-2">
+              <template v-if="dialogDetalhes.requisicao.isEstoque">
+                <v-icon size="small" class="mr-1">mdi-warehouse</v-icon> ESTOQUE
+              </template>
+              <template v-else>
+                OP {{ dialogDetalhes.requisicao.op?.numeroOP }} - {{ dialogDetalhes.requisicao.op?.cliente }}
+              </template>
+            </div>
           </div>
           <v-chip color="white" variant="flat" size="small">
             {{ (dialogDetalhes.requisicao.fornecedor || '').replace('REQ_', '') }}
@@ -410,6 +441,7 @@
                     hide-details
                     style="min-width: 120px;"
                   ></v-text-field>
+                  <div v-else-if="item.estoque" class="font-weight-bold">{{ item.estoque.codigo }}</div>
                   <div v-else class="font-weight-bold">-</div>
                 </td>
                 <td>
@@ -425,7 +457,7 @@
                   <div class="text-caption">{{ item.etapaProcesso || '-' }}</div>
                 </td>
                 <td class="text-center">
-                  <div class="text-caption">{{ item.peca?.material || '-' }}</div>
+                  <div class="text-caption">{{ item.peca?.material || item.estoque?.material || '-' }}</div>
                 </td>
                 <td class="text-center">
                   <v-text-field
@@ -652,7 +684,7 @@
                         </tr>
                         <tr>
                             <td style="padding: 5px; border-bottom: 1px solid #000; border-right: 1px solid #000; font-weight: bold;">EMISSÃO:</td>
-                            <td style="padding: 5px; border-bottom: 1px solid #000; text-align: right;">{{ new Date().toLocaleDateString('pt-BR') }}</td>
+                            <td style="padding: 5px; border-bottom: 1px solid #000; text-align: right;">{{ printData.dataCompra ? new Date(printData.dataCompra).toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR') }}</td>
                         </tr>
                         <tr>
                             <td style="padding: 5px; border-bottom: 1px solid #000; border-right: 1px solid #000; font-weight: bold;">FORMA DE PAGAMENTO:</td>
@@ -711,12 +743,12 @@
                 <td style="padding: 2px; border: 1px solid #000; font-size: 9px;">(%) IPI</td>
             </tr>
             <tr v-for="item in chunk" :key="item.id">
-                <td style="padding: 5px; border: 1px solid #000;">{{ item.peca?.codigo || '-' }}</td>
-                <td style="padding: 5px; border: 1px solid #000;">{{ item.peca?.descricao || (item.descricao.includes(' - Peça: ') ? item.descricao.split(' - Peça: ')[1] : item.descricao) }}</td>
+                <td style="padding: 5px; border: 1px solid #000;">{{ item.peca?.codigo || item.estoque?.codigo || '-' }}</td>
+                <td style="padding: 5px; border: 1px solid #000;">{{ item.peca?.descricao || item.estoque?.descricao || (item.descricao.includes(' - Peça: ') ? item.descricao.split(' - Peça: ')[1] : item.descricao) }}</td>
                 <td style="padding: 5px; border: 1px solid #000;">{{ item.etapaProcesso || '-' }}</td>
-                <td style="padding: 5px; border: 1px solid #000; text-align: center;">{{ item.peca?.material || '-' }}</td>
+                <td style="padding: 5px; border: 1px solid #000; text-align: center;">{{ item.peca?.material || item.estoque?.material || '-' }}</td>
                 <td style="padding: 5px; border: 1px solid #000; text-align: center;">{{ item.quantidade }}</td>
-                <td style="padding: 5px; border: 1px solid #000; text-align: center;">PÇ</td>
+                <td style="padding: 5px; border: 1px solid #000; text-align: center;">{{ item.estoque?.unidade || 'PÇ' }}</td>
                 <td style="padding: 5px; border: 1px solid #000; text-align: right;">{{ formatCurrency(item.valorUnitario) }}</td>
                 <td style="padding: 5px; border: 1px solid #000; text-align: center;">{{ item.aliqICMS || 0 }}%</td>
                 <td style="padding: 5px; border: 1px solid #000; text-align: center;">{{ item.aliqIPI || 0 }}%</td>
@@ -921,11 +953,11 @@
             <tbody>
               <tr v-for="item in dialogRecebimento.data.itens" :key="item.id">
                 <td>
-                  <div class="font-weight-bold" style="word-break: break-word;">{{ item.peca?.codigo || '-' }}</div>
+                  <div class="font-weight-bold" style="word-break: break-word;">{{ item.peca?.codigo || item.estoque?.codigo || '-' }}</div>
                 </td>
                 <td>
                   <div class="text-caption" style="white-space: normal; line-height: 1.2;">
-                    {{ item.peca?.descricao || (item.descricao.includes(' - Peça: ') ? item.descricao.split(' - Peça: ')[1] : item.descricao) }}
+                    {{ item.peca?.descricao || item.estoque?.descricao || (item.descricao.includes(' - Peça: ') ? item.descricao.split(' - Peça: ')[1] : item.descricao) }}
                   </div>
                 </td>
                 <td class="text-center">{{ item.quantidade }}</td>
@@ -1155,7 +1187,8 @@ const headersDemandas = [
 ]
 
 const headersRequisicoes = [
-  { title: 'Data', key: 'dataSolicitacao', formatter: formatDate },
+  // { title: 'Data', key: 'dataSolicitacao', formatter: formatDate },
+  { title: 'Requisição', key: 'numero', align: 'center', minWidth: '100px' },
   { title: 'OP / Cliente', key: 'op' },
   { title: 'OS / Máquina', key: 'os' },
   { title: 'Processo / Tipo', key: 'tipo', align: 'center' },
@@ -1168,6 +1201,7 @@ const headersPedidos = [
   { title: 'Pedido', key: 'numero' },
   { title: 'OP', key: 'op' },
   { title: 'Fornecedor', key: 'fornecedor' },
+  { title: 'Emissão', key: 'emissao' },
   { title: 'Previsão de Entrega', key: 'previsao' },
   { title: 'Status', key: 'status' },
   { title: 'Itens', key: '_count.itens', align: 'center' },
@@ -1178,6 +1212,7 @@ const headersFinalizadas = [
   { title: 'Pedido', key: 'numero' },
   { title: 'OP', key: 'op' },
   { title: 'Fornecedor', key: 'fornecedor' },
+  { title: 'Emissão', key: 'emissao' },
   { title: 'Prazos / Recebimento', key: 'datasEntrega' },
   { title: 'Status', key: 'status' },
   { title: 'NF', key: 'numeroNF' },
