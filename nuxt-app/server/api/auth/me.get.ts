@@ -1,7 +1,5 @@
-import { PrismaClient } from '@prisma/client'
-const prisma = new PrismaClient()
-
 export default defineEventHandler(async (event) => {
+  const prisma = event.context.prisma
     const userContext = event.context.user
 
     if (!userContext || !userContext.id) {

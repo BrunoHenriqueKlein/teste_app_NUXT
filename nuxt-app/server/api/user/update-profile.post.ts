@@ -1,9 +1,7 @@
-import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 
-const prisma = new PrismaClient()
-
 export default defineEventHandler(async (event) => {
+  const prisma = event.context.prisma
     const body = await readBody(event)
     const { name, currentPassword, newPassword } = body
 

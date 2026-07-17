@@ -1,8 +1,5 @@
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
-
 export default defineEventHandler(async (event) => {
+  const prisma = event.context.prisma
   try {
     const users = await prisma.user.findMany({
       where: { isActive: true },

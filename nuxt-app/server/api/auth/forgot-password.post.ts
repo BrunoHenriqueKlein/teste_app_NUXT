@@ -1,10 +1,8 @@
 // server/api/auth/forgot-password.post.ts
-import { PrismaClient } from '@prisma/client'
 import { createTransport } from 'nodemailer'
 
-const prisma = new PrismaClient()
-
 export default defineEventHandler(async (event) => {
+  const prisma = event.context.prisma
   const body = await readBody(event)
 
   try {

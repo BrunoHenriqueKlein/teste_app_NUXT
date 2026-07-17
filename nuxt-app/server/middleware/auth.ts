@@ -1,7 +1,14 @@
 import { defineEventHandler, createError, getHeader } from 'h3'
 import jwt from 'jsonwebtoken'
 
-const jwtSecret = process.env.JWT_SECRET || 'your-secret-key-change-in-production'
+const rawSecret = process.env.JWT_SECRET
+
+if (process.env.NODE_ENV === 'production' && (!rawSecret || rawSecret === 'your-secret-key-change-in-production')) {
+  console.error('❌ FATAL: JWT_SECRET não configurado ou inseguro em produção!')
+  throw new Error('JWT_SECRET não configurado ou inseguro em produção!')
+}
+
+const jwtSecret = rawSecret || 'your-secret-key-change-in-production'
 
 export default defineEventHandler(async (event) => {
     const authHeader = getHeader(event, 'Authorization')

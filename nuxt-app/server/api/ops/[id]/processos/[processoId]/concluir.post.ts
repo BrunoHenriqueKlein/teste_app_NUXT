@@ -1,10 +1,8 @@
 import { defineEventHandler, createError, getRouterParam } from 'h3'
-import { PrismaClient } from '@prisma/client'
 import { updateOPStatus } from '../../../../../utils/opStatus'
 
-const prisma = new PrismaClient()
-
 export default defineEventHandler(async (event) => {
+  const prisma = event.context.prisma
     try {
         const opId = getRouterParam(event, 'id')
         const processoId = getRouterParam(event, 'processoId')

@@ -17,8 +17,11 @@ RUN npm install
 # FINALMENTE copiar o restante da aplicação
 COPY nuxt-app/ .
 
+# Gerar o build de produção
+RUN npm run build
+
 # Expor a porta
 EXPOSE 3000
 
-# Comando para iniciar a aplicação
-CMD ["sh", "-c", "npx prisma db push --accept-data-loss && npx tsx prisma/seed.ts && npm run dev"]
+# Comando seguro de inicialização em produção
+CMD ["sh", "-c", "npx prisma migrate deploy && npx tsx prisma/seed.ts && node .output/server/index.mjs"]

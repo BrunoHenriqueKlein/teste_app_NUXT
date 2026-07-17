@@ -1,11 +1,9 @@
 import { defineEventHandler } from 'h3'
-import { PrismaClient } from '@prisma/client'
 import fs from 'fs'
 import path from 'path'
 
-const prisma = new PrismaClient()
-
 export default defineEventHandler(async (event) => {
+  const prisma = event.context.prisma
     const compraId = parseInt(event.context.params?.id as string)
     const anexoId = parseInt(event.context.params?.anexoId as string)
 

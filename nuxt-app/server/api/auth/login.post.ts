@@ -1,12 +1,18 @@
 // server/api/auth/login.post.ts (adicione logs)
-import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 
-const prisma = new PrismaClient()
-const jwtSecret = process.env.JWT_SECRET || 'your-secret-key-change-in-production'
+const rawSecret = process.env.JWT_SECRET
+
+if (process.env.NODE_ENV === 'production' && (!rawSecret || rawSecret === 'your-secret-key-change-in-production')) {
+  console.error('❌ FATAL: JWT_SECRET não configurado ou inseguro em produção!')
+  throw new Error('JWT_SECRET não configurado ou inseguro em produção!')
+}
+
+const jwtSecret = rawSecret || 'your-secret-key-change-in-production'
 
 export default defineEventHandler(async (event) => {
+  const prisma = event.context.prisma
   const body = await readBody(event)
 
   console.log('🔐 Tentativa de login:', body.email)

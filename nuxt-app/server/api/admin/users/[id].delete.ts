@@ -1,9 +1,6 @@
 import { defineEventHandler, createError } from 'h3'
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
-
 export default defineEventHandler(async (event) => {
+  const prisma = event.context.prisma
     const id = Number(event.context.params?.id)
 
     if (!id || isNaN(id)) {

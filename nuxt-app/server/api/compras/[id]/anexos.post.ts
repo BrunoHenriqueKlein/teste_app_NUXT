@@ -1,10 +1,7 @@
 import fs from 'fs'
 import path from 'path'
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
-
 export default defineEventHandler(async (event) => {
+  const prisma = event.context.prisma
     const compraId = parseInt(event.context.params?.id as string)
 
     if (isNaN(compraId)) {

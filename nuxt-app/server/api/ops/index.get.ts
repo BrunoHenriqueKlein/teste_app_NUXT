@@ -1,9 +1,6 @@
 import { defineEventHandler, getQuery, createError } from 'h3'
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
-
 export default defineEventHandler(async (event) => {
+  const prisma = event.context.prisma
   try {
     const query = getQuery(event)
     const { status, search, atrasada, dataInicio, dataFim, sortBy, sortOrder } = query
