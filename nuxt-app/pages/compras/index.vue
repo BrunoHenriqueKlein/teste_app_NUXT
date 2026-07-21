@@ -269,8 +269,8 @@
               </div>
             </template>
             <template v-slot:item.status="{ item }">
-              <v-chip color="success" size="small" variant="tonal">
-                RECEBIDA
+              <v-chip :color="getStatusColor(item.status)" size="small" variant="tonal">
+                {{ item.status }}
               </v-chip>
             </template>
             <template v-slot:item.acoes_oc="{ item }">

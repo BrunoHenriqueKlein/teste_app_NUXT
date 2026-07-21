@@ -372,6 +372,30 @@ export default defineEventHandler(async (event) => {
             }
 
             if (data.itens && Array.isArray(data.itens)) {
+                // Identifica itens deletados no frontend (existiam no banco, mas não vieram no PUT)
+                if (currentCompra && currentCompra.itens) {
+                    const incomingIds = data.itens.map((i: any) => Number(i.id)).filter((id: number) => !isNaN(id) && id > 0)
+                    const itemsToDelete = currentCompra.itens.filter(i => !incomingIds.includes(i.id))
+
+                    if (itemsToDelete.length > 0) {
+                        for (const item of itemsToDelete) {
+                            if (item.pecaId) {
+                                await prisma.peca.update({
+                                    where: { id: item.pecaId },
+                                    data: {
+                                        statusSuprimento: 'PARA_COTACAO',
+                                        status: 'AGUARDANDO',
+                                        fornecedorId: null
+                                    }
+                                })
+                            }
+                        }
+                        await prisma.compraItem.deleteMany({
+                            where: { id: { in: itemsToDelete.map(i => i.id) } }
+                        })
+                    }
+                }
+
                 for (const item of data.itens) {
                     if (item.id) {
                         const updatedItem = await prisma.compraItem.update({
