@@ -17,7 +17,11 @@ export default defineEventHandler(async (event) => {
             include: {
                 pecas: {
                     include: {
-                        compras: true,
+                        compras: {
+                            include: {
+                                compra: true
+                            }
+                        },
                         processos: true
                     }
                 }
@@ -40,39 +44,8 @@ export default defineEventHandler(async (event) => {
         let totalICMSServicos = 0
 
         for (const peca of op.pecas) {
-            // 1. Custos de Materiais (via itens de compra vinculados ou estimado da engenharia)
-            let custoCompraDaPeca = 0
-            let ipiCompraDaPeca = 0
-            let icmsCompraDaPeca = 0
-            let temCompraValida = false
-
-            if (peca.compras && peca.compras.length > 0) {
-                for (const itemCompra of peca.compras) {
-                    if (itemCompra.valorUnitario > 0) {
-                        temCompraValida = true
-                        const ipiAbsoluto = itemCompra.valorIPI || 0
-                        const icmsAbsoluto = itemCompra.valorICMS || 0
-                        custoCompraDaPeca += (itemCompra.valorUnitario * itemCompra.quantidade) + ipiAbsoluto + icmsAbsoluto
-                        ipiCompraDaPeca += ipiAbsoluto
-                        icmsCompraDaPeca += icmsAbsoluto
-                    }
-                }
-            }
-
-            if (temCompraValida) {
-                custoBrutoMateriais += custoCompraDaPeca
-                totalIPIMateriais += ipiCompraDaPeca
-                totalICMSMateriais += icmsCompraDaPeca
-            } else if (peca.categoria === 'COMERCIAL' && peca.valorUnitario) {
-                const ipiAbsoluto = peca.valorUnitario * ((peca.valorIPI || 0) / 100)
-                const icmsAbsoluto = peca.valorUnitario * ((peca.valorICMS || 0) / 100)
-                const subtotal = (peca.valorUnitario + ipiAbsoluto + icmsAbsoluto) * peca.quantidade
-                custoBrutoMateriais += subtotal
-                totalIPIMateriais += ipiAbsoluto * peca.quantidade
-                totalICMSMateriais += icmsAbsoluto * peca.quantidade
-            }
-
-            // 2. Custos de Serviços (via processos da peça)
+            let custoServicoDestaPeca = 0
+            // 1. Custos de Serviços (via processos da peça)
             for (const processo of peca.processos) {
                 if (processo.valorCusto) {
                     const ipiAbsoluto = processo.valorCusto * ((processo.valorIPI || 0) / 100)
@@ -82,7 +55,45 @@ export default defineEventHandler(async (event) => {
                     custoBrutoServicos += subtotalServico
                     totalIPIServicos += ipiAbsoluto * peca.quantidade
                     totalICMSServicos += icmsAbsoluto * peca.quantidade
+                    
+                    custoServicoDestaPeca += subtotalServico
                 }
+            }
+
+            // 2. Custos de Materiais (via última compra vinculada ou estimado da engenharia)
+            let ultimaCompraMaterial = null
+            if (peca.compras && peca.compras.length > 0) {
+                // Pegar apenas compras que não são de O.S e têm valor
+                const comprasMaterial = peca.compras.filter((c: any) => !c.compra?.osId && c.valorUnitario > 0)
+                if (comprasMaterial.length > 0) {
+                    ultimaCompraMaterial = comprasMaterial[comprasMaterial.length - 1] // A mais recente
+                }
+            }
+
+            if (ultimaCompraMaterial) {
+                // Usa a peca.quantidade (BOM) e não a quantidade comprada (estoque)
+                const ipiAbsoluto = ultimaCompraMaterial.valorUnitario * ((ultimaCompraMaterial.aliqIPI || 0) / 100)
+                const icmsAbsoluto = ultimaCompraMaterial.valorUnitario * ((ultimaCompraMaterial.aliqICMS || 0) / 100)
+                const subtotalMaterial = (ultimaCompraMaterial.valorUnitario + ipiAbsoluto + icmsAbsoluto) * peca.quantidade
+
+                custoBrutoMateriais += subtotalMaterial
+                totalIPIMateriais += ipiAbsoluto * peca.quantidade
+                totalICMSMateriais += icmsAbsoluto * peca.quantidade
+            } else if (peca.valorUnitario && peca.categoria === 'COMERCIAL') {
+                const ipiAbsoluto = peca.valorUnitario * ((peca.valorIPI || 0) / 100)
+                const icmsAbsoluto = peca.valorUnitario * ((peca.valorICMS || 0) / 100)
+                const subtotal = (peca.valorUnitario + ipiAbsoluto + icmsAbsoluto) * peca.quantidade
+                custoBrutoMateriais += subtotal
+                totalIPIMateriais += ipiAbsoluto * peca.quantidade
+                totalICMSMateriais += icmsAbsoluto * peca.quantidade
+            } else if (peca.valorUnitario && peca.categoria === 'FABRICADO' && custoServicoDestaPeca === 0) {
+                // Material de fabricação própria sem serviço terceirizado ainda
+                const ipiAbsoluto = peca.valorUnitario * ((peca.valorIPI || 0) / 100)
+                const icmsAbsoluto = peca.valorUnitario * ((peca.valorICMS || 0) / 100)
+                const subtotal = (peca.valorUnitario + ipiAbsoluto + icmsAbsoluto) * peca.quantidade
+                custoBrutoMateriais += subtotal
+                totalIPIMateriais += ipiAbsoluto * peca.quantidade
+                totalICMSMateriais += icmsAbsoluto * peca.quantidade
             }
         }
 
