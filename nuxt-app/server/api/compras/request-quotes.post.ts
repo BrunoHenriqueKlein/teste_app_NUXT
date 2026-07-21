@@ -273,8 +273,9 @@ export default defineEventHandler(async (event) => {
             const statusCompra = directPurchase ? 'SOLICITADA' : 'COTACAO'
             const fornecedorName = directPurchase ? 'Compra Direta / Mercado Livre' : 'Múltiplos / Cotação'
             
-            const count = await prisma.compra.count()
-            const numero = `REQ-${(count + 1).toString().padStart(4, '0')}`
+            const ultimaCompra = await prisma.compra.findFirst({ orderBy: { id: 'desc' } })
+            const nextNumber = (ultimaCompra?.id || 0) + 1
+            const numero = `REQ-${nextNumber.toString().padStart(4, '0')}`
 
             // Determina a OP e OS principais (pega da primeira peça para ter referência)
             const pecaBase = pecas.find(p => p.opId)

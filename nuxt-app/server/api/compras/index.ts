@@ -45,9 +45,9 @@ export default defineEventHandler(async (event) => {
     if (method === 'POST') {
         const body = await readBody(event)
         try {
-            const count = await prisma.compra.count()
-            // Se já vier com número (ex: de uma REQ), mantém. Se não, gera um REQ temporário.
-            const numero = body.numero || `REQ-${(count + 1).toString().padStart(4, '0')}`
+            const ultimaCompra = await prisma.compra.findFirst({ orderBy: { id: 'desc' } })
+            const nextNumber = (ultimaCompra?.id || 0) + 1
+            const numero = body.numero || `REQ-${nextNumber.toString().padStart(4, '0')}`
 
             const compra = await prisma.compra.create({
                 data: {
@@ -93,7 +93,11 @@ export default defineEventHandler(async (event) => {
                     })
                     await prisma.processoPeca.updateMany({
                         where: { osId: compra.osId },
-                        data: { status: 'EM_ANDAMENTO', fornecedorId }
+                        data: { fornecedorId }
+                    })
+                    await prisma.processoPeca.updateMany({
+                        where: { osId: compra.osId, sequencia: 1 },
+                        data: { status: 'EM_ANDAMENTO' }
                     })
                 }
 
@@ -468,8 +472,13 @@ export default defineEventHandler(async (event) => {
                     await prisma.processoPeca.updateMany({
                         where: { osId: updatedCompra.osId },
                         data: {
-                            status: 'EM_ANDAMENTO',
                             fornecedorId: fornecedorId
+                        }
+                    })
+                    await prisma.processoPeca.updateMany({
+                        where: { osId: updatedCompra.osId, sequencia: 1 },
+                        data: {
+                            status: 'EM_ANDAMENTO'
                         }
                     })
 

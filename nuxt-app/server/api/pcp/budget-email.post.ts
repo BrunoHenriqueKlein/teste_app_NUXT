@@ -167,8 +167,9 @@ export default defineEventHandler(async (event) => {
         })
 
         if (!targetCompra) {
-            const count = await prisma.compra.count()
-            const numeroReq = `REQ-OS-${os.numero.split('-').pop()}-${(count + 1).toString().padStart(3, '0')}`
+            const ultimaCompra = await prisma.compra.findFirst({ orderBy: { id: 'desc' } })
+            const nextNumber = (ultimaCompra?.id || 0) + 1
+            const numeroReq = `REQ-OS-${os.numero.split('-').pop()}-${nextNumber.toString().padStart(3, '0')}`
 
             targetCompra = await prisma.compra.create({
                 data: {

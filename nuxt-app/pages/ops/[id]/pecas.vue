@@ -319,7 +319,7 @@
             variant="flat"
             class="text-uppercase"
           >
-            {{ item.status.replace('_', ' ') }}
+            {{ item.status === 'EM_ESTOQUE' ? 'FINALIZADA' : item.status.replace('_', ' ') }}
           </v-chip>
         </template>
 
@@ -409,26 +409,38 @@
         </template>
 
         <template v-slot:item.processos="{ item }">
-          <div class="d-flex justify-center">
+          <div class="d-flex justify-center align-center h-100 w-100">
+            <div 
+              v-if="item.processos && item.processos.length > 0" 
+              class="d-flex flex-column align-center justify-center pa-2 rounded hover-bg" 
+              @click="openProcessos(item)" 
+              style="cursor: pointer; min-width: 120px;"
+            >
+              <v-chip :color="getEtapaColor(item.processos)" size="x-small" variant="flat" class="mb-1 font-weight-bold">
+                {{ getEtapaAtiva(item.processos) }}
+              </v-chip>
+              <div class="d-flex align-center w-100" style="gap: 4px;">
+                <v-progress-linear 
+                  :model-value="getProgressoProcessos(item.processos)"
+                  :color="getProgressoProcessos(item.processos) === 100 ? 'success' : 'primary'"
+                  height="6"
+                  rounded
+                ></v-progress-linear>
+                <span class="text-caption font-weight-bold" style="font-size: 10px;">
+                  {{ item.processos.filter(p => p.status === 'CONCLUIDO').length }}/{{ item.processos.length }}
+                </span>
+              </div>
+            </div>
+            
             <v-btn
-              v-if="hasPermission('Peças', 'canEdit')"
-              icon="mdi-format-list-bulleted-type"
+              v-else-if="hasPermission('Peças', 'canEdit')"
+              icon="mdi-plus"
               variant="tonal"
               size="small"
-              color="primary"
-              title="Gerenciar Processos"
+              color="grey"
+              title="Criar Roteiro"
               @click="openProcessos(item)"
-            >
-              <v-badge
-                v-if="item._count?.processos"
-                color="error"
-                :content="item._count.processos"
-                floating
-              >
-                <v-icon icon="mdi-format-list-bulleted-type"></v-icon>
-              </v-badge>
-              <v-icon v-else icon="mdi-format-list-bulleted-type"></v-icon>
-            </v-btn>
+            ></v-btn>
           </div>
         </template>
 
@@ -759,35 +771,67 @@
                         :prefix="`${index + 1}. `"
                       ></v-combobox>
                     </v-col>
-                    <v-col cols="12" md="2">
-                      <v-select
-                        v-model="proc.status"
-                        :items="[
-                          { title: 'Não Iniciado', value: 'NAO_INICIADO' },
-                          { title: 'Em Andamento', value: 'EM_ANDAMENTO' },
-                          { title: 'Concluído', value: 'CONCLUIDO' }
-                        ]"
-                        label="Status"
-                        variant="outlined"
-                        density="compact"
-                      >
-                        <template v-slot:selection="{ item }">
-                          <v-chip :color="getStatusColor(item.value)" size="x-small" label variant="flat" class="text-white">
-                            {{ item.title }}
-                          </v-chip>
-                        </template>
-                      </v-select>
+                    <v-col cols="12" md="3" class="d-flex align-center justify-center">
+                      <div class="d-flex flex-column align-center w-100">
+                        <div class="text-caption mb-1">Status da Etapa</div>
+                        
+                        <v-btn
+                          v-if="proc.status === 'NAO_INICIADO'"
+                          color="primary"
+                          variant="tonal"
+                          size="small"
+                          prepend-icon="mdi-truck-fast"
+                          @click="proc.status = 'EM_ANDAMENTO'"
+                          class="w-100"
+                        >
+                          Despachar / Iniciar
+                        </v-btn>
+
+                        <v-btn
+                          v-else-if="proc.status === 'EM_ANDAMENTO'"
+                          color="warning"
+                          variant="elevated"
+                          size="small"
+                          prepend-icon="mdi-package-down"
+                          @click="proc.status = 'CONCLUIDO'"
+                          class="w-100 font-weight-bold"
+                        >
+                          Registrar Retorno
+                        </v-btn>
+
+                        <v-chip
+                          v-else-if="proc.status === 'CONCLUIDO'"
+                          color="success"
+                          variant="flat"
+                          prepend-icon="mdi-check-circle"
+                          class="w-100 justify-center font-weight-bold"
+                        >
+                          Concluído
+                        </v-chip>
+                        
+                        <!-- Permite desfazer clicando num botão pequeno caso tenha errado -->
+                        <v-btn
+                          v-if="proc.status !== 'NAO_INICIADO'"
+                          variant="text"
+                          size="x-small"
+                          color="grey"
+                          class="mt-1"
+                          @click="proc.status = 'NAO_INICIADO'"
+                        >
+                          Desfazer Status
+                        </v-btn>
+                      </div>
                     </v-col>
-                    <v-col cols="12" md="3">
+                    <v-col cols="12" md="2">
                       <v-select
                         v-model="proc.fornecedorId"
                         :items="fornecedores"
                         item-title="nome"
                         item-value="id"
-                        label="Responsável / Fornecedor"
+                        label="Fornecedor/Responsável"
                         variant="outlined"
                         density="compact"
-                        placeholder="Setor interno ou Terceiro"
+                        placeholder="Quem faz?"
                         clearable
                       >
                       </v-select>
@@ -1519,6 +1563,42 @@ const truncateName = (name) => {
 
 const showSnackbar = (text, color = 'success') => {
   snackbar.value = { show: true, text, color }
+}
+
+const getEtapaAtiva = (processos) => {
+  if (!processos || processos.length === 0) return 'Sem roteiro'
+  
+  // Ordena por sequencia
+  const ordenados = [...processos].sort((a, b) => a.sequencia - b.sequencia)
+  
+  // 1. Procura o que está em andamento
+  const emAndamento = ordenados.find(p => p.status === 'EM_ANDAMENTO')
+  if (emAndamento) return `${emAndamento.sequencia}. ${emAndamento.nome}`
+
+  // 2. Se tudo concluído
+  const todosConcluidos = ordenados.every(p => p.status === 'CONCLUIDO')
+  if (todosConcluidos) return 'Finalizado'
+
+  // 3. Procura o próximo a ser iniciado (o primeiro não iniciado)
+  const proximo = ordenados.find(p => p.status === 'NAO_INICIADO')
+  if (proximo) return `Aguardando ${proximo.sequencia}. ${proximo.nome}`
+
+  return 'Pendente'
+}
+
+const getEtapaColor = (processos) => {
+  if (!processos || processos.length === 0) return 'grey'
+  const ordenados = [...processos].sort((a, b) => a.sequencia - b.sequencia)
+  
+  if (ordenados.every(p => p.status === 'CONCLUIDO')) return 'success'
+  if (ordenados.some(p => p.status === 'EM_ANDAMENTO')) return 'warning'
+  return 'primary'
+}
+
+const getProgressoProcessos = (processos) => {
+  if (!processos || processos.length === 0) return 0
+  const concluidos = processos.filter(p => p.status === 'CONCLUIDO').length
+  return Math.round((concluidos / processos.length) * 100)
 }
 
 onMounted(() => {
