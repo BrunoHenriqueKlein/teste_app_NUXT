@@ -38,6 +38,22 @@ export default defineEventHandler(async (event) => {
             })
         }
 
+        // 1.5 Buscar item no estoque para auto-completar dados se existir
+        const itemEstoque = await prisma.estoque.findUnique({
+            where: { codigo: peca.codigo }
+        })
+
+        const descFinal = peca.descricao || (itemEstoque ? itemEstoque.descricao : '') || ''
+        const matFinal = peca.material || (itemEstoque ? itemEstoque.material : '') || ''
+        const catRaw = peca.categoria || (itemEstoque ? itemEstoque.categoria : '') || 'FABRICADO'
+        const catFinal = (String(catRaw).toUpperCase() === 'COMERCIAL' || String(catRaw).toUpperCase() === 'COMPRADO') ? 'COMERCIAL' : 'FABRICADO'
+        const subcatFinal = peca.subcategoria || (itemEstoque ? itemEstoque.subcategoria : '') || ''
+        
+        const valUnit = (itemEstoque?.valorUnitario) ? itemEstoque.valorUnitario : null
+        const valIPI = (itemEstoque?.impostoIPI) ? itemEstoque.impostoIPI : null
+        const valUnitComImposto = valUnit ? (valUnit + (valUnit * (valIPI || 0) / 100)) : null
+        const qtdFinal = peca.quantidade || 1
+
         // 2. Upsert da Peça
         const pecaCriada = await prisma.peca.upsert({
             where: {
@@ -47,20 +63,26 @@ export default defineEventHandler(async (event) => {
                 }
             },
             update: {
-                descricao: peca.descricao || '',
-                material: peca.material || '',
-                quantidade: peca.quantidade || 1,
-                categoria: peca.categoria || 'FABRICADO',
-                subcategoria: peca.subcategoria || ''
+                descricao: descFinal,
+                material: matFinal,
+                quantidade: qtdFinal,
+                categoria: catFinal,
+                subcategoria: subcatFinal,
+                valorUnitario: valUnit,
+                valorIPI: valIPI,
+                custoTotal: valUnitComImposto ? valUnitComImposto * qtdFinal : undefined
             },
             create: {
                 opId: op.id,
                 codigo: peca.codigo,
-                descricao: peca.descricao || '',
-                material: peca.material || '',
-                quantidade: peca.quantidade || 1,
-                categoria: peca.categoria || 'FABRICADO',
-                subcategoria: peca.subcategoria || '',
+                descricao: descFinal,
+                material: matFinal,
+                quantidade: qtdFinal,
+                categoria: catFinal,
+                subcategoria: subcatFinal,
+                valorUnitario: valUnit,
+                valorIPI: valIPI,
+                custoTotal: valUnitComImposto ? valUnitComImposto * qtdFinal : null,
                 status: 'NAO_INICIADA'
             }
         })

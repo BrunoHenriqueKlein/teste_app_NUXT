@@ -56,18 +56,26 @@ export default defineEventHandler(async (event) => {
                 // Aceita tanto COMPRADO quanto COMERCIAL do CSV para manter compatibilidade com planilhas antigas
                 const categoria = (rawCategoria === 'COMPRADO' || rawCategoria === 'COMERCIAL') ? 'COMERCIAL' : 'FABRICADO'
 
-                if (!codigo || !descricao) {
-                    continue // Pula linhas vazias ou inválidas
-                }
-
-                // 1. Verificar se já existe no Estoque para avisar
+                // 1. Verificar se já existe no Estoque para herdar dados e avisar
                 const itemEstoque = await prisma.estoque.findUnique({
                     where: { codigo }
                 })
 
-                // Obter valor unitário se houver
+                const descFinal = descricao || (itemEstoque ? itemEstoque.descricao : '') || ''
+                const matFinal = material || (itemEstoque ? itemEstoque.material : '') || ''
+                const catFinal = (categoria === 'COMERCIAL' || itemEstoque?.categoria === 'COMERCIAL' || itemEstoque?.categoria === 'COMPRADO') ? 'COMERCIAL' : 'FABRICADO'
+                const subcatFinal = subcategoria || (itemEstoque ? itemEstoque.subcategoria : '') || ''
+
+                // Obter valor unitário se houver na planilha ou no estoque
                 const rawValor = row.ValorUnitario || row.valorUnitario || row.Valor || row.valor || row.VALOR || row.Custo || null
-                const vUnit = rawValor ? parseFloat(String(rawValor).replace(',', '.')) : null
+                const vUnit = rawValor ? parseFloat(String(rawValor).replace(',', '.')) : (itemEstoque?.valorUnitario ?? null)
+                const vIPI = itemEstoque?.impostoIPI ?? null
+
+                const valUnitComImposto = vUnit ? (vUnit + (vUnit * (vIPI || 0) / 100)) : null
+
+                if (!codigo) {
+                    continue // Pula linhas sem código
+                }
 
                 // 2. Criar ou atualizar a peça na OP
                 const peca = await prisma.peca.upsert({
@@ -78,26 +86,29 @@ export default defineEventHandler(async (event) => {
                         }
                     },
                     update: {
-                        descricao,
+                        descricao: descFinal,
                         quantidade,
-                        material,
-                        categoria,
-                        subcategoria,
-                        subconjunto
-                        // Não sobrescrevemos valorUnitario e custoTotal no update para não apagar custos manuais já definidos
+                        material: matFinal,
+                        categoria: catFinal,
+                        subcategoria: subcatFinal,
+                        subconjunto,
+                        valorUnitario: vUnit,
+                        valorIPI: vIPI,
+                        custoTotal: valUnitComImposto ? valUnitComImposto * quantidade : undefined
                     },
                     create: {
                         opId: parseInt(opId),
                         codigo,
-                        descricao,
+                        descricao: descFinal,
                         quantidade,
-                        material,
-                        categoria,
-                        subcategoria,
+                        material: matFinal,
+                        categoria: catFinal,
+                        subcategoria: subcatFinal,
                         subconjunto,
                         valorUnitario: vUnit,
-                        custoTotal: vUnit ? vUnit * quantidade : null,
-                        status: itemEstoque ? 'EM_ESTOQUE' : 'NAO_INICIADA'
+                        valorIPI: vIPI,
+                        custoTotal: valUnitComImposto ? valUnitComImposto * quantidade : null,
+                        status: 'NAO_INICIADA'
                     }
                 })
 

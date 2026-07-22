@@ -36,9 +36,23 @@ export default defineEventHandler(async (event) => {
         })
 
         const qtd = body.quantidade || 1
-        const vUnit = body.valorUnitario ? parseFloat(body.valorUnitario) : null
-        const vIPI = body.valorIPI ? parseFloat(body.valorIPI) : null
-        const vICMS = body.valorICMS ? parseFloat(body.valorICMS) : null
+        const desc = body.descricao || (estoqueItem ? estoqueItem.descricao : '') || ''
+        const mat = body.material || (estoqueItem ? estoqueItem.material : '') || ''
+        const catRaw = body.categoria || (estoqueItem ? estoqueItem.categoria : '') || 'FABRICADO'
+        const catFinal = (String(catRaw).toUpperCase() === 'COMERCIAL' || String(catRaw).toUpperCase() === 'COMPRADO') ? 'COMERCIAL' : 'FABRICADO'
+        const subcat = body.subcategoria || (estoqueItem ? estoqueItem.subcategoria : '') || ''
+
+        const vUnit = (body.valorUnitario !== undefined && body.valorUnitario !== null && body.valorUnitario !== '') 
+            ? parseFloat(body.valorUnitario) 
+            : (estoqueItem?.valorUnitario ?? null)
+            
+        const vIPI = (body.valorIPI !== undefined && body.valorIPI !== null && body.valorIPI !== '') 
+            ? parseFloat(body.valorIPI) 
+            : (estoqueItem?.impostoIPI ?? null)
+            
+        const vICMS = (body.valorICMS !== undefined && body.valorICMS !== null && body.valorICMS !== '') 
+            ? parseFloat(body.valorICMS) 
+            : null
         
         let vUnitComImposto = vUnit;
         if (vUnit) {
@@ -49,11 +63,11 @@ export default defineEventHandler(async (event) => {
             data: {
                 opId: parseInt(opId),
                 codigo: body.codigo,
-                descricao: body.descricao,
+                descricao: desc,
                 quantidade: qtd,
-                material: body.material,
-                categoria: body.categoria || 'FABRICADO',
-                subcategoria: body.subcategoria,
+                material: mat,
+                categoria: catFinal,
+                subcategoria: subcat,
                 subconjunto: body.subconjunto,
                 statusSuprimento: body.statusSuprimento || 'NAO_SOLICITADO',
                 valorUnitario: vUnit,
@@ -61,7 +75,7 @@ export default defineEventHandler(async (event) => {
                 valorICMS: vICMS,
                 custoTotal: vUnitComImposto ? vUnitComImposto * qtd : null,
                 fornecedorId: body.fornecedorId ? parseInt(body.fornecedorId) : null,
-                status: estoqueItem ? 'EM_ESTOQUE' : 'NAO_INICIADA'
+                status: 'NAO_INICIADA'
             }
         })
 

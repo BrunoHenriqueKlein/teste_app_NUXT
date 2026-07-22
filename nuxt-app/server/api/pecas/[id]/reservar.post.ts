@@ -12,10 +12,14 @@ export default defineEventHandler(async (event) => {
     const prisma = event.context.prisma
 
     try {
-        const body = await readBody(event)
-        const { quantidade } = body
+        let body: any = {}
+        try {
+            body = (await readBody(event)) || {}
+        } catch {
+            body = {}
+        }
+        const quantidade = body.quantidade
 
-        // ... (rest of logic remains same, just ensuring createError uses message) ...
         const peca = await prisma.peca.findUnique({
             where: { id: parseInt(id) }
         })
@@ -23,7 +27,7 @@ export default defineEventHandler(async (event) => {
         if (!peca) {
             throw createError({
                 statusCode: 404,
-                message: 'Peça não encontrada'
+                statusMessage: 'Peça não encontrada'
             })
         }
 
@@ -31,14 +35,23 @@ export default defineEventHandler(async (event) => {
             where: { codigo: peca.codigo }
         })
 
-        if (!itemEstoque || itemEstoque.quantidade < (quantidade || peca.quantidade)) {
+        if (!itemEstoque) {
             throw createError({
                 statusCode: 400,
-                message: 'Saldo insuficiente no estoque'
+                statusMessage: 'Item não encontrado no cadastro de estoque'
             })
         }
-        // ...
-        const qtdReserva = quantidade || peca.quantidade
+
+        const qtdReserva = quantidade || peca.quantidade || 1
+
+        if (itemEstoque.quantidade < qtdReserva) {
+            throw createError({
+                statusCode: 400,
+                statusMessage: `Saldo insuficiente no estoque (Disponível: ${itemEstoque.quantidade}, Necessário: ${qtdReserva})`
+            })
+        }
+
+        const userId = (event.context.user as any)?.id || 1
 
         return await prisma.$transaction(async (tx: any) => {
             await tx.estoqueMovimentacao.create({
@@ -48,7 +61,7 @@ export default defineEventHandler(async (event) => {
                     quantidade: qtdReserva,
                     motivo: `Reserva para OP #${peca.opId} (Peça: ${peca.codigo})`,
                     opId: peca.opId,
-                    usuarioId: 1
+                    usuarioId: userId
                 }
             })
 
@@ -70,8 +83,8 @@ export default defineEventHandler(async (event) => {
 
         console.error('❌ Erro ao reservar estoque:', error)
         throw createError({
-            statusCode: 500,
-            message: 'Erro ao processar reserva: ' + error.message
+            statusCode: error.statusCode || 500,
+            statusMessage: error.statusMessage || error.message || 'Erro ao processar reserva'
         })
     }
 })
