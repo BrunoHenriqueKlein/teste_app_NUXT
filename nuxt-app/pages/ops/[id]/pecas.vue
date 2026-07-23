@@ -869,7 +869,27 @@
                         placeholder="0,00"
                       ></v-text-field>
                     </v-col>
-                    <v-col cols="12" md="1" class="d-flex align-center justify-end">
+                    <v-col cols="12" md="1" class="d-flex flex-column align-center justify-center">
+                      <div class="d-flex w-100 justify-space-between mb-1" style="max-width: 60px;">
+                        <v-btn
+                          icon="mdi-arrow-up"
+                          color="primary"
+                          variant="tonal"
+                          size="x-small"
+                          title="Mover para cima"
+                          :disabled="index === 0 || !canMoveProcess(index, -1)"
+                          @click="moveProcess(index, -1)"
+                        ></v-btn>
+                        <v-btn
+                          icon="mdi-arrow-down"
+                          color="primary"
+                          variant="tonal"
+                          size="x-small"
+                          title="Mover para baixo"
+                          :disabled="index === dialogProcessos.items.length - 1 || !canMoveProcess(index, 1)"
+                          @click="moveProcess(index, 1)"
+                        ></v-btn>
+                      </div>
                       <v-btn
                         icon="mdi-delete-outline"
                         color="error"
@@ -1369,6 +1389,31 @@ const openProcessos = async (peca) => {
   } catch (error) {
     showSnackbar('Erro ao carregar processos da peça', 'error')
   }
+}
+
+const canMoveProcess = (index, direction) => {
+  const currentProcess = dialogProcessos.value.items[index]
+  const targetProcess = dialogProcessos.value.items[index + direction]
+  
+  if (!currentProcess || !targetProcess) return false
+  
+  // Só permite reordenar se ambos os processos envolvidos na troca estiverem NÃO_INICIADO
+  return currentProcess.status === 'NAO_INICIADO' && targetProcess.status === 'NAO_INICIADO'
+}
+
+const moveProcess = (index, direction) => {
+  if (!canMoveProcess(index, direction)) {
+    showSnackbar('Ação não permitida: Processos já iniciados não podem ser reordenados.', 'warning')
+    return
+  }
+  
+  const newIndex = index + direction
+  if (newIndex < 0 || newIndex >= dialogProcessos.value.items.length) return
+  
+  const items = dialogProcessos.value.items
+  const temp = items[index]
+  items[index] = items[newIndex]
+  items[newIndex] = temp
 }
 
 const addProcess = () => {
