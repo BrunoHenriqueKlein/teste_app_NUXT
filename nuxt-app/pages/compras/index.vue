@@ -221,6 +221,14 @@
                 title="Cancelar Pedido Vazio"
               ></v-btn>
               <v-btn
+                icon="mdi-email-fast-outline"
+                variant="text"
+                color="primary"
+                size="small"
+                @click="reenviarEmailDaOC(item)"
+                title="Reenviar E-mail"
+              ></v-btn>
+              <v-btn
                 icon="mdi-image-outline"
                 variant="text"
                 color="grey"
@@ -1879,55 +1887,87 @@ const enviarEmailOC = async () => {
   }
 }
 
+const reenviarEmailDaOC = async (oc) => {
+  if (!confirm(`Deseja reenviar a Ordem de Compra ${oc.numero} por e-mail para o fornecedor?`)) return
+  
+  saving.value = true
+  showSnackbar('Gerando PDF atualizado...', 'info')
+  
+  try {
+    const enrichedItens = oc.itens.map(item => ({
+      ...item,
+      etapaProcesso: item.etapaProcesso || oc.os?.tipo || '-'
+    }))
+
+    const itensSum = enrichedItens.reduce((acc, i) => acc + ((i.valorUnitario || 0) * (i.quantidade || 0)), 0)
+    const totalIPI = enrichedItens.reduce((acc, i) => acc + (i.valorIPI || 0), 0)
+    
+    printData.value = {
+      ...oc,
+      itens: enrichedItens,
+      itensSum,
+      totalIPI
+    }
+    
+    await new Promise(r => setTimeout(r, 500)) // Dá tempo de renderizar o HTML oculto
+
+    let poImageBase64 = null
+    const pdf = await generateMultiPagePDF()
+    poImageBase64 = pdf.output('datauristring')
+
+    showSnackbar('PDF gerado, enviando e-mail...', 'info')
+
+    await $fetch(`/api/compras/${oc.id}/send-po-email`, { 
+      method: 'POST',
+      body: { 
+        poImageBase64,
+        anexosSelecionados: oc.anexos ? oc.anexos.map(a => a.id) : []
+      }
+    })
+    
+    showSnackbar('E-mail reenviado com sucesso!', 'success')
+  } catch (error) {
+    console.error('Erro ao reenviar e-mail:', error)
+    showSnackbar('Erro ao reenviar e-mail: ' + (error.data?.statusMessage || error.message), 'error')
+  } finally {
+    saving.value = false
+    printData.value = null
+  }
+}
+
 const baixarImagemOC = async (oc) => {
-  const itensSum = oc.itens.reduce((acc, i) => acc + ((i.valorUnitario || 0) * (i.quantidade || 0)), 0)
-  const totalIPI = oc.itens.reduce((acc, i) => acc + (i.valorIPI || 0), 0)
+  const enrichedItens = oc.itens.map(item => ({
+    ...item,
+    etapaProcesso: item.etapaProcesso || oc.os?.tipo || '-'
+  }))
+
+  const itensSum = enrichedItens.reduce((acc, i) => acc + ((i.valorUnitario || 0) * (i.quantidade || 0)), 0)
+  const totalIPI = enrichedItens.reduce((acc, i) => acc + (i.valorIPI || 0), 0)
   
   printData.value = {
     ...oc,
+    itens: enrichedItens,
     itensSum,
     totalIPI
   }
   
-  if (!window.htmlToImage) {
-    showSnackbar('Biblioteca de imagem não carregada', 'warning')
+  if (!window.htmlToImage || !window.jspdf) {
+    showSnackbar('Bibliotecas de PDF não carregadas', 'warning')
     return
   }
 
   showSnackbar('Gerando PDF...', 'info')
-  await new Promise(r => setTimeout(r, 200)) // Dá tempo de renderizar o HTML oculto
+  await new Promise(r => setTimeout(r, 500)) // Dá tempo de renderizar o HTML oculto
 
-  const printElement = document.getElementById('print-oc')
-  if (printElement) {
-    const oldDisplay = printElement.style.display
-    printElement.style.setProperty('display', 'block', 'important')
-    try {
-      const jpegBase64 = await window.htmlToImage.toJpeg(printElement, {
-        backgroundColor: '#ffffff',
-        style: { transform: 'none' },
-        pixelRatio: 2,
-        quality: 0.8
-      })
-
-      if (window.jspdf && window.jspdf.jsPDF) {
-        const { jsPDF } = window.jspdf
-        const pdf = new jsPDF('l', 'mm', 'a4')
-        const pdfWidth = pdf.internal.pageSize.getWidth()
-        const pdfHeight = (printElement.offsetHeight * pdfWidth) / printElement.offsetWidth
-        
-        pdf.addImage(jpegBase64, 'JPEG', 0, 0, pdfWidth, pdfHeight)
-        
-        const blobUrl = pdf.output('bloburl')
-        window.open(blobUrl, '_blank')
-      } else {
-        showSnackbar('Biblioteca PDF não carregada', 'error')
-      }
-    } catch (e) {
-      console.error(e)
-      showSnackbar('Erro ao gerar PDF', 'error')
-    } finally {
-      printElement.style.display = oldDisplay
-    }
+  try {
+    const pdf = await generateMultiPagePDF()
+    const blobUrl = pdf.output('bloburl')
+    window.open(blobUrl, '_blank')
+  } catch (e) {
+    console.error(e)
+    showSnackbar('Erro ao gerar PDF', 'error')
+  } finally {
+    printData.value = null
   }
 }
 
@@ -2018,6 +2058,18 @@ onMounted(() => {
     background: white !important;
     z-index: 999999;
   }
+  
+  /* Correção para o corte na margem superior em múltiplas páginas no Chrome */
+  .oc-page {
+    page-break-after: always;
+    page-break-inside: avoid;
+    box-sizing: border-box;
+  }
+  
+  .oc-page:not(:first-child) {
+    padding-top: 15mm !important; 
+  }
+
   /* Oculta os popups/overlays do Vuetify para não criarem páginas em branco fantasma */
   .v-overlay-container {
     display: none !important;
