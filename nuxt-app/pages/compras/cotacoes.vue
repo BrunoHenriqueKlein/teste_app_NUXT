@@ -60,6 +60,81 @@
             </v-btn>
           </v-col>
         </v-row>
+        <v-divider class="my-4"></v-divider>
+        
+        <v-expansion-panels variant="accordion" class="mb-2">
+          <v-expansion-panel elevation="0" class="border">
+            <v-expansion-panel-title class="text-subtitle-2 text-primary font-weight-bold">
+              <v-icon start color="primary">mdi-filter-variant</v-icon> Filtros Avançados
+            </v-expansion-panel-title>
+            <v-expansion-panel-text>
+              <v-row dense class="mt-2">
+                <v-col cols="12" sm="4" md="2">
+                  <v-select
+                    v-model="advancedFilters.status"
+                    :items="['Todos', 'EM COTAÇÃO', 'NÃO COTADO']"
+                    label="Status"
+                    variant="outlined"
+                    density="compact"
+                    hide-details
+                  ></v-select>
+                </v-col>
+                <v-col cols="12" sm="4" md="2">
+                  <v-text-field
+                    v-model="advancedFilters.requisicao"
+                    label="Requisição"
+                    variant="outlined"
+                    density="compact"
+                    hide-details
+                    clearable
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="12" sm="4" md="2">
+                  <v-text-field
+                    v-model="advancedFilters.codigo"
+                    label="Código"
+                    variant="outlined"
+                    density="compact"
+                    hide-details
+                    clearable
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="12" sm="4" md="3">
+                  <v-text-field
+                    v-model="advancedFilters.descricao"
+                    label="Descrição"
+                    variant="outlined"
+                    density="compact"
+                    hide-details
+                    clearable
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="12" sm="4" md="3">
+                  <v-select
+                    v-model="advancedFilters.subcategoria"
+                    :items="subcategoriasList"
+                    label="Subcategoria"
+                    variant="outlined"
+                    density="compact"
+                    hide-details
+                  ></v-select>
+                </v-col>
+                <v-col cols="12" sm="4" md="3">
+                  <v-autocomplete
+                    v-model="advancedFilters.fornecedorId"
+                    :items="fornecedoresFilterList"
+                    item-title="nome"
+                    item-value="id"
+                    label="Fornecedor"
+                    variant="outlined"
+                    density="compact"
+                    hide-details
+                  ></v-autocomplete>
+                </v-col>
+              </v-row>
+            </v-expansion-panel-text>
+          </v-expansion-panel>
+        </v-expansion-panels>
       </v-card-text>
     </v-card>
 
@@ -67,7 +142,7 @@
       <v-data-table
         v-model="selectedItems"
         :headers="headers"
-        :items="demandas"
+        :items="filteredDemandas"
         :loading="loading"
         show-select
         hover
@@ -87,10 +162,16 @@
         </template>
 
         <template v-slot:item.codigo="{ item }">
-          <div class="font-weight-bold">{{ item.codigo }}</div>
+          <div class="font-weight-bold" style="max-width: 400px; white-space: normal; line-height: 1.3; padding-top: 4px; padding-bottom: 4px;">{{ item.codigo }}</div>
+        </template>
+        <template v-slot:item.subcategoria="{ item }">
+          <v-chip size="x-small" variant="flat" color="blue-grey-lighten-4" class="text-blue-grey-darken-3 font-weight-bold" v-if="item.subcategoria">
+            {{ item.subcategoria }}
+          </v-chip>
+          <span v-else class="text-caption text-grey">--</span>
         </template>
         <template v-slot:item.descricao="{ item }">
-          <div class="text-caption">{{ item.descricao }}</div>
+          <div class="text-caption" style="max-width: 400px; white-space: normal; line-height: 1.3; padding-top: 4px; padding-bottom: 4px;">{{ item.descricao }}</div>
         </template>
 
         <template v-slot:item.fornecedorId="{ item }">
@@ -201,6 +282,64 @@ const filters = ref({
 })
 const opsList = ref([])
 
+const showAdvancedFilters = ref(false)
+const advancedFilters = ref({
+  status: 'Todos',
+  requisicao: '',
+  codigo: '',
+  descricao: '',
+  subcategoria: 'Todos',
+  fornecedorId: 'Todos'
+})
+
+const subcategoriasList = computed(() => {
+  const subs = new Set(demandas.value.map(d => d.subcategoria).filter(Boolean))
+  return ['Todos', ...Array.from(subs).sort()]
+})
+
+const fornecedoresFilterList = computed(() => {
+  return [{ id: 'Todos', nome: 'Todos' }, ...fornecedores.value]
+})
+
+const filteredDemandas = computed(() => {
+  return demandas.value.filter(item => {
+    // Status
+    if (advancedFilters.value.status !== 'Todos') {
+      const isEmCotacao = item.statusSuprimento === 'EM_ORCAMENTO'
+      const filterStatus = advancedFilters.value.status
+      if (filterStatus === 'EM COTAÇÃO' && !isEmCotacao) return false
+      if (filterStatus === 'NÃO COTADO' && isEmCotacao) return false
+    }
+
+    // Requisição (numeroCompra)
+    if (advancedFilters.value.requisicao && item.numeroCompra) {
+      if (!item.numeroCompra.toLowerCase().includes(advancedFilters.value.requisicao.toLowerCase())) return false
+    }
+
+    // Código
+    if (advancedFilters.value.codigo && item.codigo) {
+      if (!item.codigo.toLowerCase().includes(advancedFilters.value.codigo.toLowerCase())) return false
+    }
+
+    // Descrição
+    if (advancedFilters.value.descricao && item.descricao) {
+      if (!item.descricao.toLowerCase().includes(advancedFilters.value.descricao.toLowerCase())) return false
+    }
+
+    // Subcategoria
+    if (advancedFilters.value.subcategoria !== 'Todos') {
+      if (item.subcategoria !== advancedFilters.value.subcategoria) return false
+    }
+
+    // Fornecedor
+    if (advancedFilters.value.fornecedorId !== 'Todos') {
+      if (item.fornecedorId !== advancedFilters.value.fornecedorId) return false
+    }
+
+    return true
+  })
+})
+
 const loading = ref(false)
 const saving = ref(false)
 
@@ -226,9 +365,11 @@ const headers = [
   { title: 'Status', key: 'statusSuprimento', width: '120px' },
   { title: 'Requisição', key: 'numeroCompra', width: '120px' },
   { title: 'OP', key: 'op', width: '80px' },
-  { title: 'Código', key: 'codigo', minWidth: '300px', width: '40%' },
-  { title: 'Descrição', key: 'descricao', minWidth: '150px' },
-  { title: 'Qtd', key: 'quantidade', align: 'end', width: '80px' }
+  { title: 'Código', key: 'codigo', minWidth: '150px', maxWidth: '400px' },
+  { title: 'Descrição', key: 'descricao', minWidth: '150px', maxWidth: '400px' },
+  { title: 'Qtd', key: 'quantidade', align: 'end', width: '80px' },
+  { title: 'Subcategoria', key: 'subcategoria', width: '150px' },
+  { title: 'Fornecedor', key: 'fornecedorId', width: '200px' }
 ]
 
 const loadData = async () => {

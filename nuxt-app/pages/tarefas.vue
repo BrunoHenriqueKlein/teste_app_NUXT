@@ -105,6 +105,16 @@
                   hide-details
                 />
               </v-col>
+              <v-col cols="12" sm="6" md="3" v-if="showGlobal">
+                <v-select
+                  v-model="userFilter"
+                  :items="userOptions"
+                  label="Usuário"
+                  variant="outlined"
+                  density="comfortable"
+                  hide-details
+                />
+              </v-col>
               <v-col cols="auto" v-if="user?.role === 'ADMIN'">
                 <v-switch
                   v-model="showGlobal"
@@ -449,6 +459,7 @@ const loading = ref(true)
 const tasks = ref([])
 const search = ref('')
 const statusFilter = ref('Todos')
+const userFilter = ref('Todos')
 const showGlobal = ref(false)
 const viewMode = ref('cards') // 'cards' ou 'list'
 
@@ -478,12 +489,26 @@ const fetchTasks = async () => {
       updating: false, 
       hasChanged: false 
     }))
+    // Reseta o filtro de usuário quando alterna a visualização
+    if (!showGlobal.value) {
+      userFilter.value = 'Todos'
+    }
   } catch (error) {
     console.error('Erro ao buscar tarefas:', error)
   } finally {
     loading.value = false
   }
 }
+
+const userOptions = computed(() => {
+  const users = new Set()
+  tasks.value.forEach(t => {
+    if (t.responsavel?.name) {
+      users.add(t.responsavel.name)
+    }
+  })
+  return ['Todos', ...Array.from(users).sort(), 'Não atribuído']
+})
 
 const myWorkload = ref(null)
 
@@ -551,8 +576,18 @@ const filteredTasks = computed(() => {
     } else {
       matchesStatus = task.status === statusFilter.value
     }
+
+    // Filtro de usuário
+    let matchesUser = true
+    if (showGlobal.value && userFilter.value !== 'Todos') {
+      if (userFilter.value === 'Não atribuído') {
+        matchesUser = !task.responsavel || !task.responsavel.name
+      } else {
+        matchesUser = task.responsavel?.name === userFilter.value
+      }
+    }
     
-    return matchesSearch && matchesStatus
+    return matchesSearch && matchesStatus && matchesUser
   })
 })
 
