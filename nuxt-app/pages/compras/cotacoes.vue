@@ -298,7 +298,10 @@ const subcategoriasList = computed(() => {
 })
 
 const fornecedoresFilterList = computed(() => {
-  return [{ id: 'Todos', nome: 'Todos' }, ...fornecedores.value]
+  const fornecedoresIdsNaTela = new Set(demandas.value.map(d => d.fornecedorId).filter(Boolean))
+  const fornecedoresFiltrados = fornecedores.value.filter(f => fornecedoresIdsNaTela.has(f.id))
+  fornecedoresFiltrados.sort((a, b) => a.nome.localeCompare(b.nome))
+  return [{ id: 'Todos', nome: 'Todos' }, ...fornecedoresFiltrados]
 })
 
 const filteredDemandas = computed(() => {
