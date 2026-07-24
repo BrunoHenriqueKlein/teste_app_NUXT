@@ -53,22 +53,79 @@
       <v-data-table
         v-model="selected"
         :headers="headers"
-        :items="items"
+        :items="filteredItems"
         :loading="loading"
         show-select
         hover
-        :search="search"
       >
         <template v-slot:top>
-          <v-text-field
-            v-model="search"
-            label="Buscar no estoque..."
-            prepend-inner-icon="mdi-magnify"
-            variant="outlined"
-            density="comfortable"
-            class="pa-4"
-            hide-details
-          ></v-text-field>
+          <div class="px-4 pt-4 pb-2">
+            <v-expansion-panels variant="accordion">
+              <v-expansion-panel elevation="0" class="border">
+                <v-expansion-panel-title class="text-subtitle-2 text-primary font-weight-bold">
+                  <v-icon start color="primary">mdi-filter-variant</v-icon> Filtros Avançados
+                </v-expansion-panel-title>
+                <v-expansion-panel-text>
+                  <v-row dense class="mt-2">
+                    <v-col cols="12" md="3">
+                      <v-text-field
+                        v-model="advancedFilters.busca"
+                        label="Buscar Código, Descrição ou Material"
+                        prepend-inner-icon="mdi-magnify"
+                        variant="outlined"
+                        density="compact"
+                        hide-details
+                        clearable
+                      ></v-text-field>
+                    </v-col>
+                    <v-col cols="12" md="2">
+                      <v-select
+                        v-model="advancedFilters.status"
+                        :items="['Todos', 'Estoque Crítico', 'Estoque Normal']"
+                        label="Status do Saldo"
+                        variant="outlined"
+                        density="compact"
+                        hide-details
+                      ></v-select>
+                    </v-col>
+                    <v-col cols="12" md="2">
+                      <v-select
+                        v-model="advancedFilters.categoria"
+                        :items="categoriasList"
+                        label="Categoria"
+                        variant="outlined"
+                        density="compact"
+                        hide-details
+                        clearable
+                      ></v-select>
+                    </v-col>
+                    <v-col cols="12" md="2">
+                      <v-select
+                        v-model="advancedFilters.subcategoria"
+                        :items="subcategoriasList"
+                        label="Subcategoria"
+                        variant="outlined"
+                        density="compact"
+                        hide-details
+                        clearable
+                      ></v-select>
+                    </v-col>
+                    <v-col cols="12" md="3">
+                      <v-select
+                        v-model="advancedFilters.localizacao"
+                        :items="localizacoesList"
+                        label="Localização"
+                        variant="outlined"
+                        density="compact"
+                        hide-details
+                        clearable
+                      ></v-select>
+                    </v-col>
+                  </v-row>
+                </v-expansion-panel-text>
+              </v-expansion-panel>
+            </v-expansion-panels>
+          </div>
         </template>
 
         <template v-slot:item.codigo="{ item }">
@@ -242,12 +299,72 @@
 const items = ref([])
 const categoriasDisponiveis = ref([])
 const loading = ref(false)
-const search = ref('')
 const saving = ref(false)
 const selected = ref([])
 const dialogCompra = ref({ show: false, fornecedorId: null, itens: [] })
 const savingCompra = ref(false)
 const fornecedores = ref([])
+
+const advancedFilters = ref({
+  busca: '',
+  status: 'Todos',
+  categoria: null,
+  subcategoria: null,
+  localizacao: null
+})
+
+const categoriasList = computed(() => {
+  const cat = new Set(items.value.map(i => i.categoria).filter(Boolean))
+  return Array.from(cat).sort()
+})
+
+const subcategoriasList = computed(() => {
+  const sub = new Set(items.value.map(i => i.subcategoria).filter(Boolean))
+  return Array.from(sub).sort()
+})
+
+const localizacoesList = computed(() => {
+  const loc = new Set(items.value.map(i => i.localizacao).filter(Boolean))
+  return Array.from(loc).sort()
+})
+
+const filteredItems = computed(() => {
+  return items.value.filter(item => {
+    // Busca Geral (Código, Descrição ou Material)
+    if (advancedFilters.value.busca) {
+      const b = advancedFilters.value.busca.toLowerCase()
+      if (!((item.codigo && item.codigo.toLowerCase().includes(b)) || 
+            (item.descricao && item.descricao.toLowerCase().includes(b)) ||
+            (item.material && item.material.toLowerCase().includes(b)))) {
+        return false
+      }
+    }
+
+    // Status do Saldo
+    if (advancedFilters.value.status !== 'Todos') {
+      const isCritico = item.quantidade <= (item.minEstoque || 0)
+      if (advancedFilters.value.status === 'Estoque Crítico' && !isCritico) return false
+      if (advancedFilters.value.status === 'Estoque Normal' && isCritico) return false
+    }
+
+    // Categoria
+    if (advancedFilters.value.categoria && item.categoria !== advancedFilters.value.categoria) {
+      return false
+    }
+
+    // Subcategoria
+    if (advancedFilters.value.subcategoria && item.subcategoria !== advancedFilters.value.subcategoria) {
+      return false
+    }
+
+    // Localização
+    if (advancedFilters.value.localizacao && item.localizacao !== advancedFilters.value.localizacao) {
+      return false
+    }
+
+    return true
+  })
+})
 
 const filteredFornecedores = computed(() => {
   if (!dialogCompra.value.itens.length) return fornecedores.value
@@ -288,11 +405,11 @@ const formatCurrency = (value) => {
 }
 
 const valorTotalEstoque = computed(() => {
-  return items.value.reduce((sum, item) => sum + (item.valorTotal || 0), 0)
+  return filteredItems.value.reduce((sum, item) => sum + (item.valorTotal || 0), 0)
 })
 
 const itensCriticos = computed(() => {
-  return items.value.filter(i => i.quantidade <= (i.minEstoque || 0)).length
+  return filteredItems.value.filter(i => i.quantidade <= (i.minEstoque || 0)).length
 })
 
 const loadItems = async () => {
