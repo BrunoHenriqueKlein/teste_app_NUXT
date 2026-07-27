@@ -1674,7 +1674,8 @@ const cancelarRequisicao = async () => {
     await loadCompras()
   } catch (error) {
     console.error(error)
-    snackbar.value = { show: true, text: 'Erro ao cancelar requisição', color: 'error' }
+    const errorMessage = error.data?.statusMessage || error.message || 'Erro ao cancelar requisição'
+    snackbar.value = { show: true, text: errorMessage, color: 'error' }
   } finally {
     saving.value = false
   }
@@ -1696,7 +1697,8 @@ const cancelarPedidoVazio = async (item) => {
     await loadCompras()
   } catch (error) {
     console.error(error)
-    showSnackbar('Erro ao cancelar pedido', 'error')
+    const errorMessage = error.data?.statusMessage || error.message || 'Erro ao cancelar pedido'
+    showSnackbar(errorMessage, 'error')
   }
 }
 
@@ -1714,7 +1716,8 @@ const devolverParaRequisicao = async (item) => {
     await loadDemandas()
   } catch (error) {
     console.error(error)
-    showSnackbar('Erro ao reverter pedido', 'error')
+    const errorMessage = error.data?.statusMessage || error.message || 'Erro ao reverter pedido'
+    showSnackbar(errorMessage, 'error')
   } finally {
     saving.value = false
   }

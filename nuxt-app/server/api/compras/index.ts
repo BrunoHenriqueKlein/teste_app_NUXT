@@ -170,7 +170,7 @@ export default defineEventHandler(async (event) => {
                                 where: { id: item.pecaId },
                                 data: {
                                     statusSuprimento: 'PARA_COTACAO',
-                                    status: 'AGUARDANDO',
+                                    status: 'NAO_INICIADA',
                                     fornecedorId: null
                                 }
                             })
@@ -196,13 +196,23 @@ export default defineEventHandler(async (event) => {
                     })
                 }
 
-                await prisma.compraItem.deleteMany({
-                    where: { compraId: Number(id) }
-                })
-                
-                await prisma.compra.delete({
-                    where: { id: Number(id) }
-                })
+                try {
+                    await prisma.compraItem.deleteMany({
+                        where: { compraId: Number(id) }
+                    })
+                    
+                    await prisma.compra.delete({
+                        where: { id: Number(id) }
+                    })
+                } catch (delError: any) {
+                    if (delError.code === 'P2003') {
+                        throw createError({
+                            statusCode: 400,
+                            statusMessage: 'Não é possível excluir a requisição pois existem registros vinculados a ela (ex: RNC, Recebimentos).'
+                        })
+                    }
+                    throw delError
+                }
 
                 return { success: true, message: 'Requisição excluída permanentemente com sucesso.' }
             }
@@ -389,7 +399,7 @@ export default defineEventHandler(async (event) => {
                                     where: { id: item.pecaId },
                                     data: {
                                         statusSuprimento: 'PARA_COTACAO',
-                                        status: 'AGUARDANDO',
+                                        status: 'NAO_INICIADA',
                                         fornecedorId: null
                                     }
                                 })
