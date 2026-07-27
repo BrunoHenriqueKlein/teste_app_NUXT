@@ -185,6 +185,7 @@
             hide-details
             class="mt-1"
             style="min-width: 150px"
+            @update:model-value="saveFornecedor(item)"
           ></v-select>
         </template>
       </v-data-table>
@@ -466,6 +467,22 @@ const sendFinalQuoteEmails = async () => {
     showSnackbar('Erro ao enviar: ' + (error.data?.statusMessage || error.message), 'error')
   } finally {
     sendingEmail.value = false
+  }
+}
+
+const saveFornecedor = async (item) => {
+  if (!item.id) return
+  
+  try {
+    await $fetch(`/api/pecas/${item.id}`, {
+      method: 'PATCH',
+      body: {
+        fornecedorId: item.fornecedorId
+      }
+    })
+    showSnackbar('Fornecedor atualizado com sucesso!', 'success')
+  } catch (error) {
+    showSnackbar('Erro ao salvar fornecedor: ' + (error.data?.statusMessage || error.message), 'error')
   }
 }
 
