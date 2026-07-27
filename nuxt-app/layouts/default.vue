@@ -196,6 +196,7 @@ const navigation = [
   { title: 'Estoque', icon: 'mdi-warehouse', route: '/estoque', moduleName: 'Estoque' },
   { title: 'Fornecedores', icon: 'mdi-account-group', route: '/fornecedores', moduleName: 'Fornecedores' },
   { title: 'Compras', icon: 'mdi-cart', route: '/compras', moduleName: 'Compras' },
+  { title: 'Qualidade (RNC)', icon: 'mdi-shield-check', route: '/qualidade/rnc', moduleName: 'Qualidade', isUniversal: true },
   { title: 'Workload', icon: 'mdi-chart-timeline-variant', route: '/workload', moduleName: 'Workload' },
   { title: 'Inteligência (IA)', icon: 'mdi-brain', route: '/analytics', moduleName: 'Relatórios' },
   { title: 'Relatórios', icon: 'mdi-chart-bar', route: '/relatorios', moduleName: 'Relatórios' },

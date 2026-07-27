@@ -25,6 +25,9 @@ export default defineEventHandler(async (event) => {
                         compra: { select: { numero: true, fornecedor: true } }
                     }
                 },
+                rncs: {
+                    select: { status: true, numero: true }
+                },
                 _count: {
                     select: { processos: true }
                 }

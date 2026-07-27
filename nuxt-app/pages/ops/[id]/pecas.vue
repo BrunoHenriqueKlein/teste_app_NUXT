@@ -300,9 +300,16 @@
             <template v-slot:bottom></template>
         <!-- Customização das Colunas -->
         <template v-slot:item.peca="{ item }">
-          <div style="white-space: normal; word-break: break-all; overflow-wrap: break-word;">
-            <div class="font-weight-bold text-primary">{{ item.codigo }}</div>
-            <div class="text-caption text-grey-darken-1 mt-1">{{ item.descricao }}</div>
+          <div style="white-space: normal; word-break: break-all; overflow-wrap: break-word;" class="d-flex align-center justify-space-between">
+            <div>
+              <div class="font-weight-bold text-primary">{{ item.codigo }}</div>
+              <div class="text-caption text-grey-darken-1 mt-1">{{ item.descricao }}</div>
+            </div>
+            <v-tooltip v-if="hasActiveRNC(item.rncs)" text="Possui Não Conformidade (RNC) ativa">
+              <template v-slot:activator="{ props }">
+                <v-icon v-bind="props" color="error" size="small" class="ml-2">mdi-alert-octagon</v-icon>
+              </template>
+            </v-tooltip>
           </div>
         </template>
 
@@ -1644,6 +1651,11 @@ const getProgressoProcessos = (processos) => {
   if (!processos || processos.length === 0) return 0
   const concluidos = processos.filter(p => p.status === 'CONCLUIDO').length
   return Math.round((concluidos / processos.length) * 100)
+}
+
+const hasActiveRNC = (rncs) => {
+  if (!rncs || !rncs.length) return false
+  return rncs.some(r => r.status !== 'CONCLUIDA' && r.status !== 'CANCELADA')
 }
 
 onMounted(() => {

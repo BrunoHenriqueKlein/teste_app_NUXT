@@ -156,7 +156,14 @@
             hover
           >
             <template v-slot:item.numero="{ item }">
-              <div class="font-weight-bold">{{ item.numero }}</div>
+              <div class="d-flex align-center">
+                <div class="font-weight-bold">{{ item.numero }}</div>
+                <v-tooltip v-if="hasActiveRNC(item.rncs)" text="Possui Não Conformidade (RNC) ativa">
+                  <template v-slot:activator="{ props }">
+                    <v-icon v-bind="props" color="error" size="small" class="ml-2">mdi-alert-octagon</v-icon>
+                  </template>
+                </v-tooltip>
+              </div>
             </template>
             <template v-slot:item.op="{ item }">
               <span v-if="item.isEstoque" class="text-orange font-weight-bold">
@@ -2022,6 +2029,11 @@ const getSuprimentoColor = (status) => {
 
 const showSnackbar = (text, color = 'success') => {
   snackbar.value = { show: true, text, color }
+}
+
+const hasActiveRNC = (rncs) => {
+  if (!rncs || !rncs.length) return false
+  return rncs.some(r => r.status !== 'CONCLUIDA' && r.status !== 'CANCELADA')
 }
 
 onMounted(() => {

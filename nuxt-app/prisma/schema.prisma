@@ -87,6 +87,22 @@ enum CompraStatus {
   CANCELADA
 }
 
+enum RNCStatus {
+  ABERTA
+  EM_ANALISE
+  AGUARDANDO_FORNECEDOR
+  CONCLUIDA
+  CANCELADA
+}
+
+enum RNCDisposicao {
+  RETRABALHO_INTERNO
+  RETRABALHO_FORNECEDOR
+  DEVOLUCAO
+  SUCATA
+  ACEITACAO_CONDICIONAL
+}
+
 // --- MODELS ---
 model User {
   id                   Int                   @id @default(autoincrement())
@@ -121,6 +137,7 @@ model User {
   resetToken        String?   @map("reset_token")
   resetTokenExpiry  DateTime? @map("reset_token_expiry")
   systemLogs        SystemLog[]
+  rncsAbertas       RNC[]     @relation("RNC_Relator")
 
   @@map("users")
 }
@@ -183,6 +200,7 @@ model OP {
   criadoPor        User                  @relation("OP_CriadaPor", fields: [criadoPorId], references: [id])
   responsavel      User?                 @relation("OP_Responsavel", fields: [responsavelId], references: [id])
   pecas            Peca[]
+  rncs             RNC[]
 
   @@map("ops")
 }
@@ -246,6 +264,7 @@ model Peca {
   op               OP               @relation(fields: [opId], references: [id], onDelete: Cascade)
   processos        ProcessoPeca[]
   fornecedor       Fornecedor?      @relation(fields: [fornecedorId], references: [id])
+  rncs             RNC[]
 
   @@unique([opId, codigo])
   @@map("pecas")
@@ -312,6 +331,7 @@ model Fornecedor {
   processos     ProcessoPeca[]
   pecas         Peca[]
   compras       Compra[]       @relation("FornecedorCompra")
+  rncs          RNC[]
 
   @@map("fornecedores")
 }
@@ -379,6 +399,7 @@ model Compra {
   fornecedorRef       Fornecedor?  @relation("FornecedorCompra", fields: [fornecedorId], references: [id])
   itens               CompraItem[]
   anexos              CompraAnexo[]
+  rncs                RNC[]
 
   @@map("compras")
 }
@@ -533,4 +554,48 @@ model SystemLog {
   user      User?    @relation(fields: [userId], references: [id])
 
   @@map("system_logs")
+}
+
+model RNC {
+  id                  Int             @id @default(autoincrement())
+  numero              String          @unique
+  dataEmissao         DateTime        @default(now()) @map("data_emissao")
+  status              RNCStatus       @default(ABERTA)
+  
+  opId                Int?            @map("op_id")
+  pecaId              Int?            @map("peca_id")
+  compraId            Int?            @map("compra_id")
+  fornecedorId        Int?            @map("fornecedor_id")
+  relatorId           Int             @map("relator_id")
+  
+  descricaoFalha      String          @map("descricao_falha") @db.Text
+  quantidadeLote      Int?            @map("quantidade_lote")
+  quantidadeReprovada Int?            @map("quantidade_reprovada")
+  custoMaQualidade    Float?          @map("custo_ma_qualidade")
+  
+  acaoCorretiva       String?         @map("acao_corretiva") @db.Text
+  acaoPreventiva      String?         @map("acao_preventiva") @db.Text
+  disposicao          RNCDisposicao?
+  
+  dataFechamento      DateTime?       @map("data_fechamento")
+  
+  op                  OP?             @relation(fields: [opId], references: [id])
+  peca                Peca?           @relation(fields: [pecaId], references: [id])
+  compra              Compra?         @relation(fields: [compraId], references: [id])
+  fornecedor          Fornecedor?     @relation(fields: [fornecedorId], references: [id])
+  relator             User            @relation("RNC_Relator", fields: [relatorId], references: [id])
+  
+  anexos              RNCAnexo[]
+
+  @@map("rncs")
+}
+
+model RNCAnexo {
+  id      Int    @id @default(autoincrement())
+  rncId   Int    @map("rnc_id")
+  nome    String
+  url     String
+  rnc     RNC    @relation(fields: [rncId], references: [id], onDelete: Cascade)
+
+  @@map("rnc_anexos")
 }

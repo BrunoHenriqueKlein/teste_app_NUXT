@@ -27,6 +27,7 @@ export default defineEventHandler(async (event) => {
                     },
                     anexos: true,
                     fornecedorRef: true,
+                    rncs: { select: { status: true } },
                     _count: {
                         select: { itens: true }
                     }
