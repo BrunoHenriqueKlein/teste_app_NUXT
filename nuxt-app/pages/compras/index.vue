@@ -1097,7 +1097,8 @@ const activeOrders = computed(() => {
     o.status !== 'SOLICITADA' && 
     o.status !== 'COTACAO' && 
     o.status !== 'RECEBIDA_TOTAL' && 
-    o.status !== 'CANCELADA'
+    o.status !== 'CANCELADA' &&
+    o.status !== 'RASCUNHO'
   )
 })
 
