@@ -77,6 +77,16 @@
             style="min-width: 150px"
           ></v-select>
         </template>
+
+        <template v-slot:item.acoes="{ item }">
+          <v-btn
+            icon="mdi-delete"
+            color="error"
+            variant="text"
+            size="small"
+            @click.stop="excluirItem(item)"
+          ></v-btn>
+        </template>
       </v-data-table>
     </v-card>
 
@@ -190,7 +200,8 @@ const headers = [
   { title: 'Material', key: 'material', width: '120px' },
   { title: 'Quantidade', key: 'quantidade', align: 'end', width: '100px' },
   { title: 'Categoria', key: 'categoria', width: '120px' },
-  { title: 'Subcategoria', key: 'subcategoria', width: '120px' }
+  { title: 'Subcategoria', key: 'subcategoria', width: '120px' },
+  { title: 'Ações', key: 'acoes', align: 'center', width: '80px', sortable: false }
 ]
 
 const loadData = async () => {
@@ -215,6 +226,18 @@ const openQuoteDialog = () => {
   dialogQuoteSuppliers.value = {
     show: true,
     fornecedorIds: []
+  }
+}
+
+const excluirItem = async (item) => {
+  if (!confirm(`Tem certeza que deseja excluir a requisição do item ${item.codigo}? Essa ação não pode ser desfeita.`)) return
+
+  try {
+    await $fetch(`/api/compras/${item.compraId}`, { method: 'DELETE' })
+    snackbar.value = { show: true, text: 'Requisição excluída com sucesso!', color: 'success' }
+    await loadData()
+  } catch (error) {
+    snackbar.value = { show: true, text: 'Erro ao excluir requisição: ' + (error.data?.statusMessage || error.message), color: 'error' }
   }
 }
 

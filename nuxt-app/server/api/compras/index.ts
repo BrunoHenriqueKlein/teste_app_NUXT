@@ -196,6 +196,14 @@ export default defineEventHandler(async (event) => {
                     })
                 }
 
+                if (currentCompra && currentCompra.isEstoque) {
+                    await prisma.compra.update({
+                        where: { id: Number(id) },
+                        data: { status: 'RASCUNHO', fornecedor: 'Pendente de Definição' }
+                    })
+                    return { success: true, message: 'Requisição de estoque revertida para Rascunho.' }
+                }
+
                 try {
                     await prisma.compraItem.deleteMany({
                         where: { compraId: Number(id) }
