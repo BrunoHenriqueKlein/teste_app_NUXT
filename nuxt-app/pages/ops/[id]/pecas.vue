@@ -454,15 +454,12 @@
         <template v-slot:item.valores="{ item }">
           <div class="d-flex flex-column align-end" :class="item.categoria === 'FABRICADO' ? 'text-primary' : ''">
             <div class="font-weight-bold">
-              {{ item.custoTotal ? (item.custoTotal).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '-' }}
+              {{ calcularCustoPeca(item) > 0 ? calcularCustoPeca(item).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '-' }}
             </div>
             <div class="text-caption text-grey" style="white-space: nowrap;">
               {{ item.quantidade }}x 
-              <template v-if="item.valorUnitario">
-                {{ (item.valorUnitario + (item.valorUnitario * (item.valorIPI || 0) / 100) + (item.valorUnitario * (item.valorICMS || 0) / 100)).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }}
-                <v-tooltip activator="parent" location="top" v-if="item.valorIPI || item.valorICMS">
-                  Base: {{ item.valorUnitario.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }} | IPI: {{ item.valorIPI || 0 }}% | ICMS: {{ item.valorICMS || 0 }}%
-                </v-tooltip>
+              <template v-if="calcularCustoPeca(item) > 0">
+                {{ (calcularCustoPeca(item) / (item.quantidade || 1)).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }}
               </template>
               <span v-else>?</span>
             </div>
@@ -1102,6 +1099,38 @@ const kitsGrouped = computed(() => {
 
   return groups
 })
+
+const printQRCode = () => {
+  window.print()
+}
+
+const calcularCustoProcessosUnitario = (item) => {
+  let custoProcessos = 0
+  if (item.processos && item.processos.length > 0) {
+    for (const p of item.processos) {
+      if (p.valorCusto) {
+        const ipi = p.valorCusto * ((p.valorIPI || 0) / 100)
+        const icms = p.valorCusto * ((p.valorICMS || 0) / 100)
+        custoProcessos += (p.valorCusto + ipi + icms)
+      }
+    }
+  }
+  return custoProcessos
+}
+
+const calcularCustoPeca = (item) => {
+  let custoMaterial = 0
+  if (item.valorUnitario) {
+    const ipi = item.valorUnitario * ((item.valorIPI || 0) / 100)
+    const icms = item.valorUnitario * ((item.valorICMS || 0) / 100)
+    custoMaterial = (item.valorUnitario + ipi + icms) * (item.quantidade || 1)
+  }
+
+  const custoProcessos = calcularCustoProcessosUnitario(item) * (item.quantidade || 1)
+
+  const total = custoMaterial + custoProcessos
+  return total > 0 ? total : (item.custoTotal || 0)
+}
 
 const prontidaoGeral = computed(() => {
   if (pecas.value.length === 0) return 0
