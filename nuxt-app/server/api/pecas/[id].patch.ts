@@ -38,6 +38,11 @@ export default defineEventHandler(async (event) => {
         if (newVUnit) {
             vUnitComImposto = newVUnit + (newVUnit * (newVIPI || 0) / 100) + (newVUnit * (newVICMS || 0) / 100);
         }
+        
+        let newCustoTrat = existing?.custoTratamento || 0
+        if (body.custoTratamento !== undefined && body.custoTratamento !== null) {
+            newCustoTrat = parseFloat(body.custoTratamento)
+        }
 
         const updatedPeca = await prisma.peca.update({
             where: { id: parseInt(id) },
@@ -50,11 +55,20 @@ export default defineEventHandler(async (event) => {
                 categoria: body.categoria,
                 subcategoria: body.subcategoria,
                 subconjunto: body.subconjunto,
+                peso: body.peso !== undefined ? (body.peso ? parseFloat(body.peso) : null) : undefined,
+                areaSuperficial: body.areaSuperficial !== undefined ? (body.areaSuperficial ? parseFloat(body.areaSuperficial) : null) : undefined,
+                dimensoesExternas: body.dimensoesExternas !== undefined ? body.dimensoesExternas : undefined,
+                tratamentoSuperficial: body.tratamentoSuperficial !== undefined ? body.tratamentoSuperficial : undefined,
+                detalheTratamento: body.detalheTratamento !== undefined ? body.detalheTratamento : undefined,
+                comprimentoMaterial: body.comprimentoMaterial !== undefined ? (body.comprimentoMaterial ? parseFloat(body.comprimentoMaterial) : null) : undefined,
+                tipoMaterial: body.tipoMaterial !== undefined ? body.tipoMaterial : undefined,
+                imagem: body.imagem !== undefined ? body.imagem : undefined,
                 statusSuprimento: body.statusSuprimento,
                 valorUnitario: newVUnit,
                 valorIPI: newVIPI,
                 valorICMS: newVICMS,
-                custoTotal: vUnitComImposto * newQtd,
+                custoTratamento: newCustoTrat,
+                custoTotal: (vUnitComImposto + newCustoTrat) * newQtd,
                 fornecedorId: body.fornecedorId ? parseInt(body.fornecedorId) : undefined
             }
         })

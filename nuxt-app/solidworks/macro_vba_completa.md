@@ -17,11 +17,15 @@ Para a versão completa, seu UserForm no VBA precisará ter **todos** os campos 
 | **Label** | `lblProgresso` | Exibe "Item x de y" |
 | **TextBox** | `txtCodPeca` | Código da peça |
 | **TextBox** | `txtDescricao` | Descrição/Nome |
-| **TextBox** | `txtMaterial` | Material da peça |
+| **TextBox** | `txtMaterial` | Material da peça (Liga/Especificação) |
+| **TextBox** | `txtTipoMaterial` | Tipo/Perfil do material (Ex: Barra Chata) |
+| **TextBox** | `txtComprimento` | Comprimento do material em mm |
 | **Label** | `lblQuantidade` | Exibe a quantidade total |
 | **ComboBox** | `cmbCategoria` | Categorias: FABRICADO / COMERCIAL |
 | **ComboBox** | `cmbSubcategoria`| Subcategoria (Exibida apenas se COMERCIAL) |
-| **ListBox** | `lstProcessos` | Etapas do PCP (Exibida apenas se FABRICADO) |
+| **ComboBoxes** | `cmbProcesso1` a `cmbProcesso6` | 6 Caixas de seleção para os Processos (Exibidas apenas se FABRICADO) |
+| **ComboBox** | `cmbTratamento` | Tratamento Superficial (Pintura, Zinco, etc) |
+| **TextBox** | `txtDetalheTratamento`| Detalhe/Cor do Tratamento |
 | **CheckBox** | `chkUsarConfig` | Incluir config no código? |
 | **CheckBox** | `chkApenasConfig` | Usar **apenas** config como código? |
 | **CheckBox** | `chkPDF` | Exportar e Anexar PDF do Desenho? |
@@ -33,7 +37,7 @@ Para a versão completa, seu UserForm no VBA precisará ter **todos** os campos 
 
 **Ajustes das Propriedades**:
 1. Formulário (`frmProcessos`): Mude **ShowModal** para `False`.
-2. ListBox (`lstProcessos`): Mude **MultiSelect** para `1 - fmMultiSelectMulti`.
+2. ComboBoxes (`cmbProcesso1` a `cmbProcesso6`): Mude **Style** para `2 - fmStyleDropDownList` (opcional).
 3. ComboBox (`cmbSubcategoria`): Deixe a propriedade **Visible** como `False` por padrão no painel de propriedades.
 
 ---
@@ -74,6 +78,9 @@ Private mKeyAtual As String ' Chave: Path::Config::FolderIdx (-1 = Peça, 0+ = C
 Private mMainAssyPath As String
 Private mCutListCache As Scripting.Dictionary
 Private mCurrentBodies As Variant ' Guarda os corpos do Cut-List atual para exportação
+Private mPeso As Double
+Private mArea As Double
+Private mDimensoes As String
 
 ' --- INICIALIZAÇÃO ---
 Public Sub IniciarComMontagem(swModel As SldWorks.ModelDoc2)
@@ -206,6 +213,14 @@ Private Sub ProcessarProximo()
     swCustProp.Get4 "categoria", False, "", cat
     swCustProp.Get4 "subcategoria", False, "", subcat
     
+    Dim loadedTratamento As String, loadedDetalhe As String
+    swCustProp.Get4 "tratamento", False, "", loadedTratamento
+    swCustProp.Get4 "detalhe_tratamento", False, "", loadedDetalhe
+    
+    Dim loadedTipoMat As String, loadedComprimento As String
+    swCustProp.Get4 "tipo_material", False, "", loadedTipoMat
+    swCustProp.Get4 "comprimento_material", False, "", loadedComprimento
+    
     On Error Resume Next
     Me.txtDescricao.Text = desc: Me.txtMaterial.Text = ""
     If typeDoc = 1 Then
@@ -221,7 +236,64 @@ Private Sub ProcessarProximo()
             Me.txtMaterial.Text = cleanMat
         End If
     End If
+    Me.txtTipoMaterial.Text = loadedTipoMat
+    Me.txtComprimento.Text = loadedComprimento
     On Error GoTo 0
+    
+    ' --- CÁLCULO DE PROPRIEDADES FÍSICAS (Massa, Área, Bounding Box) ---
+    Dim swMass As SldWorks.MassProperty
+    Set swMass = swCompModel.Extension.CreateMassProperty
+    If Not swMass Is Nothing Then
+        mPeso = swMass.Mass ' Em KG (Padrão do SolidWorks)
+        mArea = swMass.SurfaceArea ' Em M²
+    Else
+        mPeso = 0: mArea = 0
+    End If
+    
+    Dim boxArr As Variant
+    If typeDoc = 1 Then
+        Dim swPart As SldWorks.PartDoc: Set swPart = swCompModel
+        boxArr = swPart.GetPartBox(True)
+    Else
+        Dim swAssy As SldWorks.AssemblyDoc: Set swAssy = swCompModel
+        boxArr = swAssy.GetBox(0)
+    End If
+    If Not IsEmpty(boxArr) Then
+        ' boxArr retorna (XMin, YMin, ZMin, XMax, YMax, ZMax) em metros
+        Dim compX As Double, compY As Double, compZ As Double
+        compX = Abs(boxArr(3) - boxArr(0)) * 1000
+        compY = Abs(boxArr(4) - boxArr(1)) * 1000
+        compZ = Abs(boxArr(5) - boxArr(2)) * 1000
+        ' Ordenar para C x L x E
+        Dim dims(2) As Double: dims(0) = compX: dims(1) = compY: dims(2) = compZ
+        Dim tempD As Double, ii As Integer, jj As Integer
+        For ii = 0 To 1
+            For jj = ii + 1 To 2
+                If dims(ii) < dims(jj) Then
+                    tempD = dims(ii): dims(ii) = dims(jj): dims(jj) = tempD
+                End If
+            Next jj
+        Next ii
+        mDimensoes = Format(dims(0), "0.0") & " x " & Format(dims(1), "0.0") & " x " & Format(dims(2), "0.0")
+    Else
+        mDimensoes = ""
+    End If
+    
+    Me.cmbTratamento.Clear
+    Me.cmbTratamento.AddItem "Zinco"
+    Me.cmbTratamento.AddItem "Pintura"
+    Me.cmbTratamento.AddItem "Outros"
+    Me.cmbTratamento.AddItem "Sem tratamento superficial"
+    If loadedTratamento = "Nenhum" Then loadedTratamento = "Sem tratamento superficial"
+    
+    If loadedTratamento <> "" Then
+        On Error Resume Next
+        Me.cmbTratamento.Text = loadedTratamento
+        On Error GoTo 0
+    Else
+        Me.cmbTratamento.ListIndex = 3 ' 3 = Sem tratamento superficial
+    End If
+    Me.txtDetalheTratamento.Text = loadedDetalhe
     
     Me.cmbCategoria.Clear: Me.cmbCategoria.AddItem "FABRICADO": Me.cmbCategoria.AddItem "COMERCIAL"
     
@@ -256,13 +328,22 @@ Private Sub ProcessarProximo()
 End Sub
 
 Private Sub cmbCategoria_Change()
+    Dim i As Integer
+    On Error Resume Next
     If Me.cmbCategoria.Text = "COMERCIAL" Then
-        Me.lstProcessos.Visible = False
+        For i = 1 To 6
+            Me.Frame1.Controls("cmbProcesso" & i).Visible = False
+            Me.Frame1.Controls("lblProcesso" & i).Visible = False
+        Next i
         Me.cmbSubcategoria.Visible = True
     Else
-        Me.lstProcessos.Visible = True
+        For i = 1 To 6
+            Me.Frame1.Controls("cmbProcesso" & i).Visible = True
+            Me.Frame1.Controls("lblProcesso" & i).Visible = True
+        Next i
         Me.cmbSubcategoria.Visible = False
     End If
+    On Error GoTo 0
 End Sub
 
 Private Sub btnConfirmar_Click()
@@ -442,11 +523,19 @@ Private Sub SalvarNoArquivo()
     Dim swCustProp As SldWorks.CustomPropertyManager: Set swCustProp = swModel.Extension.CustomPropertyManager(configName)
     swCustProp.Add3 "categoria", 30, Me.cmbCategoria.Text, 2: swCustProp.Add3 "nome", 30, Me.txtDescricao.Text, 2
     swCustProp.Add3 "subcategoria", 30, Me.cmbSubcategoria.Text, 2
+    swCustProp.Add3 "tratamento", 30, Me.cmbTratamento.Text, 2
+    swCustProp.Add3 "detalhe_tratamento", 30, Me.txtDetalheTratamento.Text, 2
+    swCustProp.Add3 "tipo_material", 30, Me.txtTipoMaterial.Text, 2
+    swCustProp.Add3 "comprimento_material", 30, Me.txtComprimento.Text, 2
     Dim i As Integer: For i = 1 To 10: swCustProp.Delete "processo" & i: Next i
     Dim count As Integer: count = 1
-    For i = 0 To Me.lstProcessos.ListCount - 1
-        If Me.lstProcessos.Selected(i) Then swCustProp.Add3 "processo" & count, 30, Me.lstProcessos.List(i), 2: count = count + 1
+    On Error Resume Next
+    For i = 1 To 6
+        If Me.Frame1.Controls("cmbProcesso" & i).Text <> "" Then
+            swCustProp.Add3 "processo" & count, 30, Me.Frame1.Controls("cmbProcesso" & i).Text, 2: count = count + 1
+        End If
     Next i
+    On Error GoTo 0
     swModel.Save3 1, 0, 0
 End Sub
 
@@ -454,17 +543,34 @@ Private Function EnviarParaAPI() As Long
     On Error GoTo Erro
     Dim http As Object: Set http = CreateObject("MSXML2.XMLHTTP")
     Dim escolhidos As String, i As Integer
+    On Error Resume Next
     If Me.cmbCategoria.Text = "FABRICADO" Then
-        For i = 0 To Me.lstProcessos.ListCount - 1
-            If Me.lstProcessos.Selected(i) Then escolhidos = escolhidos & """" & Me.lstProcessos.List(i) & ""","
+        For i = 1 To 6
+            If Me.Frame1.Controls("cmbProcesso" & i).Text <> "" Then
+                escolhidos = escolhidos & """" & Me.Frame1.Controls("cmbProcesso" & i).Text & ""","
+            End If
         Next i
         If Len(escolhidos) > 0 Then escolhidos = Left(escolhidos, Len(escolhidos) - 1)
     End If
+    On Error GoTo Erro
     
     Dim selSubCat As String: selSubCat = ""
     If Me.cmbCategoria.Text = "COMERCIAL" Then selSubCat = Me.cmbSubcategoria.Text
     
-    Dim body As String: body = "{""numeroOP"": """ & mOP & """, ""peca"": {""codigo"": """ & Me.txtCodPeca.Text & """, ""descricao"": """ & Me.txtDescricao.Text & """, ""material"": """ & Me.txtMaterial.Text & """, ""quantidade"": " & mDictComps(mKeyAtual) & ", ""categoria"": """ & Me.cmbCategoria.Text & """, ""subcategoria"": """ & selSubCat & """, ""processos"": [" & escolhidos & "]}}"
+    Dim tTratamento As String, tDetalhe As String
+    tTratamento = "": tDetalhe = ""
+    If Me.cmbTratamento.Text <> "Sem tratamento superficial" And Me.cmbTratamento.Text <> "" Then
+        tTratamento = Me.cmbTratamento.Text
+        tDetalhe = Me.txtDetalheTratamento.Text
+    End If
+    
+    Dim strPeso As String: strPeso = Replace(CStr(mPeso), ",", ".")
+    Dim strArea As String: strArea = Replace(CStr(mArea), ",", ".")
+    
+    Dim cComp As String: cComp = Me.txtComprimento.Text
+    If cComp = "" Then cComp = "null" Else cComp = Replace(cComp, ",", ".")
+    
+    Dim body As String: body = "{""numeroOP"": """ & mOP & """, ""peca"": {""codigo"": """ & Me.txtCodPeca.Text & """, ""descricao"": """ & Me.txtDescricao.Text & """, ""material"": """ & Me.txtMaterial.Text & """, ""tipoMaterial"": """ & Me.txtTipoMaterial.Text & """, ""comprimentoMaterial"": " & cComp & ", ""quantidade"": " & mDictComps(mKeyAtual) & ", ""categoria"": """ & Me.cmbCategoria.Text & """, ""subcategoria"": """ & selSubCat & """, ""processos"": [" & escolhidos & "], ""peso"": " & strPeso & ", ""areaSuperficial"": " & strArea & ", ""dimensoesExternas"": """ & mDimensoes & """, ""tratamentoSuperficial"": """ & tTratamento & """, ""detalheTratamento"": """ & tDetalhe & """}}"
     
     http.Open "POST", mUrl & "/ops/import-bom", False
     http.setRequestHeader "Content-Type", "application/json"
@@ -489,6 +595,18 @@ Private Sub ExportarArquivos(pecaId As Long)
     Dim tempFolder As String: tempFolder = Environ("TEMP") & "\"
     Dim tempPath As String
     
+    ' Criar um nome seguro para os arquivos (remover caracteres inválidos do Windows)
+    Dim safeCod As String: safeCod = Me.txtCodPeca.Text
+    safeCod = Replace(safeCod, "/", "-")
+    safeCod = Replace(safeCod, "\", "-")
+    safeCod = Replace(safeCod, ":", "-")
+    safeCod = Replace(safeCod, "*", "")
+    safeCod = Replace(safeCod, "?", "")
+    safeCod = Replace(safeCod, """", "")
+    safeCod = Replace(safeCod, "<", "")
+    safeCod = Replace(safeCod, ">", "")
+    safeCod = Replace(safeCod, "|", "")
+    
     ' Obter Pasta do 3D para buscar o desenho
     Dim modelPath As String: modelPath = swModel.GetPathName
     Dim folderPath As String: folderPath = Left(modelPath, InStrRev(modelPath, "\"))
@@ -503,7 +621,7 @@ Private Sub ExportarArquivos(pecaId As Long)
         ' TRATATIVA MAIS RÁPIDA E DIRETA:
         ' Se o PDF já existir na mesma pasta do arquivo 3D, envia ele direto sem abrir o desenho!
         If Dir(localPdfPath) <> "" Then
-            UploadArquivo pecaId, localPdfPath, Me.txtCodPeca.Text & ".pdf"
+            UploadArquivo pecaId, localPdfPath, safeCod & ".pdf"
             
         ' Se não existir, tenta gerar o PDF e salva na mesma pasta (evita bloqueios da pasta TEMP)
         ElseIf Dir(drwPath) <> "" Then
@@ -528,7 +646,7 @@ Private Sub ExportarArquivos(pecaId As Long)
                 swApp.ActivateDoc3 swModel.GetTitle, True, 1, errs
                 
                 If Dir(localPdfPath) <> "" Then
-                    UploadArquivo pecaId, localPdfPath, Me.txtCodPeca.Text & ".pdf"
+                    UploadArquivo pecaId, localPdfPath, safeCod & ".pdf"
                 End If
             End If
         End If
@@ -536,15 +654,15 @@ Private Sub ExportarArquivos(pecaId As Long)
     
     ' 2. Exportar DXF (Flat Pattern para Chapas)
     If Me.chkDXF.Value = True And swModel.GetType = 1 Then
-        Dim localDxfPath As String: localDxfPath = folderPath & Me.txtCodPeca.Text & ".dxf"
+        Dim localDxfPath As String: localDxfPath = folderPath & safeCod & ".dxf"
         
         ' Se o DXF já existir, envia ele direto!
         If Dir(localDxfPath) <> "" Then
-            UploadArquivo pecaId, localDxfPath, Me.txtCodPeca.Text & ".dxf"
+            UploadArquivo pecaId, localDxfPath, safeCod & ".dxf"
             
         ' Se não existir, tenta gerar o DXF
         Else
-            tempPath = tempFolder & "corte_" & Me.txtCodPeca.Text & ".dxf"
+            tempPath = tempFolder & "corte_" & safeCod & ".dxf"
             Dim swPart As SldWorks.PartDoc: Set swPart = swModel
             
             ' A abertura do PDF logo acima cancelou todas as seleções da tela!
@@ -597,7 +715,7 @@ Private Sub ExportarArquivos(pecaId As Long)
             bRetDXF = swPart.ExportToDWG2(tempPath, modelPath, 1, True, Empty, False, False, 5, Empty)
             
             If Dir(tempPath) <> "" Then
-                UploadArquivo pecaId, tempPath, Me.txtCodPeca.Text & ".dxf"
+                UploadArquivo pecaId, tempPath, safeCod & ".dxf"
                 Kill tempPath
             End If
         End If
@@ -605,15 +723,15 @@ Private Sub ExportarArquivos(pecaId As Long)
     
     ' 3. Exportar IGS (Peças Usinadas)
     If Me.chkIGS.Value = True And swModel.GetType = 1 Then
-        Dim localIgsPath As String: localIgsPath = folderPath & Me.txtCodPeca.Text & ".igs"
+        Dim localIgsPath As String: localIgsPath = folderPath & safeCod & ".igs"
         
         ' Se o IGS já existir, usa ele!
         If Dir(localIgsPath) <> "" Then
-            UploadArquivo pecaId, localIgsPath, Me.txtCodPeca.Text & ".igs"
+            UploadArquivo pecaId, localIgsPath, safeCod & ".igs"
             
         ' Se não existir, tenta gerar o IGS do corpo isolado
         Else
-            tempPath = tempFolder & "usinagem_" & Me.txtCodPeca.Text & ".igs"
+            tempPath = tempFolder & "usinagem_" & safeCod & ".igs"
             
             ' Garantir que o corpo alvo seja o único selecionado no momento da exportação!
             swModel.ClearSelection2 True
@@ -627,10 +745,31 @@ Private Sub ExportarArquivos(pecaId As Long)
             swModel.Extension.SaveAs tempPath, 0, 1, Nothing, errsIGS, warnsIGS
             
             If Dir(tempPath) <> "" Then
-                UploadArquivo pecaId, tempPath, Me.txtCodPeca.Text & ".igs"
+                UploadArquivo pecaId, tempPath, safeCod & ".igs"
                 Kill tempPath
             End If
         End If
+    End If
+    
+    ' 4. Exportar Foto (JPG)
+    tempPath = tempFolder & "foto_" & safeCod & ".jpg"
+    
+    ' Forçar ativação da janela e renderização antes de tirar a foto (JPG é screenshot da tela)
+    Dim errsAct As Long
+    swApp.ActivateDoc3 swModel.GetTitle, True, 1, errsAct
+    swModel.ClearSelection2 True
+    swModel.ViewZoomtofit2
+    swModel.GraphicsRedraw2
+    
+    ' Aguardar a placa de vídeo renderizar a tela
+    For t = 1 To 10: DoEvents: Next t
+    
+    Dim errsJPG As Long, warnsJPG As Long
+    swModel.Extension.SaveAs tempPath, 0, 1, Nothing, errsJPG, warnsJPG
+    
+    If Dir(tempPath) <> "" Then
+        UploadArquivo pecaId, tempPath, safeCod & ".jpg"
+        Kill tempPath
     End If
 End Sub
 
@@ -648,18 +787,23 @@ Private Sub UploadArquivo(pecaId As Long, filePath As String, fileName As String
     adodbStream.Close
     
     http.Open "POST", mUrl & "/pecas/" & pecaId & "/desenho", False
-    http.setRequestHeader "Content-Type", "application/pdf"
+    http.setRequestHeader "Content-Type", "application/octet-stream"
     http.setRequestHeader "X-File-Name", fileName
     http.send fileContent
 End Sub
 
 Private Sub PopularListaProcessos(swModel As SldWorks.ModelDoc2, configName As String)
-    Me.lstProcessos.Clear
+    Dim i As Integer
+    For i = 1 To 6
+        Me.Controls("cmbProcesso" & i).Clear
+        Me.Controls("cmbProcesso" & i).AddItem ""
+    Next i
+    
     Dim partes() As String: partes = Split(mProcessoList, """nome"": """)
     If UBound(partes) = 0 Then partes = Split(mProcessoList, """nome"":""")
     
     Dim arrBanco() As String: ReDim arrBanco(0)
-    Dim i As Integer, countBanco As Integer: countBanco = 0
+    Dim countBanco As Integer: countBanco = 0
     For i = 1 To UBound(partes)
         ReDim Preserve arrBanco(countBanco)
         arrBanco(countBanco) = Split(partes(i), """")(0)
@@ -667,19 +811,18 @@ Private Sub PopularListaProcessos(swModel As SldWorks.ModelDoc2, configName As S
     Next i
     
     For i = 0 To countBanco - 1
-        Me.lstProcessos.AddItem arrBanco(i)
+        Dim j As Integer
+        For j = 1 To 6
+            Me.Controls("cmbProcesso" & j).AddItem arrBanco(i)
+        Next j
     Next i
     
     Dim swCustProp As SldWorks.CustomPropertyManager: Set swCustProp = swModel.Extension.CustomPropertyManager(configName)
-    Dim val As String, j As Integer
-    For i = 1 To 10
+    Dim val As String
+    For i = 1 To 6
         swCustProp.Get4 "processo" & i, False, "", val
         If val = "" Then swModel.Extension.CustomPropertyManager("").Get4 "processo" & i, False, "", val
-        If val <> "" Then
-            For j = 0 To Me.lstProcessos.ListCount - 1
-                If Me.lstProcessos.List(j) = val Then Me.lstProcessos.Selected(j) = True
-            Next j
-        End If
+        If val <> "" Then Me.Controls("cmbProcesso" & i).Text = val
     Next i
 End Sub
 

@@ -70,7 +70,14 @@ export default defineEventHandler(async (event) => {
                 subcategoria: subcatFinal,
                 valorUnitario: valUnit,
                 valorIPI: valIPI,
-                custoTotal: valUnitComImposto ? valUnitComImposto * qtdFinal : undefined
+                custoTotal: valUnitComImposto ? valUnitComImposto * qtdFinal : undefined,
+                peso: peca.peso,
+                areaSuperficial: peca.areaSuperficial,
+                dimensoesExternas: peca.dimensoesExternas,
+                tratamentoSuperficial: peca.tratamentoSuperficial,
+                detalheTratamento: peca.detalheTratamento,
+                comprimentoMaterial: peca.comprimentoMaterial,
+                tipoMaterial: peca.tipoMaterial
             },
             create: {
                 opId: op.id,
@@ -83,7 +90,14 @@ export default defineEventHandler(async (event) => {
                 valorUnitario: valUnit,
                 valorIPI: valIPI,
                 custoTotal: valUnitComImposto ? valUnitComImposto * qtdFinal : null,
-                status: 'NAO_INICIADA'
+                status: 'NAO_INICIADA',
+                peso: peca.peso,
+                areaSuperficial: peca.areaSuperficial,
+                dimensoesExternas: peca.dimensoesExternas,
+                tratamentoSuperficial: peca.tratamentoSuperficial,
+                detalheTratamento: peca.detalheTratamento,
+                comprimentoMaterial: peca.comprimentoMaterial,
+                tipoMaterial: peca.tipoMaterial
             }
         })
 
@@ -121,6 +135,70 @@ export default defineEventHandler(async (event) => {
             await prisma.processoPeca.createMany({
                 data: processosData
             })
+        }
+
+        // 4. Auto-Geração de Roteiros de Tratamento Superficial
+        if (peca.tratamentoSuperficial) {
+            const tratamento = String(peca.tratamentoSuperficial).toUpperCase()
+            let tipoRoteiro = 'OUTROS'
+            if (tratamento.includes('ZINCO')) tipoRoteiro = 'ZINCO'
+            else if (tratamento.includes('PINTURA')) tipoRoteiro = 'PINTURA'
+
+            // Buscar se já existe um roteiro deste tipo para esta OP
+            let roteiro = await prisma.roteiro.findFirst({
+                where: {
+                    opId: op.id,
+                    tipo: tipoRoteiro
+                }
+            })
+
+            // Se não existe, cria
+            if (!roteiro) {
+                // Gerar número do roteiro: ROT-{OP}-{TIPO}
+                const numRoteiro = `ROT-${op.numeroOP}-${tipoRoteiro}`
+                roteiro = await prisma.roteiro.create({
+                    data: {
+                        numero: numRoteiro,
+                        tipo: tipoRoteiro,
+                        opId: op.id,
+                        status: 'CRIADO'
+                    }
+                })
+            }
+
+            // Inserir a peça no Roteiro (se já não estiver)
+            const roteiroItemExistente = await prisma.roteiroItem.findFirst({
+                where: { roteiroId: roteiro.id, pecaId: pecaCriada.id }
+            })
+
+            if (roteiroItemExistente) {
+                // Atualiza a quantidade, peso e área se já existir
+                await prisma.roteiroItem.update({
+                    where: { id: roteiroItemExistente.id },
+                    data: {
+                        quantidade: pecaCriada.quantidade,
+                        pesoIndividual: pecaCriada.peso,
+                        areaSuperficial: pecaCriada.areaSuperficial,
+                        dimensoesExternas: pecaCriada.dimensoesExternas,
+                        tratamento: pecaCriada.tratamentoSuperficial || 'Não especificado',
+                        imagemUrl: pecaCriada.imagem
+                    }
+                })
+            } else {
+                // Cria o item no roteiro
+                await prisma.roteiroItem.create({
+                    data: {
+                        roteiroId: roteiro.id,
+                        pecaId: pecaCriada.id,
+                        quantidade: pecaCriada.quantidade,
+                        pesoIndividual: pecaCriada.peso,
+                        areaSuperficial: pecaCriada.areaSuperficial,
+                        dimensoesExternas: pecaCriada.dimensoesExternas,
+                        tratamento: pecaCriada.tratamentoSuperficial || 'Não especificado',
+                        imagemUrl: pecaCriada.imagem
+                    }
+                })
+            }
         }
 
         return {

@@ -28,6 +28,9 @@ export default defineEventHandler(async (event) => {
                 rncs: {
                     select: { status: true, numero: true }
                 },
+                roteiroItens: {
+                    include: { roteiro: true }
+                },
                 _count: {
                     select: { processos: true }
                 }

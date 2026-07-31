@@ -84,6 +84,14 @@ export default defineEventHandler(async (event) => {
             })
         }
 
+        // Se for imagem (.jpg, .jpeg, .png), atualiza o campo `imagem` da peça
+        if (['.jpg', '.jpeg', '.png'].includes(fileExt.toLowerCase())) {
+            await prisma.peca.update({
+                where: { id: parseInt(pecaId) },
+                data: { imagem: url }
+            })
+        }
+
         try {
             const { logAction } = await import('../../../utils/logger')
             await logAction(

@@ -103,6 +103,20 @@ enum RNCDisposicao {
   ACEITACAO_CONDICIONAL
 }
 
+enum RoteiroTipo {
+  ZINCO
+  PINTURA
+  OUTROS
+}
+
+enum RoteiroStatus {
+  CRIADO
+  AGUARDANDO_ORCAMENTO
+  ENVIADO
+  RECEBIDO
+  CANCELADO
+}
+
 // --- MODELS ---
 model User {
   id                   Int                   @id @default(autoincrement())
@@ -201,6 +215,7 @@ model OP {
   responsavel      User?                 @relation("OP_Responsavel", fields: [responsavelId], references: [id])
   pecas            Peca[]
   rncs             RNC[]
+  roteiros         Roteiro[]
 
   @@map("ops")
 }
@@ -258,13 +273,23 @@ model Peca {
   custoTotal       Float?           @map("custo_total")
   fornecedorId     Int?             @map("fornecedor_id")
   anexos           PecaAnexo[]
-  arquivoBOM       String?
-  status           PecaStatus       @default(NAO_INICIADA)
+  arquivoBOM            String?
+  peso                  Float?           @map("peso")
+  areaSuperficial       Float?           @map("area_superficial")
+  dimensoesExternas     String?          @map("dimensoes_externas")
+  tratamentoSuperficial String?          @map("tratamento_superficial")
+  detalheTratamento     String?          @map("detalhe_tratamento")
+  comprimentoMaterial   Float?           @map("comprimento_material") // em mm
+  tipoMaterial          String?          @map("tipo_material") // Ex: barra chata, tubo
+  custoTratamento       Float?           @map("custo_tratamento")
+  imagem                String?          @map("imagem")
+  status                PecaStatus       @default(NAO_INICIADA)
   compras          CompraItem[]
   op               OP               @relation(fields: [opId], references: [id], onDelete: Cascade)
   processos        ProcessoPeca[]
   fornecedor       Fornecedor?      @relation(fields: [fornecedorId], references: [id])
   rncs             RNC[]
+  roteiroItens     RoteiroItem[]
 
   @@unique([opId, codigo])
   @@map("pecas")
@@ -332,6 +357,8 @@ model Fornecedor {
   pecas         Peca[]
   compras       Compra[]       @relation("FornecedorCompra")
   rncs          RNC[]
+  roteiros      Roteiro[]
+  precoKgZinco  Float?         @map("preco_kg_zinco")
 
   @@map("fornecedores")
 }
@@ -598,4 +625,45 @@ model RNCAnexo {
   rnc     RNC    @relation(fields: [rncId], references: [id], onDelete: Cascade)
 
   @@map("rnc_anexos")
+}
+
+model Roteiro {
+  id           Int           @id @default(autoincrement())
+  numero       String        @unique
+  tipo         RoteiroTipo
+  status       RoteiroStatus @default(CRIADO)
+  fornecedorId Int?          @map("fornecedor_id")
+  opId         Int?          @map("op_id")
+  dataCriacao  DateTime      @default(now()) @map("data_criacao")
+  dataEnvio    DateTime?     @map("data_envio")
+  dataRetorno  DateTime?     @map("data_retorno")
+  valorTotal   Float?        @map("valor_total")
+  observacoes  String?       @db.Text
+  
+  fornecedor   Fornecedor?   @relation(fields: [fornecedorId], references: [id])
+  op           OP?           @relation(fields: [opId], references: [id])
+  itens        RoteiroItem[]
+
+  @@map("roteiros")
+}
+
+model RoteiroItem {
+  id                Int      @id @default(autoincrement())
+  roteiroId         Int      @map("roteiro_id")
+  pecaId            Int      @map("peca_id")
+  quantidade        Int
+  quantidadeEnviada Int      @default(0) @map("quantidade_enviada")
+  quantidadeRecebida Int     @default(0) @map("quantidade_recebida")
+  tratamento        String   // Ex: Zinco Branco, Pintura Epoxi Preta, etc
+  pesoIndividual    Float?   @map("peso_individual")
+  areaSuperficial   Float?   @map("area_superficial") // m² para pintura
+  dimensoesExternas String?  @map("dimensoes_externas") // para pintura
+  valorUnitario     Float?   @map("valor_unitario")
+  valorTotal        Float?   @map("valor_total")
+  imagemUrl         String?  @map("imagem_url") // Pode copiar da peça para fixar
+  
+  roteiro           Roteiro  @relation(fields: [roteiroId], references: [id], onDelete: Cascade)
+  peca              Peca     @relation(fields: [pecaId], references: [id])
+
+  @@map("roteiro_itens")
 }

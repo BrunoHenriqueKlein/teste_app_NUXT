@@ -19,7 +19,9 @@ Certifique-se de que cada controle no seu UserForm tenha exatamente estes nomes:
 | **TextBox** | `txtMaterial` | Para o material |
 | **Label** | `lblQuantidade` | Exibe a quantidade total |
 | **ComboBox** | `cmbCategoria` | FABRICADO/COMERCIAL |
-| **ListBox** | `lstProcessos` | Lista as etapas |
+| **ComboBoxes** | `cmbProcesso1` a `cmbProcesso6` | 6 Caixas de seleção para os Processos (Exibidas apenas se FABRICADO) |
+| **ComboBox** | `cmbTratamento` | Tratamento Superficial (Pintura, Zinco, etc) |
+| **TextBox** | `txtDetalheTratamento`| Detalhe/Cor do Tratamento |
 | **CheckBox** | `chkUsarConfig` | Incluir config no código? |
 | **CheckBox** | `chkApenasConfig` | Usar **apenas** config como código? |
 | **CommandButton**| `btnConfirmar` | Salvar e Próxima |
@@ -27,7 +29,7 @@ Certifique-se de que cada controle no seu UserForm tenha exatamente estes nomes:
 
 **Configurações de Interface (Propriedades)**:
 1.  Selecione o **Formulário** (`frmProcessos`) e mude **ShowModal** para **False**.
-2.  Selecione a **ListBox** (`lstProcessos`) e mude **MultiSelect** para `1 - fmMultiSelectMulti`.
+2.  Selecione as **ComboBoxes** (`cmbProcesso1` a `cmbProcesso6`) e mude **Style** para `2 - fmStyleDropDownList` (opcional).
 
 ## 3. Código do Módulo Principal (`Module1`)
 ```vba
@@ -56,6 +58,9 @@ Private mIndice As Integer
 Private mKeyAtual As String ' Chave: Path::Config::FolderIdx (-1 = Peça, 0+ = Cut-List)
 Private mMainAssyPath As String
 Private mCutListCache As Scripting.Dictionary
+Private mPeso As Double
+Private mArea As Double
+Private mDimensoes As String
 
 ' --- INICIALIZAÇÃO ---
 Public Sub IniciarComMontagem(swModel As SldWorks.ModelDoc2)
@@ -190,6 +195,10 @@ Private Sub ProcessarProximo()
     
     swCustProp.Get4 "categoria", False, "", cat
     
+    Dim loadedTratamento As String, loadedDetalhe As String
+    swCustProp.Get4 "tratamento", False, "", loadedTratamento
+    swCustProp.Get4 "detalhe_tratamento", False, "", loadedDetalhe
+    
     On Error Resume Next
     Me.txtDescricao.Text = desc: Me.txtMaterial.Text = ""
     If typeDoc = 1 Then
@@ -206,13 +215,61 @@ Private Sub ProcessarProximo()
         End If
     End If
     On Error GoTo 0
+    
+    Dim swMass As SldWorks.MassProperty
+    Set swMass = swCompModel.Extension.CreateMassProperty
+    If Not swMass Is Nothing Then
+        mPeso = swMass.Mass ' Em KG
+        mArea = swMass.SurfaceArea ' Em M²
+    Else
+        mPeso = 0: mArea = 0
+    End If
+    
+    Dim boxArr As Variant
+    If typeDoc = 1 Then
+        Dim swPart As SldWorks.PartDoc: Set swPart = swCompModel
+        boxArr = swPart.GetPartBox(True)
+    Else
+        Dim swAssy As SldWorks.AssemblyDoc: Set swAssy = swCompModel
+        boxArr = swAssy.GetBox(0)
+    End If
+    If Not IsEmpty(boxArr) Then
+        Dim compX As Double, compY As Double, compZ As Double
+        compX = Abs(boxArr(3) - boxArr(0)) * 1000
+        compY = Abs(boxArr(4) - boxArr(1)) * 1000
+        compZ = Abs(boxArr(5) - boxArr(2)) * 1000
+        Dim dims(2) As Double: dims(0) = compX: dims(1) = compY: dims(2) = compZ
+        Dim tempD As Double, ii As Integer, jj As Integer
+        For ii = 0 To 1
+            For jj = ii + 1 To 2
+                If dims(ii) < dims(jj) Then
+                    tempD = dims(ii): dims(ii) = dims(jj): dims(jj) = tempD
+                End If
+            Next jj
+        Next ii
+        mDimensoes = Format(dims(0), "0.0") & " x " & Format(dims(1), "0.0") & " x " & Format(dims(2), "0.0")
+    Else
+        mDimensoes = ""
+    End If
+    
+    Me.cmbTratamento.Clear
+    Me.cmbTratamento.AddItem "Nenhum"
+    Me.cmbTratamento.AddItem "Pintura"
+    Me.cmbTratamento.AddItem "Zinco"
+    If loadedTratamento <> "" Then
+        Me.cmbTratamento.Text = loadedTratamento
+    Else
+        Me.cmbTratamento.ListIndex = 0
+    End If
+    Me.txtDetalheTratamento.Text = loadedDetalhe
+
     Me.cmbCategoria.Clear: Me.cmbCategoria.AddItem "FABRICADO": Me.cmbCategoria.AddItem "COMERCIAL"
     If cat = "COMERCIAL" Then
         Me.cmbCategoria.ListIndex = 1
     Else
         Me.cmbCategoria.ListIndex = 0
     End If
-    Me.lstProcessos.Clear: PopularProcessosDaPeca swCompModel, configName: PopularListaBanco
+    Dim i As Integer: For i = 1 To 6: Me.Controls("cmbProcesso" & i).Clear: Next i: PopularProcessosDaPeca swCompModel, configName: PopularListaBanco
     Me.Show vbModeless
 End Sub
 
@@ -307,10 +364,17 @@ Private Sub chkUsarConfig_Click(): AtualizarSugestaoCodigo: End Sub
 Private Sub chkApenasConfig_Click(): AtualizarSugestaoCodigo: End Sub
 
 Private Sub cmbCategoria_Change()
+    Dim i As Integer
     If Me.cmbCategoria.Text = "COMERCIAL" Then
-        Me.lstProcessos.Visible = False
+        For i = 1 To 6
+            Me.Controls("cmbProcesso" & i).Visible = False
+            Me.Controls("lblProcesso" & i).Visible = False
+        Next i
     Else
-        Me.lstProcessos.Visible = True
+        For i = 1 To 6
+            Me.Controls("cmbProcesso" & i).Visible = True
+            Me.Controls("lblProcesso" & i).Visible = True
+        Next i
     End If
 End Sub
 
@@ -379,10 +443,14 @@ Private Sub SalvarNoArquivo()
     If swModel Is Nothing Then Exit Sub
     Dim swCustProp As SldWorks.CustomPropertyManager: Set swCustProp = swModel.Extension.CustomPropertyManager(configName)
     swCustProp.Add3 "categoria", 30, Me.cmbCategoria.Text, 2: swCustProp.Add3 "nome", 30, Me.txtDescricao.Text, 2
+    swCustProp.Add3 "tratamento", 30, Me.cmbTratamento.Text, 2
+    swCustProp.Add3 "detalhe_tratamento", 30, Me.txtDetalheTratamento.Text, 2
     Dim i As Integer: For i = 1 To 10: swCustProp.Delete "processo" & i: Next i
     Dim count As Integer: count = 1
-    For i = 0 To Me.lstProcessos.ListCount - 1
-        If Me.lstProcessos.Selected(i) Then swCustProp.Add3 "processo" & count, 30, Me.lstProcessos.List(i), 2: count = count + 1
+    For i = 1 To 6
+        If Me.Controls("cmbProcesso" & i).Text <> "" Then
+            swCustProp.Add3 "processo" & count, 30, Me.Controls("cmbProcesso" & i).Text, 2: count = count + 1
+        End If
     Next i
     swModel.Save3 1, 0, 0
 End Sub
@@ -390,12 +458,27 @@ End Sub
 Private Function EnviarParaAPI() As Long
     On Error GoTo Erro
     Dim http As Object: Set http = CreateObject("MSXML2.XMLHTTP")
-    Dim escolhidos As String, i As Integer: For i = 0 To Me.lstProcessos.ListCount - 1
-        If Me.lstProcessos.Selected(i) Then escolhidos = escolhidos & """" & Me.lstProcessos.List(i) & ""","
-    Next i
-    If Len(escolhidos) > 0 Then escolhidos = Left(escolhidos, Len(escolhidos) - 1)
+    Dim escolhidos As String, i As Integer
+    If Me.cmbCategoria.Text = "FABRICADO" Then
+        For i = 1 To 6
+            If Me.Controls("cmbProcesso" & i).Text <> "" Then
+                escolhidos = escolhidos & """" & Me.Controls("cmbProcesso" & i).Text & ""","
+            End If
+        Next i
+        If Len(escolhidos) > 0 Then escolhidos = Left(escolhidos, Len(escolhidos) - 1)
+    End If
     
-    Dim body As String: body = "{""numeroOP"": """ & mOP & """, ""peca"": {""codigo"": """ & Me.txtCodPeca.Text & """, ""descricao"": """ & Me.txtDescricao.Text & """, ""material"": """ & Me.txtMaterial.Text & """, ""quantidade"": " & mDictComps(mKeyAtual) & ", ""categoria"": """ & Me.cmbCategoria.Text & """, ""subcategoria"": """ & Me.subcategoria & """, ""processos"": [" & escolhidos & "]}}"
+    Dim tTratamento As String, tDetalhe As String
+    tTratamento = "": tDetalhe = ""
+    If Me.cmbTratamento.Text <> "Nenhum" And Me.cmbTratamento.Text <> "" Then
+        tTratamento = Me.cmbTratamento.Text
+        tDetalhe = Me.txtDetalheTratamento.Text
+    End If
+    
+    Dim strPeso As String: strPeso = Replace(CStr(mPeso), ",", ".")
+    Dim strArea As String: strArea = Replace(CStr(mArea), ",", ".")
+    
+    Dim body As String: body = "{""numeroOP"": """ & mOP & """, ""peca"": {""codigo"": """ & Me.txtCodPeca.Text & """, ""descricao"": """ & Me.txtDescricao.Text & """, ""material"": """ & Me.txtMaterial.Text & """, ""quantidade"": " & mDictComps(mKeyAtual) & ", ""categoria"": """ & Me.cmbCategoria.Text & """, ""subcategoria"": """ & Me.subcategoria & """, ""processos"": [" & escolhidos & "], ""peso"": " & strPeso & ", ""areaSuperficial"": " & strArea & ", ""dimensoesExternas"": """ & mDimensoes & """, ""tratamentoSuperficial"": """ & tTratamento & """, ""detalheTratamento"": """ & tDetalhe & """}}"
     
     http.Open "POST", mUrl & "/ops/import-bom", False
     http.setRequestHeader "Content-Type", "application/json"
@@ -434,6 +517,16 @@ Private Sub ExportarEEnviarDesenho(pecaId As Long)
         UploadArquivo pecaId, tempPath
         Kill tempPath
     End If
+    
+    ' Gerar Foto
+    Dim tempImgPath As String: tempImgPath = Environ("TEMP") & "\foto_temp.jpg"
+    swModel.ClearSelection2 True
+    swModel.ViewZoomtofit2
+    swModel.Extension.SaveAs tempImgPath, 0, 1, Nothing, 0, 0
+    If Dir(tempImgPath) <> "" Then
+        UploadArquivo pecaId, tempImgPath
+        Kill tempImgPath
+    End If
 End Sub
 
 Private Sub UploadArquivo(pecaId As Long, filePath As String)
@@ -454,8 +547,8 @@ Private Sub UploadArquivo(pecaId As Long, filePath As String)
     ' Para esta primeira versão, vamos enviar o binário puro com o pecaId na URL.
     
     http.Open "POST", mUrl & "/pecas/" & pecaId & "/desenho", False
-    http.setRequestHeader "Content-Type", "application/pdf" ' Enviando direto por ora
-    http.setRequestHeader "X-File-Name", Me.txtCodPeca.Text & ".pdf"
+    http.setRequestHeader "Content-Type", "application/octet-stream" ' Enviando binário
+    http.setRequestHeader "X-File-Name", Mid(filePath, InStrRev(filePath, "\") + 1)
     http.send fileContent
 End Sub
 
@@ -472,8 +565,12 @@ Private Sub PopularListaBanco()
     If UBound(partes) = 0 Then partes = Split(mProcessoList, """nome"":""")
     Dim i As Integer, nome As String: For i = 1 To UBound(partes)
         nome = Split(partes(i), """")(0): Dim j As Integer: Dim existe As Boolean: existe = False
-        For j = 0 To Me.lstProcessos.ListCount - 1: If Me.lstProcessos.List(j) = nome Then existe = True: Exit For
-        Next j: If Not existe Then Me.lstProcessos.AddItem nome
+        Dim j As Integer, k As Integer
+        For k = 1 To 6
+            For j = 0 To Me.Controls("cmbProcesso" & k).ListCount - 1: If Me.Controls("cmbProcesso" & k).List(j) = nome Then existe = True: Exit For
+            Next j
+            If Not existe Then Me.Controls("cmbProcesso" & k).AddItem nome
+        Next k
     Next i
 End Sub
 

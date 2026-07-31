@@ -300,10 +300,25 @@
             <template v-slot:bottom></template>
         <!-- Customização das Colunas -->
         <template v-slot:item.peca="{ item }">
-          <div style="white-space: normal; word-break: break-all; overflow-wrap: break-word;" class="d-flex align-center justify-space-between">
-            <div>
+          <div style="white-space: normal; word-break: break-all; overflow-wrap: break-word;" class="d-flex align-center">
+            <v-avatar v-if="item.imagem" rounded size="48" class="mr-3 border bg-grey-lighten-4 cursor-pointer" @click="abrirFotoPeca(item)">
+              <v-img :src="item.imagem" cover></v-img>
+            </v-avatar>
+            <v-avatar v-else rounded size="48" class="mr-3 border bg-grey-lighten-4">
+              <v-icon color="grey">mdi-image-outline</v-icon>
+            </v-avatar>
+            <div class="flex-grow-1">
               <div class="font-weight-bold text-primary">{{ item.codigo }}</div>
               <div class="text-caption text-grey-darken-1 mt-1">{{ item.descricao }}</div>
+              <div v-if="item.dimensoesExternas || item.peso" class="text-caption text-grey mt-1">
+                <span v-if="item.dimensoesExternas">{{ item.dimensoesExternas }} mm</span>
+                <span v-if="item.dimensoesExternas && item.peso"> | </span>
+                <span v-if="item.peso">{{ Number(item.peso).toFixed(1) }} kg</span>
+                <span v-if="item.areaSuperficial"> | {{ Number(item.areaSuperficial).toFixed(1) }} m²</span>
+              </div>
+              <div v-if="item.tratamentoSuperficial && item.tratamentoSuperficial !== 'Nenhum'" class="text-caption text-indigo mt-1">
+                <v-icon size="12" start>mdi-spray</v-icon> {{ item.tratamentoSuperficial }} <span v-if="item.detalheTratamento">- {{ item.detalheTratamento }}</span>
+              </div>
             </div>
             <v-tooltip v-if="hasActiveRNC(item.rncs)" text="Possui Não Conformidade (RNC) ativa">
               <template v-slot:activator="{ props }">
@@ -606,9 +621,28 @@
               </v-card-text>
             </v-card>
           </v-col>
-        </v-row>
+            </v-row>
       </v-tabs-window-item>
     </v-tabs-window>
+
+    <!-- Diálogo de Visualização de Foto -->
+    <v-dialog v-model="dialogFoto" max-width="800px">
+      <v-card v-if="fotoSelecionada">
+        <v-toolbar color="primary" density="compact">
+          <v-toolbar-title>Imagem da Peça: {{ fotoSelecionada.codigo }}</v-toolbar-title>
+          <v-spacer></v-spacer>
+          <v-btn icon @click="dialogFoto = false"><v-icon>mdi-close</v-icon></v-btn>
+        </v-toolbar>
+        <v-card-text class="text-center pa-4 bg-grey-lighten-4">
+          <v-img :src="fotoSelecionada.imagem" max-height="600" contain></v-img>
+        </v-card-text>
+        <v-card-actions>
+          <v-btn color="error" variant="text" @click="removerFotoPeca"><v-icon start>mdi-delete</v-icon> Excluir Foto</v-btn>
+          <v-spacer></v-spacer>
+          <v-btn variant="text" @click="dialogFoto = false">Fechar</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
     <!-- Diálogo de Inserção/Edição de Peça -->
     <v-dialog v-model="dialogPeca.show" max-width="500px">
@@ -638,6 +672,31 @@
                 hint="As peças serão agrupadas nos Kits de Montagem baseadas neste nome"
                 persistent-hint
               ></v-combobox>
+            </v-col>
+          </v-row>
+          <v-row>
+            <v-col cols="4">
+              <v-text-field v-model.number="dialogPeca.data.peso" label="Peso (KG)" type="number" variant="outlined" density="compact"></v-text-field>
+            </v-col>
+            <v-col cols="4">
+              <v-text-field v-model.number="dialogPeca.data.areaSuperficial" label="Área (M²)" type="number" variant="outlined" density="compact"></v-text-field>
+            </v-col>
+            <v-col cols="4">
+              <v-text-field v-model="dialogPeca.data.dimensoesExternas" label="Dimensões (mm)" placeholder="X x Y x Z" variant="outlined" density="compact"></v-text-field>
+            </v-col>
+          </v-row>
+          <v-row>
+            <v-col cols="6">
+              <v-combobox
+                v-model="dialogPeca.data.tratamentoSuperficial"
+                :items="['Pintura', 'Zinco', 'Nenhum']"
+                label="Tratamento Superficial"
+                variant="outlined"
+                density="compact"
+              ></v-combobox>
+            </v-col>
+            <v-col cols="6">
+              <v-text-field v-model="dialogPeca.data.detalheTratamento" label="Detalhe/Cor" variant="outlined" density="compact"></v-text-field>
             </v-col>
           </v-row>
           <v-row>
@@ -738,11 +797,14 @@
     <!-- Diálogo de Processos -->
     <v-dialog v-model="dialogProcessos.show" max-width="1200px" scrollable>
       <v-card>
-        <v-card-title class="d-flex justify-space-between align-center px-6 py-4 bg-primary text-white">
+        <v-card-title class="d-flex align-center bg-blue-grey-darken-3 text-white pa-4">
           <div class="d-flex align-center">
-            <v-icon color="white" class="mr-2">mdi-cogs</v-icon>
             <span class="text-h6 font-weight-bold">Fluxo de Processos: {{ dialogProcessos.peca?.codigo }}</span>
+            <v-chip color="info" size="small" variant="flat" class="text-uppercase ml-4" v-if="dialogProcessos.peca?.status">
+              {{ dialogProcessos.peca.status.replace(/_/g, ' ') }}
+            </v-chip>
           </div>
+          <v-spacer></v-spacer>
           <v-btn icon="mdi-close" variant="text" color="white" @click="dialogProcessos.show = false"></v-btn>
         </v-card-title>
         
@@ -751,8 +813,60 @@
         <v-card-text class="pa-6 bg-grey-lighten-4" style="height: 60vh;">
           <div class="mb-4">
             <div class="text-subtitle-1 font-weight-black">{{ dialogProcessos.peca?.descricao }}</div>
-            <div class="text-caption text-grey-darken-1">Defina a sequência de fabricação ou serviços externos para este item.</div>
+            <div class="text-caption text-grey-darken-1">Defina a engenharia completa da peça dividida em Matéria Prima, Processos Internos e Tratamento Superficial.</div>
           </div>
+
+          <!-- BLOCO 1: MATÉRIA PRIMA -->
+          <v-card class="mb-6 border" variant="flat">
+            <v-card-title class="bg-blue-grey-lighten-5 text-subtitle-1 font-weight-bold d-flex align-center">
+              <v-icon color="brown-darken-1" class="mr-2">mdi-cube-outline</v-icon>
+              1. Matéria Prima
+            </v-card-title>
+            <v-divider></v-divider>
+            <v-card-text>
+              <v-row>
+                <v-col cols="12" md="4">
+                  <v-text-field
+                    v-model="dialogProcessos.peca.tipoMaterial"
+                    label="Perfil / Tipo de Matéria Prima"
+                    placeholder="Ex: Tubo retangular 150x100 #4,75"
+                    variant="outlined"
+                    density="compact"
+                    hide-details
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="12" md="5">
+                  <v-text-field
+                    v-model="dialogProcessos.peca.material"
+                    label="Material (Liga/Especificação)"
+                    placeholder="Ex: Laminada Ø2, AISI 1020, Inox 304"
+                    variant="outlined"
+                    density="compact"
+                    hide-details
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="12" md="3">
+                  <v-text-field
+                    v-model.number="dialogProcessos.peca.comprimentoMaterial"
+                    label="Comprimento (mm)"
+                    type="number"
+                    variant="outlined"
+                    density="compact"
+                    hide-details
+                  ></v-text-field>
+                </v-col>
+              </v-row>
+            </v-card-text>
+          </v-card>
+
+          <!-- BLOCO 2: PROCESSOS DE FABRICAÇÃO -->
+          <v-card class="mb-6 border" variant="flat">
+            <v-card-title class="bg-blue-grey-lighten-5 text-subtitle-1 font-weight-bold d-flex align-center">
+              <v-icon color="blue-darken-2" class="mr-2">mdi-cogs</v-icon>
+              2. Processos de Fabricação
+            </v-card-title>
+            <v-divider></v-divider>
+            <v-card-text>
 
           <div v-if="dialogProcessos.items.length === 0" class="text-center py-10">
             <v-icon size="64" color="grey-lighten-1">mdi-tray-plus</v-icon>
@@ -921,6 +1035,60 @@
               Adicionar Nova Etapa
             </v-btn>
           </div>
+            </v-card-text>
+          </v-card>
+
+          <!-- BLOCO 3: TRATAMENTO SUPERFICIAL -->
+          <v-card class="mb-4 border" variant="flat">
+            <v-card-title class="bg-blue-grey-lighten-5 text-subtitle-1 font-weight-bold d-flex align-center">
+              <v-icon color="teal-darken-2" class="mr-2">mdi-spray</v-icon>
+              3. Tratamento Superficial
+              <v-spacer></v-spacer>
+              <v-chip v-if="statusTratamento" :color="corStatusTratamento" size="small" variant="flat" class="text-uppercase font-weight-bold">
+                {{ statusTratamento }}
+              </v-chip>
+            </v-card-title>
+            <v-divider></v-divider>
+            <v-card-text>
+              <v-row>
+                <v-col cols="12" md="6">
+                  <v-combobox
+                    v-model="dialogProcessos.peca.tratamentoSuperficial"
+                    :items="['Zinco', 'Pintura', 'Outros', 'Sem tratamento superficial']"
+                    label="Tipo de Tratamento"
+                    placeholder="Selecione ou digite"
+                    variant="outlined"
+                    density="compact"
+                    hide-details
+                  ></v-combobox>
+                </v-col>
+                <v-col cols="12" md="6">
+                  <v-text-field
+                    v-model="dialogProcessos.peca.detalheTratamento"
+                    label="Especificação / Cor"
+                    placeholder="Ex: Branco trivalente, Preto Fosco"
+                    variant="outlined"
+                    density="compact"
+                    hide-details
+                  ></v-text-field>
+                </v-col>
+              </v-row>
+              <v-row>
+                <v-col cols="12" md="6">
+                  <v-text-field
+                    v-model="dialogProcessos.peca.custoTratamento"
+                    label="Custo do Tratamento (R$)"
+                    placeholder="Ex: 12.50"
+                    type="number"
+                    variant="outlined"
+                    density="compact"
+                    hide-details
+                    prefix="R$"
+                  ></v-text-field>
+                </v-col>
+              </v-row>
+            </v-card-text>
+          </v-card>
         </v-card-text>
 
         <v-divider></v-divider>
@@ -1063,6 +1231,32 @@ const pecasFiltradas = computed(() => {
     return true
   })
 })
+
+const dialogFoto = ref(false)
+const fotoSelecionada = ref(null)
+
+const abrirFotoPeca = (item) => {
+  fotoSelecionada.value = item
+  dialogFoto.value = true
+}
+
+const removerFotoPeca = async () => {
+  if (confirm('Tem certeza que deseja remover a imagem desta peça? (Isso afetará todos os roteiros)')) {
+    try {
+      await $fetch(`/api/pecas/${fotoSelecionada.value.id}`, {
+        method: 'PATCH',
+        body: { imagem: null }
+      })
+      
+      const pecaNaLista = pecas.value.find(p => p.id === fotoSelecionada.value.id)
+      if (pecaNaLista) pecaNaLista.imagem = null
+      
+      dialogFoto.value = false
+    } catch (e) {
+      alert('Erro ao remover imagem: ' + e.message)
+    }
+  }
+}
 
 const pecaPronta = (peca) => {
   // Peça está pronta se já estiver em estoque ou concluída no fluxo
@@ -1239,6 +1433,34 @@ const pecasDisponiveis = computed(() => {
   return pecas.value.filter(p => p.temNoEstoque).length
 })
 
+const statusTratamento = computed(() => {
+  const itens = dialogProcessos.value.peca?.roteiroItens || []
+  if (itens.length === 0) return null
+  
+  const filtrados = itens.filter(ri => 
+    ri.roteiro?.tipo?.toUpperCase() === dialogProcessos.value.peca?.tratamentoSuperficial?.toUpperCase()
+  )
+  const item = filtrados.length > 0 ? filtrados[filtrados.length - 1] : itens[itens.length - 1]
+  
+  if (item.quantidadeEnviada === 0) return 'Aguardando Envio'
+  if (item.quantidadeEnviada > 0 && item.quantidadeEnviada < item.quantidade) return 'Enviada Parcial'
+  if (item.quantidadeEnviada === item.quantidade && item.quantidadeRecebida === 0) return 'Enviada'
+  if (item.quantidadeRecebida > 0 && item.quantidadeRecebida < item.quantidadeEnviada) return 'Recebida Parcial'
+  if (item.quantidadeRecebida === item.quantidade) return 'Recebida'
+  return 'Pendente'
+})
+
+const corStatusTratamento = computed(() => {
+  switch (statusTratamento.value) {
+    case 'Aguardando Envio': return 'grey'
+    case 'Enviada Parcial': return 'warning'
+    case 'Enviada': return 'info'
+    case 'Recebida Parcial': return 'purple'
+    case 'Recebida': return 'success'
+    default: return 'grey'
+  }
+})
+
 const loadSettings = async () => {
   try {
     const [ppec, cforn] = await Promise.all([
@@ -1288,6 +1510,11 @@ const openAddPecaDialog = () => {
       material: '',
       categoria: 'FABRICADO',
       statusSuprimento: 'NAO_SOLICITADO',
+      peso: null,
+      areaSuperficial: null,
+      dimensoesExternas: '',
+      tratamentoSuperficial: '',
+      detalheTratamento: '',
       valorUnitario: null,
       valorIPI: null,
       valorICMS: null,
@@ -1413,9 +1640,14 @@ const generateOS = async () => {
 }
 
 const openProcessos = async (peca) => {
+  const pecaAjustada = { ...peca }
+  if (pecaAjustada.custoTratamento) {
+    pecaAjustada.custoTratamento = parseFloat(pecaAjustada.custoTratamento).toFixed(2)
+  }
+
   dialogProcessos.value = {
     show: true,
-    peca,
+    peca: pecaAjustada,
     items: []
   }
   
@@ -1470,15 +1702,30 @@ const removeProcess = (index) => {
 const saveProcessos = async () => {
   savingProcessos.value = true
   try {
+    // 1. Salvar os Processos Internos
     await $fetch(`/api/pecas/${dialogProcessos.value.peca.id}/processos`, {
       method: 'POST',
       body: { processos: dialogProcessos.value.items }
     })
-    showSnackbar('Processos salvos com sucesso!')
+
+    // 2. Salvar os dados de Matéria Prima e Tratamento na Peça
+    await $fetch(`/api/pecas/${dialogProcessos.value.peca.id}`, {
+      method: 'PATCH',
+      body: {
+        tipoMaterial: dialogProcessos.value.peca.tipoMaterial,
+        material: dialogProcessos.value.peca.material,
+        comprimentoMaterial: dialogProcessos.value.peca.comprimentoMaterial,
+        tratamentoSuperficial: dialogProcessos.value.peca.tratamentoSuperficial,
+        detalheTratamento: dialogProcessos.value.peca.detalheTratamento,
+        custoTratamento: dialogProcessos.value.peca.custoTratamento
+      }
+    })
+
+    showSnackbar('Engenharia salva com sucesso!')
     dialogProcessos.value.show = false
     await loadPecas()
   } catch (error) {
-    showSnackbar('Erro ao salvar processos', 'error')
+    showSnackbar('Erro ao salvar engenharia', 'error')
   } finally {
     savingProcessos.value = false
   }

@@ -131,7 +131,7 @@
 
     <v-main class="bg-background">
       <v-container fluid class="pt-1 px-3 pa-md-4 align-start">
-        <v-breadcrumbs :items="breadcrumbs" class="pa-0 mb-1 text-caption">
+        <v-breadcrumbs :items="breadcrumbs" class="pa-0 mb-1 text-caption d-print-none">
           <template v-slot:divider>
             <v-icon>mdi-chevron-right</v-icon>
           </template>
@@ -192,6 +192,7 @@ const navigation = [
   { title: 'Dashboard', icon: 'mdi-view-dashboard', route: '/', moduleName: 'Dashboard', isUniversal: true },
   { title: 'Tarefas', icon: 'mdi-clipboard-check-multiple', route: '/tarefas', moduleName: 'Tarefas', isUniversal: true },
   { title: 'Ordens de Produção', icon: 'mdi-clipboard-list', route: '/ops', moduleName: 'Ordens de Produção' },
+  { title: 'Roteiros (Envio)', icon: 'mdi-truck-delivery', route: '/roteiros', moduleName: 'PCP', isUniversal: true },
   { title: 'PCP', icon: 'mdi-factory', route: '/pcp', moduleName: 'PCP' },
   { title: 'Estoque', icon: 'mdi-warehouse', route: '/estoque', moduleName: 'Estoque' },
   { title: 'Fornecedores', icon: 'mdi-account-group', route: '/fornecedores', moduleName: 'Fornecedores' },
