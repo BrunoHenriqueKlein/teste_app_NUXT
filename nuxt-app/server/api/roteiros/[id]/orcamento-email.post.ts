@@ -70,8 +70,8 @@ export default defineEventHandler(async (event: any) => {
                     <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${item.quantidade}</td>
                     <td style="border: 1px solid #ddd; padding: 8px;">${item.tratamento || '-'}</td>
                     <td style="border: 1px solid #ddd; padding: 8px;">${item.peca.detalheTratamento || '-'}</td>
-                    <td style="border: 1px solid #ddd; padding: 8px;">${item.pesoIndividual ? Number(item.pesoIndividual).toFixed(1) + ' kg' : '-'}</td>
-                    <td style="border: 1px solid #ddd; padding: 8px;">${item.areaSuperficial ? Number(item.areaSuperficial).toFixed(1) : '-'}</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">${item.pesoIndividual ? Number(item.pesoIndividual).toFixed(2) + ' kg' : '-'}</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">${item.areaSuperficial ? Number(item.areaSuperficial).toFixed(2) : '-'}</td>
                     <td style="border: 1px solid #ddd; padding: 8px;">${item.dimensoesExternas || '-'}</td>
                 </tr>
                 `

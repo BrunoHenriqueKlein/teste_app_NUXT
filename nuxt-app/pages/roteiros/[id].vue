@@ -223,10 +223,10 @@
         {{ item.peca?.detalheTratamento || '-' }}
       </template>
       <template v-slot:item.pesoIndividual="{ item }">
-        {{ item.pesoIndividual ? Number(item.pesoIndividual).toFixed(1) + ' kg' : '-' }}
+        {{ item.pesoIndividual ? Number(item.pesoIndividual).toFixed(2) + ' kg' : '-' }}
       </template>
       <template v-slot:item.areaSuperficial="{ item }">
-        {{ item.areaSuperficial ? Number(item.areaSuperficial).toFixed(1) : '-' }}
+        {{ item.areaSuperficial ? Number(item.areaSuperficial).toFixed(2) : '-' }}
       </template>
       <template v-slot:item.valorUnitario="{ item }">
         <v-text-field
@@ -496,7 +496,7 @@ const carregarRoteiro = async () => {
         }
         if (precos[trat] === undefined) precos[trat] = 0
         if (item.valorUnitario && item.pesoIndividual && precos[trat] === 0) {
-          precos[trat] = item.valorUnitario / item.pesoIndividual
+          precos[trat] = parseFloat((item.valorUnitario / item.pesoIndividual).toFixed(4))
         }
       })
     }
