@@ -67,7 +67,7 @@
 
           <v-col cols="12" md="6">
             <h3 class="text-h6 mb-2">Fornecedor Destino</h3>
-            <div v-if="roteiro.status === 'CRIADO'">
+            <div v-if="roteiro.status === 'CRIADO' || roteiro.status === 'AGUARDANDO_ORCAMENTO'">
               <v-autocomplete
                 v-model="editFornecedorId"
                 :items="fornecedores"
@@ -100,9 +100,8 @@
             <p v-if="roteiro.observacoes" class="mt-2"><strong>Observações:</strong> {{ roteiro.observacoes }}</p>
           </v-col>
           <v-col cols="12" md="6" class="text-right d-print-none">
-            <!-- Ações de Status -->
-            <v-btn v-if="roteiro.tipo !== 'ZINCO' && roteiro.status === 'CRIADO'" color="warning" @click="mudarStatus('AGUARDANDO_ORCAMENTO')" class="mr-2">
-              Solicitar Orçamento
+            <v-btn v-if="roteiro.tipo !== 'ZINCO' && (roteiro.status === 'CRIADO' || roteiro.status === 'AGUARDANDO_ORCAMENTO')" color="warning" @click="loadEmailPreview" class="mr-2" :loading="loadingEmailPreview">
+              {{ roteiro.status === 'AGUARDANDO_ORCAMENTO' ? 'Reenviar Orçamento' : 'Solicitar Orçamento' }}
             </v-btn>
             <v-btn v-if="roteiro.tipo === 'ZINCO' && roteiro.status === 'CRIADO'" color="success" @click="mudarStatus('ENVIADO')" class="mr-2">
               Enviar Roteiro
@@ -119,7 +118,8 @@
             <v-btn v-if="roteiro.status === 'CRIADO'" color="error" @click="excluirRoteiro" class="mr-2">
               <v-icon start>mdi-delete</v-icon> Excluir
             </v-btn>
-            <v-btn v-if="roteiro.tipo !== 'ZINCO'" color="info" @click="enviarEmail">
+            <!-- Botão de E-mail antigo ocultado se estiver no novo fluxo -->
+            <v-btn v-if="roteiro.tipo !== 'ZINCO' && false" color="info" @click="enviarEmail">
               <v-icon start>mdi-email</v-icon> Enviar E-mail
             </v-btn>
           </v-col>
@@ -146,8 +146,7 @@
     </v-card>
 
     <v-card class="mt-4 mb-4 bg-grey-lighten-4">
-      <v-card-text class="d-flex justify-space-between">
-        <h3 class="text-h6">Peso Total: {{ pesoTotal.toFixed(1) }} kg</h3>
+      <v-card-text class="d-flex justify-end">
         <h3 class="text-h6" v-if="roteiro.valorTotal">Valor Total: R$ {{ roteiro.valorTotal.toFixed(2) }}</h3>
       </v-card-text>
     </v-card>
@@ -228,6 +227,20 @@
       </template>
       <template v-slot:item.areaSuperficial="{ item }">
         {{ item.areaSuperficial ? Number(item.areaSuperficial).toFixed(1) : '-' }}
+      </template>
+      <template v-slot:item.valorUnitario="{ item }">
+        <v-text-field
+          v-model.number="item.valorUnitario"
+          type="number"
+          step="0.01"
+          density="compact"
+          hide-details
+          variant="outlined"
+          style="min-width: 120px"
+          prefix="R$"
+          @change="salvarPrecoItem(item)"
+          :disabled="roteiro.status === 'RECEBIDO' || roteiro.status === 'FINALIZADO'"
+        ></v-text-field>
       </template>
       <template v-slot:item.valorTotal="{ item }">
         <span v-if="item.valorTotal">R$ {{ Number(item.valorTotal).toFixed(2) }}</span>
@@ -353,6 +366,63 @@
         </v-card-text>
       </v-card>
     </v-dialog>
+
+    <!-- Diálogo de Revisão de E-mail de Orçamento -->
+    <v-dialog v-model="dialogEmail.show" max-width="900px" persistent>
+      <v-card>
+        <v-card-title class="pa-4 bg-primary text-white d-flex align-center">
+          Revisar E-mail de Orçamento
+          <v-spacer></v-spacer>
+          <v-btn icon="mdi-close" variant="text" @click="dialogEmail.show = false"></v-btn>
+        </v-card-title>
+        
+        <v-card-text class="pa-4">
+          <v-text-field
+            v-model="dialogEmail.data.to"
+            label="Para"
+            variant="outlined"
+            density="compact"
+            class="mb-4"
+          ></v-text-field>
+
+          <v-text-field
+            v-model="dialogEmail.data.subject"
+            label="Assunto"
+            variant="outlined"
+            density="compact"
+            class="mb-4"
+          ></v-text-field>
+
+          <p class="text-caption mb-2 text-grey-darken-1">Mensagem (HTML suportado):</p>
+          <v-textarea
+            v-model="dialogEmail.data.html"
+            variant="outlined"
+            auto-grow
+            rows="10"
+            class="mb-4"
+            style="font-family: monospace; font-size: 13px;"
+          ></v-textarea>
+          
+          <v-card variant="outlined" class="pa-4 bg-grey-lighten-4">
+            <h4 class="text-subtitle-2 mb-2">Pré-visualização do Corpo do E-mail:</h4>
+            <div class="email-preview-box" v-html="dialogEmail.data.html" style="max-height: 400px; overflow-y: auto; background: white; padding: 15px; border: 1px solid #ccc; border-radius: 4px;"></div>
+          </v-card>
+        </v-card-text>
+        
+        <v-card-actions class="pa-4">
+          <v-spacer></v-spacer>
+          <v-btn variant="tonal" @click="dialogEmail.show = false">Cancelar</v-btn>
+          <v-btn
+            color="success"
+            prepend-icon="mdi-send"
+            :loading="sendingEmail"
+            @click="sendFinalEmail"
+          >
+            Enviar E-mail
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
   <div v-else>
     Carregando...
@@ -392,6 +462,13 @@ const ops = ref([])
 const fornecedores = ref([])
 const editOpId = ref(null)
 const editFornecedorId = ref(null)
+
+const dialogEmail = ref({
+  show: false,
+  data: {}
+})
+const loadingEmailPreview = ref(false)
+const sendingEmail = ref(false)
 
 const pcpHeaders = [
   { title: 'OP', key: 'peca.op.numeroOP' },
@@ -462,16 +539,18 @@ const itemHeaders = computed(() => {
   base.push(
     { title: 'Tratamento', key: 'tratamento', width: '10%' },
     { title: 'Cor / Detalhe', key: 'peca.detalheTratamento', width: '14%' },
-    { title: 'Peso Un.', key: 'pesoIndividual', width: '9%' }
+    { title: 'Peso Un.', key: 'pesoIndividual', width: '9%' },
+    { title: 'Área (m²)', key: 'areaSuperficial', width: '9%' },
+    { title: 'Dimensões', key: 'dimensoesExternas', width: '15%' }
   )
 
-  if (roteiro.value?.tipo === 'ZINCO') {
+  if (!imprimindo.value) {
+    if (roteiro.value?.tipo !== 'ZINCO') {
+      base.push({ title: 'Preço Un.', key: 'valorUnitario', width: '14%', sortable: false, align: 'center' })
+    }
     base.push({ title: 'Total Peça', key: 'valorTotal', width: '9%' })
-  } else {
-    base.push({ title: 'Área (m²)', key: 'areaSuperficial', width: '9%' })
   }
 
-  base.push({ title: 'Dimensões', key: 'dimensoesExternas', width: '15%' })
   return base
 })
 
@@ -570,6 +649,48 @@ const abrirModalPCP = async () => {
   }
 }
 
+const loadEmailPreview = async () => {
+  loadingEmailPreview.value = true
+  try {
+    const data = await $fetch(`/api/roteiros/${route.params.id}/orcamento-email`, {
+      method: 'POST',
+      body: { preview: true }
+    })
+    
+    dialogEmail.value = {
+      show: true,
+      data: data.emailData
+    }
+  } catch (error) {
+    alert('Erro ao gerar rascunho de e-mail: ' + (error.data?.statusMessage || error.message))
+  } finally {
+    loadingEmailPreview.value = false
+  }
+}
+
+const sendFinalEmail = async () => {
+  sendingEmail.value = true
+  try {
+    const res = await $fetch(`/api/roteiros/${route.params.id}/orcamento-email`, {
+      method: 'POST',
+      body: {
+        preview: false,
+        htmlEditado: dialogEmail.value.data.html,
+        subjectEditado: dialogEmail.value.data.subject,
+        toEditado: dialogEmail.value.data.to
+      }
+    })
+    
+    alert(res.message || 'E-mail enviado com sucesso!')
+    dialogEmail.value.show = false
+    await carregarRoteiro() // Atualiza os status
+  } catch (error) {
+    alert('Erro ao enviar e-mail: ' + (error.data?.statusMessage || error.message))
+  } finally {
+    sendingEmail.value = false
+  }
+}
+
 const importarPCP = async () => {
   if (processosSelecionados.value.length === 0) return
   importandoPCP.value = true
@@ -660,9 +781,9 @@ const salvarQtdItem = async (item, tipo) => {
   }
 
   try {
-    await $fetch(`/api/roteiro-itens/${item.id}`, {
+    await $fetch(`/api/roteiros/${route.params.id}/itens/${item.id}`, {
       method: 'PATCH',
-      body: {
+      body: { 
         quantidadeEnviada: item.quantidadeEnviada,
         quantidadeRecebida: item.quantidadeRecebida
       }
@@ -671,6 +792,19 @@ const salvarQtdItem = async (item, tipo) => {
   } catch (e) {
     console.error('Erro ao atualizar item', e)
     alert('Erro ao atualizar quantidades')
+  }
+}
+
+const salvarPrecoItem = async (item) => {
+  try {
+    await $fetch(`/api/roteiros/${route.params.id}/itens/${item.id}/preco`, {
+      method: 'PATCH',
+      body: { valorUnitario: item.valorUnitario }
+    })
+    await carregarRoteiro() // Recarrega para atualizar os totais
+  } catch (e) {
+    console.error('Erro ao atualizar preço do item', e)
+    alert('Erro ao atualizar preço da peça')
   }
 }
 
