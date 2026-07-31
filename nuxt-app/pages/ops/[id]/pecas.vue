@@ -302,7 +302,7 @@
         <template v-slot:item.peca="{ item }">
           <div style="white-space: normal; word-break: break-all; overflow-wrap: break-word;" class="d-flex align-center">
             <v-avatar v-if="item.imagem" rounded size="48" class="mr-3 border bg-grey-lighten-4 cursor-pointer" @click="abrirFotoPeca(item)">
-              <v-img :src="item.imagem" cover></v-img>
+              <v-img :src="item.thumbErrored ? item.imagem : getThumb(item.imagem)" @error="item.thumbErrored = true" cover></v-img>
             </v-avatar>
             <v-avatar v-else rounded size="48" class="mr-3 border bg-grey-lighten-4">
               <v-icon color="grey">mdi-image-outline</v-icon>
@@ -1129,7 +1129,14 @@
   </div>
 </template>
 <script setup>
+import { ref, computed, onMounted, nextTick } from 'vue'
+import { useRoute } from 'vue-router'
 import * as XLSX from 'xlsx'
+
+const getThumb = (url) => {
+  if (!url) return null
+  return url.replace(/(\.[\w\d_-]+)$/i, '_thumb$1')
+}
 
 const route = useRoute()
 const opId = route.params.id

@@ -1,6 +1,7 @@
 import { defineEventHandler, createError, readMultipartFormData, getRouterParam, readRawBody } from 'h3'
 import fs from 'fs'
 import path from 'path'
+import sharp from 'sharp'
 
 export default defineEventHandler(async (event) => {
     const pecaId = getRouterParam(event, 'id')
@@ -86,6 +87,14 @@ export default defineEventHandler(async (event) => {
 
         // Se for imagem (.jpg, .jpeg, .png), atualiza o campo `imagem` da peça
         if (['.jpg', '.jpeg', '.png'].includes(fileExt.toLowerCase())) {
+            // Gerar a miniatura _thumb com sharp
+            const thumbFileName = `desenho_${pecaId}_${Date.now()}_thumb${fileExt}`
+            const thumbFilePath = path.join(uploadDir, thumbFileName)
+            
+            await sharp(fileData)
+                .resize({ width: 100 }) // Reduz para 100px mantendo proporção
+                .toFile(thumbFilePath)
+            
             await prisma.peca.update({
                 where: { id: parseInt(pecaId) },
                 data: { imagem: url }
