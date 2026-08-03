@@ -21,7 +21,7 @@
 
     <!-- Hub de Navegação -->
     <v-row class="mt-2">
-      <v-col cols="12" md="4">
+      <v-col cols="12" md="3">
         <v-card 
           link 
           to="/compras/cotacoes" 
@@ -38,7 +38,7 @@
         </v-card>
       </v-col>
 
-      <v-col cols="12" md="4">
+      <v-col cols="12" md="3">
         <v-card 
           link 
           to="/compras/recebimento" 
@@ -55,7 +55,7 @@
         </v-card>
       </v-col>
 
-      <v-col cols="12" md="4">
+      <v-col cols="12" md="3">
         <v-card 
           link 
           to="/compras/cotacoes-estoque" 
@@ -68,6 +68,23 @@
           <div>
             <div class="text-h6">Cotações de Estoque</div>
             <div class="text-body-2 text-grey">Orçamentos p/ Reposição</div>
+          </div>
+        </v-card>
+      </v-col>
+
+      <v-col cols="12" md="3">
+        <v-card 
+          link 
+          to="/compras/materias-primas" 
+          variant="outlined" 
+          class="pa-4 d-flex align-center" 
+          height="120"
+          hover
+        >
+          <v-icon size="40" color="brown" class="mr-4">mdi-cube-outline</v-icon>
+          <div>
+            <div class="text-h6">Matérias-Primas (BOM)</div>
+            <div class="text-body-2 text-grey">Consolidação e Pedidos</div>
           </div>
         </v-card>
       </v-col>

@@ -26,8 +26,19 @@
             prepend-icon="mdi-factory"
             @click="generateOS"
             :loading="loadingOS"
+            class="mr-2"
           >
             Gerar PCP
+          </v-btn>
+          <v-btn
+            color="secondary"
+            variant="elevated"
+            prepend-icon="mdi-sync"
+            @click="sincronizarRoteiros"
+            class="mr-2"
+            :loading="syncingRoteiros"
+          >
+            Sincronizar Roteiros
           </v-btn>
           <v-btn
             v-if="hasPermission('Peças', 'canEdit')"
@@ -1147,6 +1158,7 @@ const processosDisponiveis = ref([])
 const categoriasDisponiveis = ref([])
 const { authHeaders, hasPermission } = useAuth()
 const loading = ref(false)
+const syncingRoteiros = ref(false)
 const loadingImport = ref(false)
 const savingProcessos = ref(false)
 const fileInput = ref(null)
@@ -1166,6 +1178,21 @@ const filtrosAvançados = reactive({
   processo: null,
   fornecedor: null
 })
+
+const sincronizarRoteiros = async () => {
+  syncingRoteiros.value = true
+  try {
+    const res = await $fetch(`/api/ops/${route.params.id}/roteiros/sincronizar`, {
+      method: 'POST'
+    })
+    showSnackbar(res.message || 'Roteiros sincronizados com sucesso!', 'success')
+  } catch (error) {
+    showSnackbar('Erro ao sincronizar roteiros', 'error')
+    console.error(error)
+  } finally {
+    syncingRoteiros.value = false
+  }
+}
 
 const fornecedoresUnicos = computed(() => {
   const fSet = new Set()
