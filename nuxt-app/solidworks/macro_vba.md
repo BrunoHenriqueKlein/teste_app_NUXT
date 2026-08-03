@@ -253,13 +253,28 @@ Private Sub ProcessarProximo()
     End If
     
     Me.cmbTratamento.Clear
-    Me.cmbTratamento.AddItem "Nenhum"
-    Me.cmbTratamento.AddItem "Pintura"
-    Me.cmbTratamento.AddItem "Zinco"
+    Me.cmbTratamento.AddItem "Sem tratamento superficial"
+    
+    If LCase(loadedTratamento) = "nenhum" Then loadedTratamento = "Sem tratamento superficial"
+    
+    Dim indexTratamento As Integer
+    indexTratamento = -1
     If loadedTratamento <> "" Then
-        Me.cmbTratamento.Text = loadedTratamento
+        Dim iTrat As Integer
+        For iTrat = 0 To Me.cmbTratamento.ListCount - 1
+            If LCase(Me.cmbTratamento.List(iTrat)) = LCase(loadedTratamento) Then
+                indexTratamento = iTrat
+                Exit For
+            End If
+        Next iTrat
+    End If
+    
+    If indexTratamento >= 0 Then
+        On Error Resume Next
+        Me.cmbTratamento.ListIndex = indexTratamento
+        On Error GoTo 0
     Else
-        Me.cmbTratamento.ListIndex = 0
+        Me.cmbTratamento.ListIndex = 0 ' Sem tratamento superficial
     End If
     Me.txtDetalheTratamento.Text = loadedDetalhe
 
@@ -401,7 +416,9 @@ Private Sub TraverseAssy(swParentDoc As SldWorks.ModelDoc2)
             Else
                 mDictComps.Add keyPai, 1
                 If LCase(Right(path, 7)) = ".sldprt" Then
+                    swApp.DocumentVisible False, 1
                     Dim swPart As SldWorks.ModelDoc2: Dim err As Long, warn As Long: Set swPart = swApp.OpenDoc6(path, 1, 1, "", err, warn)
+                    swApp.DocumentVisible True, 1
                     If Not swPart Is Nothing Then
                         Dim swFeat As SldWorks.Feature: Set swFeat = swPart.FirstFeature
                         Dim currIdx As Integer: currIdx = 0: Dim cacheStr As String: cacheStr = ""
@@ -447,12 +464,15 @@ Private Sub SalvarNoArquivo()
     swCustProp.Add3 "detalhe_tratamento", 30, Me.txtDetalheTratamento.Text, 2
     Dim i As Integer: For i = 1 To 10: swCustProp.Delete "processo" & i: Next i
     Dim count As Integer: count = 1
-    For i = 1 To 6
-        If Me.Controls("cmbProcesso" & i).Text <> "" Then
-            swCustProp.Add3 "processo" & count, 30, Me.Controls("cmbProcesso" & i).Text, 2: count = count + 1
-        End If
-    Next i
-    swModel.Save3 1, 0, 0
+    On Error Resume Next
+    If Me.cmbCategoria.Text = "FABRICADO" Then
+        For i = 1 To 6
+            If Me.Controls("cmbProcesso" & i).Text <> "" Then
+                swCustProp.Add3 "processo" & count, 30, Me.Controls("cmbProcesso" & i).Text, 2: count = count + 1
+            End If
+        Next i
+    End If
+    On Error GoTo 0: swModel.Save3 1, 0, 0
 End Sub
 
 Private Function EnviarParaAPI() As Long
