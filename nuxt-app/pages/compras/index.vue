@@ -151,13 +151,13 @@
             </template>
             <template v-slot:item.acoes="{ item }">
               <v-btn
-                color="primary"
+                :color="getTratarColor(item)"
                 variant="tonal"
                 size="small"
                 prepend-icon="mdi-eye"
                 @click="verDetalhesRequisicao(item)"
               >
-                Tratar
+                {{ getTratarLabel(item) }}
               </v-btn>
             </template>
           </v-data-table>
@@ -681,6 +681,18 @@
             class="mr-2"
           >
             Salvar Rascunho
+          </v-btn>
+          <v-btn
+            v-if="!dialogDetalhes.isVisualizado && dialogDetalhes.requisicao?.status === 'SOLICITADA' && dialogDetalhes.requisicao?.anexos?.length > 0"
+            color="success"
+            variant="flat"
+            :loading="saving"
+            @click="liberarParaCompra"
+            prepend-icon="mdi-check-circle"
+            class="mr-2"
+            title="Sinaliza ao comprador que os orçamentos já foram analisados e estão prontos para compra"
+          >
+            Liberar para Compra
           </v-btn>
           <v-btn
             v-if="temItensSelecionados && !dialogDetalhes.isVisualizado"
@@ -1241,37 +1253,48 @@ const headersDemandas = [
   { title: 'Ações', key: 'acoes', align: 'center', sortable: false }
 ]
 
+const getTratarColor = (item) => {
+  if (item.status === 'COTACAO') return 'success'
+  if (item.status === 'SOLICITADA' && item.anexos && item.anexos.length > 0) return 'warning'
+  return 'info'
+}
+
+const getTratarLabel = (item) => {
+  if (item.status === 'COTACAO') return 'Liberado para compra'
+  if (item.status === 'SOLICITADA' && item.anexos && item.anexos.length > 0) return 'Analisar Orçamentos'
+  return 'Tratar Requisição'
+}
+
 const headersRequisicoes = [
-  // { title: 'Data', key: 'dataSolicitacao', formatter: formatDate },
   { title: 'Requisição', key: 'numero', align: 'center', minWidth: '100px' },
-  { title: 'OP / Cliente', key: 'op' },
-  { title: 'OS / Máquina', key: 'os' },
-  { title: 'Processo / Tipo', key: 'tipo', align: 'center' },
-  { title: 'Categoria', key: 'categoria', align: 'center' },
-  { title: 'Itens', key: '_count.itens', align: 'center' },
-  { title: 'Ações', key: 'acoes', align: 'center', sortable: false }
+  { title: 'OP / Cliente', key: 'op', value: item => item.isEstoque ? 'ESTOQUE' : (item.op?.numeroOP || 'S/ OP') },
+  { title: 'OS / Máquina', key: 'os', value: item => item.os?.numero || '' },
+  { title: 'Processo / Tipo', key: 'tipo', align: 'center', value: item => item.os?.tipo || 'Peças / BOM' },
+  { title: 'Categoria', key: 'categoria', align: 'center', value: item => item.fornecedor ? item.fornecedor.replace('REQ_', '') : '' },
+  { title: 'Itens', key: '_count.itens', align: 'center', value: item => item._count?.itens || item.itens?.length || 0 },
+  { title: 'Ações', key: 'acoes', align: 'center', value: item => getTratarLabel(item) }
 ]
 
 const headersPedidos = [
   { title: 'Pedido', key: 'numero' },
-  { title: 'OP', key: 'op' },
+  { title: 'OP', key: 'op', value: item => item.isEstoque ? 'ESTOQUE' : (item.op?.numeroOP || 'S/ OP') },
   { title: 'Fornecedor', key: 'fornecedor' },
-  { title: 'Emissão', key: 'emissao' },
-  { title: 'Previsão de Entrega', key: 'previsao' },
+  { title: 'Emissão', key: 'emissao', value: item => item.dataCompra ? new Date(item.dataCompra).getTime() : (item.dataSolicitacao ? new Date(item.dataSolicitacao).getTime() : 0) },
+  { title: 'Previsão de Entrega', key: 'previsao', value: item => item.dataPrevisaoEntrega ? new Date(item.dataPrevisaoEntrega).getTime() : 0 },
   { title: 'Status', key: 'status' },
-  { title: 'Itens', key: '_count.itens', align: 'center' },
+  { title: 'Itens', key: '_count.itens', align: 'center', value: item => item._count?.itens || item.itens?.length || 0 },
   { title: 'Ações', key: 'acoes_oc', align: 'center', sortable: false }
 ]
 
 const headersFinalizadas = [
   { title: 'Pedido', key: 'numero' },
-  { title: 'OP', key: 'op' },
+  { title: 'OP', key: 'op', value: item => item.isEstoque ? 'ESTOQUE' : (item.op?.numeroOP || 'S/ OP') },
   { title: 'Fornecedor', key: 'fornecedor' },
-  { title: 'Emissão', key: 'emissao' },
-  { title: 'Prazos / Recebimento', key: 'datasEntrega' },
+  { title: 'Emissão', key: 'emissao', value: item => item.dataCompra ? new Date(item.dataCompra).getTime() : (item.dataSolicitacao ? new Date(item.dataSolicitacao).getTime() : 0) },
+  { title: 'Prazos / Recebimento', key: 'datasEntrega', value: item => item.dataPrevisaoEntrega ? new Date(item.dataPrevisaoEntrega).getTime() : 0 },
   { title: 'Status', key: 'status' },
   { title: 'NF', key: 'numeroNF' },
-  { title: 'Itens', key: '_count.itens', align: 'center' },
+  { title: 'Itens', key: '_count.itens', align: 'center', value: item => item._count?.itens || item.itens?.length || 0 },
   { title: 'Ações', key: 'acoes_oc', align: 'center', sortable: false }
 ]
 
@@ -1635,6 +1658,13 @@ const verDetalhesRequisicao = (item) => {
   })
   selecionarTodosItens.value = true
   loadFornecedores()
+}
+
+const liberarParaCompra = async () => {
+  if (dialogDetalhes.value.requisicao) {
+    dialogDetalhes.value.requisicao.status = 'COTACAO'
+    await salvarTratativa()
+  }
 }
 
 const salvarTratativa = async () => {
