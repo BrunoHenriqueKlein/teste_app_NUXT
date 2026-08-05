@@ -4,13 +4,17 @@ const prisma = new PrismaClient()
 
 export default defineEventHandler(async (event) => {
     try {
-        // Busca todas as peças FABRICADAS que tenham material ou tipoMaterial preenchidos
-        const materiasPrimas = await prisma.peca.findMany({
+        const [materiasPrimas, estoqueFisico] = await Promise.all([
+            prisma.peca.findMany({
             where: {
-                categoria: 'FABRICADO',
                 OR: [
-                    { material: { not: null } },
-                    { tipoMaterial: { not: null } }
+                    {
+                        categoria: 'FABRICADO',
+                        tipoMaterial: { not: null }
+                    },
+                    {
+                        categoria: 'MATERIA_PRIMA'
+                    }
                 ]
             },
             include: {
@@ -25,13 +29,34 @@ export default defineEventHandler(async (event) => {
             orderBy: {
                 opId: 'desc'
             }
+        }),
+        prisma.estoque.findMany({
+            where: {
+                categoria: 'MATERIA_PRIMA'
+            }
+        })
+        ])
+
+        // Remove registros vazios e tudo que for relacionado a "chapa"
+        const pecasFiltradas = materiasPrimas.filter(p => {
+            if (!p.tipoMaterial || p.tipoMaterial.trim() === '') return false;
+            
+            const tipoLower = p.tipoMaterial.toLowerCase();
+            const descLower = (p.descricao || '').toLowerCase();
+            const matLower = (p.material || '').toLowerCase();
+            
+            // Se for chapa, não entra como matéria prima (comprado direto com corte)
+            if (tipoLower.includes('chapa') || descLower.includes('chapa') || matLower.includes('chapa')) {
+                return false;
+            }
+            
+            return true;
         })
 
-        // Remove registros onde ambos são vazios mesmo não sendo nulos
-        return materiasPrimas.filter(p => 
-            (p.material && p.material.trim() !== '') || 
-            (p.tipoMaterial && p.tipoMaterial.trim() !== '')
-        )
+        return {
+            pecas: pecasFiltradas,
+            estoque: estoqueFisico
+        }
     } catch (error: any) {
         throw createError({
             statusCode: 500,

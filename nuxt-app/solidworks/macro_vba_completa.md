@@ -221,6 +221,21 @@ Private Sub ProcessarProximo()
     swCustProp.Get4 "tipo_material", False, "", loadedTipoMat
     swCustProp.Get4 "comprimento_material", False, "", loadedComprimento
     
+    ' Leitura inteligente do CutList para pegar perfil e comprimento automaticamente
+    If Not swCutPropMgr Is Nothing Then
+        ' Comprimento via propriedades automáticas de peças soldadas
+        Dim cutLength As String
+        swCutPropMgr.Get4 "LENGTH", False, "", cutLength
+        If cutLength = "" Then swCutPropMgr.Get4 "Comprimento", False, "", cutLength
+        If cutLength = "" Then swCutPropMgr.Get4 "Comprimento de delimitação", False, "", cutLength
+        If cutLength <> "" And loadedComprimento = "" Then loadedComprimento = cutLength
+        
+        ' Tipo Material via Description do perfil (se vazio)
+        If loadedTipoMat = "" And desc <> "" And cat = "MATERIA_PRIMA" Then
+            loadedTipoMat = desc
+        End If
+    End If
+    
     On Error Resume Next
     Me.txtDescricao.Text = desc: Me.txtMaterial.Text = ""
     If typeDoc = 1 Then
@@ -308,7 +323,10 @@ Private Sub ProcessarProximo()
     End If
     Me.txtDetalheTratamento.Text = loadedDetalhe
     
-    Me.cmbCategoria.Clear: Me.cmbCategoria.AddItem "FABRICADO": Me.cmbCategoria.AddItem "COMERCIAL"
+    Me.cmbCategoria.Clear
+    Me.cmbCategoria.AddItem "FABRICADO"
+    Me.cmbCategoria.AddItem "COMERCIAL"
+    Me.cmbCategoria.AddItem "MATERIA_PRIMA"
     
     ' Popula Subcategorias e Processos do Servidor
     PopularListaProcessos swCompModel, configName
@@ -317,6 +335,8 @@ Private Sub ProcessarProximo()
     ' Aciona a Lógica de Visibilidade (Através do Change Event)
     If cat = "COMERCIAL" Then
         Me.cmbCategoria.ListIndex = 1
+    ElseIf cat = "MATERIA_PRIMA" Then
+        Me.cmbCategoria.ListIndex = 2
     Else
         Me.cmbCategoria.ListIndex = 0
     End If
@@ -349,6 +369,13 @@ Private Sub cmbCategoria_Change()
             Me.Frame1.Controls("lblProcesso" & i).Visible = False
         Next i
         Me.cmbSubcategoria.Visible = True
+    ElseIf Me.cmbCategoria.Text = "MATERIA_PRIMA" Then
+        For i = 1 To 6
+            Me.Frame1.Controls("cmbProcesso" & i).Visible = False
+            Me.Frame1.Controls("lblProcesso" & i).Visible = False
+        Next i
+        Me.cmbSubcategoria.Text = "Matéria Prima"
+        Me.cmbSubcategoria.Visible = False
     Else
         For i = 1 To 6
             Me.Frame1.Controls("cmbProcesso" & i).Visible = True
@@ -572,7 +599,11 @@ Private Function EnviarParaAPI() As Long
     On Error GoTo Erro
     
     Dim selSubCat As String: selSubCat = ""
-    If Me.cmbCategoria.Text = "COMERCIAL" Then selSubCat = Me.cmbSubcategoria.Text
+    If Me.cmbCategoria.Text = "COMERCIAL" Then 
+        selSubCat = Me.cmbSubcategoria.Text
+    ElseIf Me.cmbCategoria.Text = "MATERIA_PRIMA" Then
+        selSubCat = "Matéria Prima"
+    End If
     
     Dim tTratamento As String, tDetalhe As String
     tTratamento = "": tDetalhe = ""

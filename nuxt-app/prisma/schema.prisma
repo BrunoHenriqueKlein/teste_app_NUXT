@@ -510,8 +510,9 @@ model Arquivo {
 }
 
 enum PecaCategoria {
-  COMERCIAL
   FABRICADO
+  COMERCIAL
+  MATERIA_PRIMA
 }
 
 enum SuprimentoStatus {
@@ -521,6 +522,7 @@ enum SuprimentoStatus {
   COMPRADO
   RECEBIDO_PARCIAL
   RECEBIDO
+  ATENDIDO_ESTOQUE
 }
 
 // Modelos de Configuração e Padronização

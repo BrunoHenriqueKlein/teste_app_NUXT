@@ -832,6 +832,10 @@
             <v-card-title class="bg-blue-grey-lighten-5 text-subtitle-1 font-weight-bold d-flex align-center">
               <v-icon color="brown-darken-1" class="mr-2">mdi-cube-outline</v-icon>
               1. Matéria Prima
+              <v-spacer></v-spacer>
+              <v-chip v-if="dialogProcessos.peca?.statusSuprimento" size="small" :color="getSuprimentoColor(dialogProcessos.peca.statusSuprimento)" variant="flat" class="text-uppercase">
+                {{ dialogProcessos.peca.statusSuprimento.replace(/_/g, ' ') }}
+              </v-chip>
             </v-card-title>
             <v-divider></v-divider>
             <v-card-text>
@@ -846,7 +850,7 @@
                     hide-details
                   ></v-text-field>
                 </v-col>
-                <v-col cols="12" md="5">
+                <v-col cols="12" md="4">
                   <v-text-field
                     v-model="dialogProcessos.peca.material"
                     label="Material (Liga/Especificação)"
@@ -856,11 +860,22 @@
                     hide-details
                   ></v-text-field>
                 </v-col>
-                <v-col cols="12" md="3">
+                <v-col cols="12" md="2">
                   <v-text-field
                     v-model.number="dialogProcessos.peca.comprimentoMaterial"
                     label="Comprimento (mm)"
                     type="number"
+                    variant="outlined"
+                    density="compact"
+                    hide-details
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="12" md="2">
+                  <v-text-field
+                    v-model.number="dialogProcessos.peca.valorUnitario"
+                    label="Custo (R$)"
+                    type="number"
+                    prefix="R$"
                     variant="outlined"
                     density="compact"
                     hide-details
@@ -1749,6 +1764,7 @@ const saveProcessos = async () => {
         tipoMaterial: dialogProcessos.value.peca.tipoMaterial,
         material: dialogProcessos.value.peca.material,
         comprimentoMaterial: dialogProcessos.value.peca.comprimentoMaterial,
+        valorUnitario: dialogProcessos.value.peca.valorUnitario,
         tratamentoSuperficial: dialogProcessos.value.peca.tratamentoSuperficial,
         detalheTratamento: dialogProcessos.value.peca.detalheTratamento,
         custoTratamento: dialogProcessos.value.peca.custoTratamento
