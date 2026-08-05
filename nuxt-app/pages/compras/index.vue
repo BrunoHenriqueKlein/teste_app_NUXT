@@ -658,6 +658,26 @@
             </v-col>
           </v-row>
 
+          <v-divider class="my-4"></v-divider>
+          <div class="text-subtitle-2 mb-2 text-primary d-flex align-center">
+            <v-icon size="20" class="mr-2">mdi-chart-line</v-icon>
+            Dados Gerenciais (Não impresso no Pedido)
+          </div>
+          <v-row dense>
+            <v-col cols="12" md="4">
+              <v-text-field
+                v-model.number="dialogDetalhes.savingNegociado"
+                label="Saving Negociado (KPI de Economia)"
+                prefix="R$"
+                variant="outlined"
+                density="compact"
+                hint="Desconto negociado pela equipe de compras. Apenas p/ relatório."
+                persistent-hint
+                color="success"
+              ></v-text-field>
+            </v-col>
+          </v-row>
+
           <v-textarea
             v-model="dialogDetalhes.observacoes"
             label="Observações para o Fornecedor"
@@ -1633,6 +1653,7 @@ const verDetalhesRequisicao = (item) => {
     dataPrevisao: item.dataPrevisaoEntrega ? new Date(item.dataPrevisaoEntrega).toISOString().substr(0, 10) : '',
     valorFrete: item.valorFrete || 0,
     valorDesconto: item.valorDesconto || 0,
+    savingNegociado: item.savingNegociado || 0,
     formaPagamento: item.formaPagamento || 'A Combinar',
     tipoFrete: item.tipoFrete || 'FOB',
     transportadora: item.transportadora || '',
@@ -1680,6 +1701,7 @@ const salvarTratativa = async () => {
         fornecedorId: dialogDetalhes.value.fornecedorId,
         valorFrete: dialogDetalhes.value.valorFrete,
         valorDesconto: dialogDetalhes.value.valorDesconto,
+        savingNegociado: dialogDetalhes.value.savingNegociado,
         formaPagamento: dialogDetalhes.value.formaPagamento,
         tipoFrete: dialogDetalhes.value.tipoFrete,
         transportadora: dialogDetalhes.value.transportadora,

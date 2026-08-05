@@ -410,6 +410,7 @@ model Compra {
   valorTotal          Float?
   valorFrete          Float?       @default(0) @map("valor_frete")
   valorDesconto       Float?       @default(0) @map("valor_desconto")
+  savingNegociado     Float?       @default(0) @map("saving_negociado")
   status              CompraStatus @default(SOLICITADA)
   observacoes         String?
   dataSolicitacao     DateTime     @default(now()) @map("data_solicitacao")

@@ -460,6 +460,7 @@ export default defineEventHandler(async (event) => {
                     valorTotal: data.valorTotal,
                     valorFrete: data.valorFrete,
                     valorDesconto: data.valorDesconto,
+                    savingNegociado: data.savingNegociado,
                     formaPagamento: data.formaPagamento,
                     tipoFrete: data.tipoFrete,
                     transportadora: data.transportadora,
