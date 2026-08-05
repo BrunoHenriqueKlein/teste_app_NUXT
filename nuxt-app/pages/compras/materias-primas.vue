@@ -20,11 +20,11 @@
         <v-btn
           color="success"
           variant="elevated"
-          prepend-icon="mdi-check-all"
+          prepend-icon="mdi-package-variant-closed"
           :disabled="selected.length === 0"
           @click="atenderEstoque"
         >
-          Atendido Pelo Estoque ({{ selected.length }})
+          Reservar Lote do Estoque ({{ selected.length }})
         </v-btn>
       </template>
     </PageHeader>
@@ -383,9 +383,9 @@
         <v-card-title class="bg-primary text-white">Atender com Estoque Físico</v-card-title>
         <v-card-text class="pt-4">
           <div class="mb-4">
-            <strong>Peça:</strong> {{ pecaParaReserva?.codigo }} <br/>
-            <strong>Material Necessário:</strong> {{ pecaParaReserva?.tipoMaterial }} | {{ pecaParaReserva?.material }} <br/>
-            <strong>Quantidade Necessária:</strong> {{ (pecaParaReserva?.comprimentoMaterial || 0) * (pecaParaReserva?.quantidade || 1) }} mm
+            <strong>Peça(s):</strong> {{ pecasParaReservaLote.length === 1 ? pecasParaReservaLote[0].codigo : pecasParaReservaLote.length + ' peças selecionadas' }} <br/>
+            <strong>Material Necessário:</strong> {{ pecasParaReservaLote[0]?.tipoMaterial }} | {{ pecasParaReservaLote[0]?.material }} <br/>
+            <strong>Quantidade Total:</strong> {{ quantidadeTotalReserva }} mm
           </div>
           
           <v-divider class="mb-4"></v-divider>
@@ -432,12 +432,16 @@ const adjustAction = ref('add')
 
 const dialogReservaEstoque = ref(false)
 const loadingReserva = ref(false)
-const pecaParaReserva = ref(null)
+const pecasParaReservaLote = ref([])
 const estoqueSelecionado = ref(null)
 
+const quantidadeTotalReserva = computed(() => {
+  return pecasParaReservaLote.value.reduce((acc, p) => acc + (p.comprimentoMaterial || 0) * (p.quantidade || 1), 0)
+})
+
 const estoqueCompativel = computed(() => {
-  if (!pecaParaReserva.value) return []
-  const pecaDesc = pecaParaReserva.value.tipoMaterial?.toLowerCase().trim() || ''
+  if (pecasParaReservaLote.value.length === 0) return []
+  const pecaDesc = pecasParaReservaLote.value[0]?.tipoMaterial?.toLowerCase().trim() || ''
   
   return estoqueFisico.value
     .filter(e => e.quantidade > 0)
@@ -679,8 +683,23 @@ const solicitarCompra = () => {
 }
 
 const atenderEstoque = () => {
-  // Assume que RECEBIDO atende o item por completo. Pode ser ATENDIDO_ESTOQUE se existir no enum SuprimentoStatus
-  atualizarStatusLote('RECEBIDO')
+  if (selected.value.length === 0) return
+  
+  const selectedPieces = itemsComGrupo.value.filter(i => selected.value.includes(i.id))
+  
+  if (selectedPieces.length === 0) return
+  
+  const firstGroup = selectedPieces[0].materialAgrupado
+  const hasMultipleMaterials = selectedPieces.some(i => i.materialAgrupado !== firstGroup)
+  
+  if (hasMultipleMaterials) {
+    showSnackbar('Selecione apenas peças do mesmo material para reservar em lote.', 'warning')
+    return
+  }
+  
+  pecasParaReservaLote.value = selectedPieces
+  estoqueSelecionado.value = null
+  dialogReservaEstoque.value = true
 }
 
 const getStatusColor = (status) => {
@@ -710,26 +729,27 @@ const formatStatus = (status) => {
 }
 
 const abrirReservaEstoque = (item) => {
-  pecaParaReserva.value = item
+  pecasParaReservaLote.value = [item]
   estoqueSelecionado.value = null
   dialogReservaEstoque.value = true
 }
 
 const confirmarReservaEstoque = async () => {
-  if (!pecaParaReserva.value || !estoqueSelecionado.value) return
+  if (pecasParaReservaLote.value.length === 0 || !estoqueSelecionado.value) return
   
   loadingReserva.value = true
   try {
     const res = await $fetch('/api/estoque/reservar', {
       method: 'POST',
       body: {
-        pecaId: pecaParaReserva.value.id,
+        pecaIds: pecasParaReservaLote.value.map(p => p.id),
         estoqueId: estoqueSelecionado.value
       }
     })
     
     showSnackbar(res.message || 'Estoque reservado com sucesso!')
     dialogReservaEstoque.value = false
+    selected.value = []
     await carregarDados() // Recarrega a BOM e Estoque
   } catch(e) {
     showSnackbar(e.data?.statusMessage || 'Erro ao reservar estoque', 'error')
