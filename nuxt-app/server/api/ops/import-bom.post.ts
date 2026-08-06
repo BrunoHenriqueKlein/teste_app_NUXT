@@ -46,7 +46,9 @@ export default defineEventHandler(async (event) => {
         const descFinal = peca.descricao || (itemEstoque ? itemEstoque.descricao : '') || ''
         const matFinal = peca.material || (itemEstoque ? itemEstoque.material : '') || ''
         const catRaw = peca.categoria || (itemEstoque ? itemEstoque.categoria : '') || 'FABRICADO'
-        const catFinal = (String(catRaw).toUpperCase() === 'COMERCIAL' || String(catRaw).toUpperCase() === 'COMPRADO') ? 'COMERCIAL' : 'FABRICADO'
+        const catFinal = (String(catRaw).toUpperCase() === 'COMERCIAL' || String(catRaw).toUpperCase() === 'COMPRADO') 
+            ? 'COMERCIAL' 
+            : (String(catRaw).toUpperCase() === 'MATERIA_PRIMA' ? 'MATERIA_PRIMA' : 'FABRICADO')
         const subcatFinal = peca.subcategoria || (itemEstoque ? itemEstoque.subcategoria : '') || ''
         
         const valUnit = (itemEstoque?.valorUnitario) ? itemEstoque.valorUnitario : null
