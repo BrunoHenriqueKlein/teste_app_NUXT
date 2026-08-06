@@ -340,7 +340,7 @@
         </template>
 
         <template v-slot:item.categoria="{ item }">
-          <v-chip size="x-small" :color="item.categoria === 'COMERCIAL' ? 'blue' : 'orange'" class="font-weight-bold" variant="outlined">
+          <v-chip size="x-small" :color="item.categoria === 'COMERCIAL' ? 'blue' : item.categoria === 'MATERIA_PRIMA' ? 'green' : 'orange'" class="font-weight-bold" variant="outlined">
             {{ item.categoria }}
           </v-chip>
         </template>
@@ -715,7 +715,7 @@
               <v-select
                 v-model="dialogPeca.data.categoria"
                 label="Categoria *"
-                :items="['FABRICADO', 'COMERCIAL']"
+                :items="['FABRICADO', 'COMERCIAL', 'MATERIA_PRIMA']"
                 variant="outlined"
                 density="comfortable"
                 :rules="[v => !!v || 'Categoria obrigatória']"
