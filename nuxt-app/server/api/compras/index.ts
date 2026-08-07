@@ -470,9 +470,88 @@ export default defineEventHandler(async (event) => {
                     dataPrevisaoEntrega: data.dataPrevisaoEntrega ? new Date(data.dataPrevisaoEntrega) : undefined,
                     dataEntregaReal: data.dataEntregaReal ? new Date(data.dataEntregaReal) : undefined,
                     numeroNF: data.numeroNF,
+                    metadados: data.metadados ? data.metadados : undefined,
                 },
                 include: { itens: true }
             })
+
+            // 0. Processamento de sobras (Retalho) para Matérias-Primas
+            const metadadosAtuais = (updatedCompra.metadados as any) || {}
+            if ((data.status === 'PEDIDO_EMITIDO' || data.status === 'APROVADA') && metadadosAtuais && metadadosAtuais.raw_materials) {
+                // Verificar se já geramos retalhos para evitar duplicidade
+                if (!metadadosAtuais.retalhosGerados) {
+                    for (const key in metadadosAtuais.raw_materials) {
+                        const meta = metadadosAtuais.raw_materials[key]
+                        const sobra = (meta.compComprado || 0) - (meta.compNecessidade || 0)
+                        
+                        if (sobra > 0) {
+                            // Quebrar a chave para extrair perfil e material (ex: "Barra Laminada Ø 31,75 | AISI 1020")
+                            const parts = key.split('|').map(s => s.trim())
+                            const perfil = parts[0]
+                            const material = parts.length > 1 ? parts[1] : ''
+                            
+                            const novoCodigo = `RET - ${perfil}${material ? ' | ' + material : ''}`
+                            
+                            // 1. Encontrar ou criar o Estoque
+                            let estoqueItem = await prisma.estoque.findFirst({
+                                where: { 
+                                    OR: [
+                                        { codigo: novoCodigo },
+                                        {
+                                            descricao: perfil,
+                                            material: material,
+                                            unidade: 'mm'
+                                        }
+                                    ]
+                                }
+                            })
+                            
+                            if (!estoqueItem) {
+                                // Cria o item de estoque base
+                                estoqueItem = await prisma.estoque.create({
+                                    data: {
+                                        codigo: novoCodigo,
+                                        descricao: perfil,
+                                        material: material,
+                                        categoria: 'MATERIA_PRIMA',
+                                        unidade: 'mm',
+                                        quantidade: 0,
+                                        valorUnitario: 0
+                                    }
+                                })
+                            }
+                            
+                            // Descobrir o valor unitário rateado do grupo
+                            // meta.valorUnitario = valor total do grupo dividido pelo comprimento total comprado
+                            // No frontend passaremos meta.valorTotalDigitado
+                            const valorTotalGrupo = meta.valorTotalDigitado || 0
+                            const valorUn = valorTotalGrupo > 0 && meta.compComprado > 0 ? valorTotalGrupo / meta.compComprado : 0
+                            
+                            // 2. Criar CompraItem do Retalho vinculado à OC
+                            await prisma.compraItem.create({
+                                data: {
+                                    compraId: updatedCompra.id,
+                                    estoqueId: estoqueItem.id,
+                                    descricao: `Retalho - ${perfil}`,
+                                    quantidade: sobra,
+                                    valorUnitario: Number(valorUn.toFixed(4)),
+                                    aliqIPI: Number(meta.aliqIPI || 0),
+                                    aliqICMS: Number(meta.aliqICMS || 0),
+                                    valorIPI: Number(((valorUn * sobra) * (meta.aliqIPI || 0) / 100).toFixed(2)),
+                                    valorICMS: Number(((valorUn * sobra) * (meta.aliqICMS || 0) / 100).toFixed(2)),
+                                    custoLiquido: Number(valorUn.toFixed(4))
+                                }
+                            })
+                        }
+                    }
+                    
+                    // Marcar como gerado para não gerar de novo num update subsequente
+                    await prisma.compra.update({
+                        where: { id: updatedCompra.id },
+                        data: { metadados: { ...metadadosAtuais, retalhosGerados: true } }
+                    })
+                }
+            }
 
             // 1. Sincronização ao Emitir Pedido (PEDIDO_EMITIDO ou APROVADA)
             if (data.status === 'PEDIDO_EMITIDO' || data.status === 'APROVADA') {
@@ -637,9 +716,21 @@ export default defineEventHandler(async (event) => {
                             const estoqueExistente = await prisma.estoque.findUnique({ where: { id: itemAtualizado.estoqueId } })
                             if (estoqueExistente) {
                                 const novaQuantidade = estoqueExistente.quantidade + Number(rec.qtdEntregue)
-                                const novoValorUnitario = itemAtualizado.valorUnitario || estoqueExistente.valorUnitario || 0
+                                
+                                let novoValorUnitario = itemAtualizado.valorUnitario || estoqueExistente.valorUnitario || 0
+                                if (estoqueExistente.unidade === 'mm' && itemAtualizado.valorUnitario) {
+                                    // Para 'mm', valorUnitario do Estoque representa 1 barra (6000mm)
+                                    novoValorUnitario = itemAtualizado.valorUnitario * 6000
+                                }
+                                
                                 const novoImpostoIPI = itemAtualizado.aliqIPI || estoqueExistente.impostoIPI || 0
-                                const novoValorTotal = novaQuantidade * novoValorUnitario * (1 + novoImpostoIPI / 100)
+                                
+                                let novoValorTotal = 0
+                                if (estoqueExistente.unidade === 'mm') {
+                                    novoValorTotal = (novaQuantidade / 6000) * novoValorUnitario * (1 + novoImpostoIPI / 100)
+                                } else {
+                                    novoValorTotal = novaQuantidade * novoValorUnitario * (1 + novoImpostoIPI / 100)
+                                }
 
                                 await prisma.estoque.update({
                                     where: { id: itemAtualizado.estoqueId },

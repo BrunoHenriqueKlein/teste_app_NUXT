@@ -129,6 +129,9 @@
               <span v-if="item.isEstoque" class="text-orange font-weight-bold">
                 <v-icon size="small" class="mr-1">mdi-warehouse</v-icon> ESTOQUE
               </span>
+              <span v-else-if="isRequisicaoMateriaPrima(item)" class="text-deep-purple font-weight-bold">
+                <v-icon size="small" class="mr-1">mdi-cube-outline</v-icon> MATÉRIA-PRIMA
+              </span>
               <span v-else class="text-primary font-weight-bold">{{ item.op?.numeroOP || 'S/ OP' }}</span>
             </template>
             <template v-slot:item.os="{ item }">
@@ -185,6 +188,9 @@
             <template v-slot:item.op="{ item }">
               <span v-if="item.isEstoque" class="text-orange font-weight-bold">
                 <v-icon size="small" class="mr-1">mdi-warehouse</v-icon> ESTOQUE
+              </span>
+              <span v-else-if="isRequisicaoMateriaPrima(item)" class="text-deep-purple font-weight-bold">
+                <v-icon size="small" class="mr-1">mdi-cube-outline</v-icon> MATÉRIA-PRIMA
               </span>
               <span v-else class="text-primary font-weight-bold">{{ item.op?.numeroOP || 'S/ OP' }}</span>
             </template>
@@ -279,6 +285,9 @@
             <template v-slot:item.op="{ item }">
               <span v-if="item.isEstoque" class="text-orange font-weight-bold">
                 <v-icon size="small" class="mr-1">mdi-warehouse</v-icon> ESTOQUE
+              </span>
+              <span v-else-if="isRequisicaoMateriaPrima(item)" class="text-deep-purple font-weight-bold">
+                <v-icon size="small" class="mr-1">mdi-cube-outline</v-icon> MATÉRIA-PRIMA
               </span>
               <span v-else class="text-primary font-weight-bold">{{ item.op?.numeroOP || 'S/ OP' }}</span>
             </template>
@@ -443,10 +452,78 @@
                     @change="toggleSelectAll"
                   ></v-checkbox-btn>
                 </th>
-                <th class="text-left font-weight-bold" style="width: 60px; min-width: 60px;">Item</th>
-                <th class="text-left font-weight-bold" style="width: 200px; min-width: 200px; white-space: nowrap;">Código</th>
-                <th class="text-left font-weight-bold" style="width: 100%;">Descrição</th>
-                <th class="text-left font-weight-bold" style="width: 120px; min-width: 120px; white-space: nowrap;">Etapa / Processo</th>
+              </tr>
+            </thead>
+          </v-table>
+          <!-- INÍCIO TABELA AGRUPADA (MATÉRIA-PRIMA) -->
+          <v-table density="compact" class="border rounded" v-if="isMateriaPrima">
+            <thead class="bg-grey-lighten-4">
+              <tr>
+                <th style="width: 40px;"></th>
+                <th class="font-weight-bold">Perfil</th>
+                <th class="text-center font-weight-bold" style="width: 150px;">Material</th>
+                <th class="text-right font-weight-bold" style="width: 150px;">Nec. Total (mm)</th>
+                
+                <th class="text-center font-weight-bold" style="width: 80px;">Qtd Com.</th>
+                <th class="text-center font-weight-bold" style="width: 80px;">UN Com.</th>
+                <th class="text-center font-weight-bold" style="width: 100px;">Tam./UN (mm)</th>
+                <th class="text-right font-weight-bold" style="width: 150px;">Total Comprado (mm)</th>
+                
+                <th class="text-center font-weight-bold" style="width: 120px;">Vlr. Total (R$)</th>
+                <th class="text-center font-weight-bold" style="width: 80px;">IPI (%)</th>
+                <th class="text-center font-weight-bold" style="width: 80px;">ICMS (%)</th>
+                <th class="text-right font-weight-bold" style="width: 120px;">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(grupo, idx) in gruposMateriaPrima" :key="idx" :class="{'bg-blue-lighten-5': grupo.selected}">
+                <td>
+                  <v-checkbox-btn v-model="grupo.selected" color="primary" density="compact" hide-details @update:model-value="atualizarRateioMateriaPrima(grupo)"></v-checkbox-btn>
+                </td>
+                <td>
+                  <div class="font-weight-bold text-primary">{{ grupo.perfil }}</div>
+                  <div class="text-caption text-grey">Agrupando {{ grupo.itens.length }} peça(s)</div>
+                </td>
+                <td class="text-center">{{ grupo.material }}</td>
+                <td class="text-right font-weight-bold">{{ grupo.comprimentoTotal.toLocaleString('pt-BR') }} mm</td>
+                <td class="text-center">
+                  <v-text-field v-model.number="grupo.qtdComercial" type="number" variant="underlined" density="compact" hide-details></v-text-field>
+                </td>
+                <td class="text-center">
+                  <v-text-field v-model="grupo.unComercial" variant="underlined" density="compact" hide-details></v-text-field>
+                </td>
+                <td class="text-center">
+                  <v-text-field v-model.number="grupo.compPorUnidade" type="number" variant="underlined" density="compact" hide-details></v-text-field>
+                </td>
+                <td class="text-right font-weight-bold">
+                  {{ ((grupo.qtdComercial || 1) * (grupo.compPorUnidade || grupo.comprimentoTotal)).toLocaleString('pt-BR') }} mm
+                  <div v-if="((grupo.qtdComercial || 1) * (grupo.compPorUnidade || grupo.comprimentoTotal)) > grupo.comprimentoTotal" class="text-caption text-orange">Sobra: {{ (((grupo.qtdComercial || 1) * (grupo.compPorUnidade || grupo.comprimentoTotal)) - grupo.comprimentoTotal).toLocaleString('pt-BR') }} mm</div>
+                </td>
+                <td>
+                  <v-text-field v-model.number="grupo.valorTotalDigitado" type="number" variant="underlined" density="compact" hide-details prefix="R$" @update:model-value="atualizarRateioMateriaPrima(grupo)"></v-text-field>
+                </td>
+                <td>
+                  <v-text-field v-model.number="grupo.aliqIPI" type="number" variant="underlined" density="compact" hide-details suffix="%" @update:model-value="atualizarRateioMateriaPrima(grupo)"></v-text-field>
+                </td>
+                <td>
+                  <v-text-field v-model.number="grupo.aliqICMS" type="number" variant="underlined" density="compact" hide-details suffix="%" @update:model-value="atualizarRateioMateriaPrima(grupo)"></v-text-field>
+                </td>
+                <td class="text-right font-weight-bold text-success">
+                  {{ formatCurrency(grupo.valorTotalDigitado * (1 + (grupo.aliqIPI||0)/100 + (grupo.aliqICMS||0)/100)) }}
+                </td>
+              </tr>
+            </tbody>
+          </v-table>
+          
+          <!-- TABELA ORIGINAL (PEÇAS INDIVIDUAIS) -->
+          <v-table density="compact" class="border rounded" v-else>
+            <thead class="bg-grey-lighten-4">
+              <tr>
+                <th style="width: 40px;"></th>
+                <th class="font-weight-bold" style="width: 60px;">Item</th>
+                <th class="font-weight-bold">Código</th>
+                <th class="font-weight-bold">Descrição</th>
+                <th class="font-weight-bold">Etapa</th>
                 <th class="text-center font-weight-bold" style="width: 80px; min-width: 80px;">Material</th>
                 <th class="text-center font-weight-bold" style="width: 60px; min-width: 60px;">Qtd</th>
                 <th class="text-center font-weight-bold" style="width: 120px; min-width: 120px;">Vlr. Unit (R$)</th>
@@ -1321,9 +1398,88 @@ const headersFinalizadas = [
 const empresa = ref(null)
 const printData = ref(null)
 
+const printItensAgrupados = computed(() => {
+  if (!printData.value || !printData.value.itens) return []
+  
+  const itensReais = printData.value.itens.filter(i => !i.descricao?.startsWith('Retalho'))
+  
+  if (!isRequisicaoMateriaPrima(printData.value)) return itensReais
+  
+  const grupos = {}
+  itensReais.forEach(item => {
+    const peca = item.peca
+    if (!peca) return
+    const perfil = peca.tipoMaterial ? `${peca.tipoMaterial}`.trim() : item.descricao || '-'
+    const material = peca.material || '-'
+    const key = `${perfil} | ${material}`
+    
+    if (!grupos[key]) {
+      grupos[key] = {
+        id: key,
+        numeroItem: Object.keys(grupos).length + 1,
+        peca: { codigo: perfil, descricao: `Total: 0 mm`, material },
+        descricao: 'Lote Consolidado',
+        etapaProcesso: '-',
+        quantidade: 1,
+        valorUnitario: 0,
+        aliqIPI: item.aliqIPI || 0,
+        aliqICMS: item.aliqICMS || 0,
+        estoque: { unidade: 'LT' },
+        comprimentoTotal: 0,
+        rawSum: 0
+      }
+    }
+    
+    const comp = parseFloat(peca.comprimentoMaterial) || 0
+    const qtd = parseInt(item.quantidade) || 1
+    grupos[key].comprimentoTotal += (comp * qtd)
+    
+    grupos[key].rawSum += ((item.valorUnitario || 0) * (item.quantidade || 1))
+  })
+  
+  // Agora substitui o valor final e formatação usando gruposMateriaPrima se possível, ou dos metadados da própria OC
+  Object.values(grupos).forEach(g => {
+    let memGrupo = gruposMateriaPrima.value?.find(mg => mg.key === g.id)
+    
+    // Se não encontrou no memGrupo, tenta puxar direto do metadados da OC (caso tenha vindo do backend)
+    let metaSource = memGrupo
+    if (!metaSource && printData.value?.metadados?.raw_materials && printData.value.metadados.raw_materials[g.id]) {
+        metaSource = printData.value.metadados.raw_materials[g.id]
+    }
+
+    if (metaSource) {
+      g.valorUnitario = Number(metaSource.valorTotalDigitado) || 0
+      
+      const qtCom = Number(metaSource.qtdComercial) || 1
+      const unCom = metaSource.unComercial || 'LT'
+      const compUn = Number(metaSource.compPorUnidade) || g.comprimentoTotal
+      const compComprado = qtCom * compUn
+      
+      g.quantidade = qtCom
+      g.estoque.unidade = unCom
+      g.peca.descricao = `Total: ${compComprado.toLocaleString('pt-BR')} mm`
+      
+      // Ajustar valorUnitario para o valor unitário por UNIDADE comercial (ex: por Barra)
+      g.valorUnitario = qtCom > 0 ? g.valorUnitario / qtCom : g.valorUnitario
+      
+    } else {
+      g.peca.descricao = `Total: ${g.comprimentoTotal.toLocaleString('pt-BR')} mm`
+      g.valorUnitario = g.rawSum
+      // Ajuste fino: se o rawSum for absurdamente perto do valorTotal da OC e só tiver 1 grupo
+      if (Object.keys(grupos).length === 1 && printData.value.valorTotal) {
+         if (Math.abs(g.valorUnitario - printData.value.valorTotal) < 1) { // margem de 1 real
+            g.valorUnitario = printData.value.valorTotal
+         }
+      }
+    }
+  })
+  
+  return Object.values(grupos)
+})
+
 const chunkedPrintItens = computed(() => {
   if (!printData.value || !printData.value.itens) return []
-  const items = printData.value.itens
+  const items = printItensAgrupados.value
   const size = 19 // Máximo de itens por página
   const result = []
   for (let i = 0; i < items.length; i += size) {
@@ -1623,8 +1779,22 @@ const excluirAnexo = async (compraId, anexoId) => {
 
 const totalPedidoCalculado = computed(() => {
   if (!dialogDetalhes.value.requisicao) return 0
-  const itens = dialogDetalhes.value.requisicao.itens.filter(i => i.selected)
-  const itensSum = itens.reduce((acc, item) => acc + calculateItemTotal(item), 0)
+  
+  let itensSum = 0
+  if (isMateriaPrima.value && gruposMateriaPrima.value && gruposMateriaPrima.value.length > 0) {
+    itensSum = gruposMateriaPrima.value.filter(g => g.selected).reduce((acc, g) => {
+      let tot = Number(g.valorTotalDigitado) || 0
+      const ipi = Number(g.aliqIPI) || 0
+      const icms = Number(g.aliqICMS) || 0
+      if (ipi) tot += (Number(g.valorTotalDigitado) || 0) * (ipi/100)
+      if (icms) tot += (Number(g.valorTotalDigitado) || 0) * (icms/100)
+      return acc + tot
+    }, 0)
+  } else {
+    const itens = dialogDetalhes.value.requisicao.itens.filter(i => i.selected)
+    itensSum = itens.reduce((acc, item) => acc + calculateItemTotal(item), 0)
+  }
+  
   return itensSum + (Number(dialogDetalhes.value.valorFrete) || 0) - (Number(dialogDetalhes.value.valorDesconto) || 0)
 })
 
@@ -1645,6 +1815,41 @@ const todosItensSelecionados = computed(() => {
   const itens = dialogDetalhes.value.requisicao?.itens || []
   return itens.length > 0 && itens.every(i => i.selected)
 })
+
+const isRequisicaoMateriaPrima = (req) => {
+  if (!req || !req.itens || req.itens.length === 0) return false
+  
+  // Se for atrelada a uma OS, é terceirização (não agrupar)
+  if (req.osId) return false
+  
+  // Ignora itens de retalho na verificação
+  const reais = req.itens.filter(i => !i.descricao?.startsWith('Retalho'))
+  if (reais.length === 0) return false
+  
+  // Para ser Matéria Prima, todos os itens precisam ser da categoria MATERIA_PRIMA 
+  // OU precisam ter um perfil/tipoMaterial preenchido (Peças Fabricadas sendo orçadas como material)
+  return reais.every(i => i.peca?.categoria === 'MATERIA_PRIMA' || (i.peca?.tipoMaterial && i.peca?.tipoMaterial.trim() !== ''))
+}
+
+const isMateriaPrima = computed(() => {
+  return isRequisicaoMateriaPrima(dialogDetalhes.value.requisicao)
+})
+
+const gruposMateriaPrima = ref([])
+
+const atualizarRateioMateriaPrima = (grupo) => {
+  const totalComprado = (grupo.qtdComercial || 1) * (grupo.compPorUnidade || grupo.comprimentoTotal)
+  const valorUnitarioMm = totalComprado > 0 ? (grupo.valorTotalDigitado / totalComprado) : 0
+  
+  grupo.itens.forEach(item => {
+    const compPeca = parseFloat(item.peca?.comprimentoMaterial) || 0
+    item.valorUnitario = parseFloat((compPeca * valorUnitarioMm).toFixed(3))
+    item.aliqIPI = grupo.aliqIPI
+    item.aliqICMS = grupo.aliqICMS
+    item.selected = grupo.selected
+  })
+  recacheTotals()
+}
 
 const verDetalhesRequisicao = (item) => {
   dialogDetalhes.value = {
@@ -1677,6 +1882,61 @@ const verDetalhesRequisicao = (item) => {
       i.etapaProcesso = '-'
     }
   })
+  
+  // Constrói os grupos de Matéria Prima de forma estática
+  if (isRequisicaoMateriaPrima(dialogDetalhes.value.requisicao)) {
+    const grupos = {}
+    dialogDetalhes.value.requisicao.itens.forEach(i => {
+      const peca = i.peca
+      if (!peca) return
+      const perfil = peca.tipoMaterial ? `${peca.tipoMaterial}`.trim() : i.descricao || '-'
+      const material = peca.material || '-'
+      const key = `${perfil} | ${material}`
+      
+      if (!grupos[key]) {
+        grupos[key] = {
+          key,
+          perfil,
+          material,
+          itens: [],
+          comprimentoTotal: 0,
+          valorTotalDigitado: 0,
+          aliqIPI: i.aliqIPI || 0,
+          aliqICMS: i.aliqICMS || 0,
+          selected: true,
+          qtdComercial: 1,
+          unComercial: 'LT',
+          compPorUnidade: 0
+        }
+      }
+      const comp = parseFloat(peca.comprimentoMaterial) || 0
+      const qtd = parseInt(i.quantidade) || 1
+      grupos[key].comprimentoTotal += (comp * qtd)
+      grupos[key].itens.push(i)
+    })
+    
+    Object.values(grupos).forEach(g => {
+       // Restaurar metadados se existirem
+       const reqMeta = dialogDetalhes.value.requisicao.metadados
+       if (reqMeta && reqMeta.raw_materials && reqMeta.raw_materials[g.key]) {
+         const rm = reqMeta.raw_materials[g.key]
+         g.qtdComercial = rm.qtdComercial || 1
+         g.unComercial = rm.unComercial || 'LT'
+         g.compPorUnidade = rm.compPorUnidade || g.comprimentoTotal
+         g.valorTotalDigitado = rm.valorTotalDigitado || 0
+       }
+       
+       let sumCusto = 0
+       g.itens.forEach(i => sumCusto += (i.valorUnitario || 0) * (i.quantidade || 1))
+       if (!g.valorTotalDigitado) g.valorTotalDigitado = parseFloat(sumCusto.toFixed(3))
+       
+       g.selected = g.itens.every(i => i.selected)
+    })
+    gruposMateriaPrima.value = Object.values(grupos)
+  } else {
+    gruposMateriaPrima.value = []
+  }
+
   selecionarTodosItens.value = true
   loadFornecedores()
 }
@@ -1713,7 +1973,26 @@ const salvarTratativa = async () => {
           valorIPI: (item.valorUnitario * item.quantidade) * ((item.aliqIPI || 0) / 100),
           valorICMS: (item.valorUnitario * item.quantidade) * ((item.aliqICMS || 0) / 100),
           custoLiquido: item.valorUnitario * (1 + ((item.aliqIPI || 0) / 100) + ((item.aliqICMS || 0) / 100))
-        }))
+        })),
+        metadados: (() => {
+          const m = dialogDetalhes.value.requisicao.metadados || {}
+          if (isMateriaPrima.value) {
+            m.raw_materials = {}
+            gruposMateriaPrima.value.forEach(g => {
+              m.raw_materials[g.key] = {
+                qtdComercial: g.qtdComercial,
+                unComercial: g.unComercial,
+                compPorUnidade: g.compPorUnidade,
+                compComprado: (g.qtdComercial || 1) * (g.compPorUnidade || g.comprimentoTotal),
+                compNecessidade: g.comprimentoTotal,
+                valorTotalDigitado: g.valorTotalDigitado,
+                aliqIPI: g.aliqIPI,
+                aliqICMS: g.aliqICMS
+              }
+            })
+          }
+          return m
+        })()
       },
       headers: authHeaders.value
     })
@@ -1836,8 +2115,23 @@ const emitirOC = async () => {
     }
     
     // Carrega os dados na div oculta para bater a foto
-    const itensSum = targetOC.itens?.reduce((acc, i) => acc + ((i.valorUnitario || 0) * (i.quantidade || 0)), 0) || 0
-    const totalIPI = targetOC.itens?.reduce((acc, i) => acc + (i.valorIPI || 0), 0) || 0
+    let itensSum = 0
+    let totalIPI = 0
+    if (isRequisicaoMateriaPrima(targetOC)) {
+      if (gruposMateriaPrima.value && gruposMateriaPrima.value.length > 0) {
+        itensSum = gruposMateriaPrima.value.reduce((acc, g) => acc + (Number(g.valorTotalDigitado) || 0), 0)
+        totalIPI = gruposMateriaPrima.value.reduce((acc, g) => acc + ((Number(g.valorTotalDigitado) || 0) * ((g.aliqIPI || 0)/100)), 0)
+      } else {
+        const grupos = printItensAgrupados.value
+        itensSum = grupos.reduce((acc, g) => acc + (g.valorUnitario || 0), 0)
+        totalIPI = grupos.reduce((acc, g) => acc + ((g.valorUnitario || 0) * ((g.aliqIPI || 0)/100)), 0)
+      }
+    } else {
+      const itensReais = targetOC.itens?.filter(i => !i.descricao?.startsWith('Retalho')) || []
+      itensSum = itensReais.reduce((acc, i) => acc + ((i.valorUnitario || 0) * (i.quantidade || 0)), 0)
+      totalIPI = itensReais.reduce((acc, i) => acc + (i.valorIPI || 0), 0)
+    }
+    
     printData.value = { ...targetOC, itensSum, totalIPI }
     
     await new Promise(r => setTimeout(r, 200)) // Aguarda o Vue renderizar a tabela oculta
@@ -1901,7 +2195,26 @@ const enviarEmailOC = async () => {
         valorIPI: (item.valorUnitario * item.quantidade) * (item.aliqIPI / 100),
         valorICMS: (item.valorUnitario * item.quantidade) * (item.aliqICMS / 100),
         custoLiquido: item.valorUnitario * (1 + (item.aliqIPI / 100) + (item.aliqICMS / 100))
-      }))
+      })),
+      metadados: (() => {
+        const m = dialogDetalhes.value.requisicao.metadados || {}
+        if (isMateriaPrima.value) {
+          m.raw_materials = {}
+          gruposMateriaPrima.value.forEach(g => {
+            m.raw_materials[g.key] = {
+              qtdComercial: g.qtdComercial,
+              unComercial: g.unComercial,
+              compPorUnidade: g.compPorUnidade,
+              compComprado: (g.qtdComercial || 1) * (g.compPorUnidade || g.comprimentoTotal),
+              compNecessidade: g.comprimentoTotal,
+              valorTotalDigitado: g.valorTotalDigitado,
+              aliqIPI: g.aliqIPI,
+              aliqICMS: g.aliqICMS
+            }
+          })
+        }
+        return m
+      })()
     }
 
     const response = await $fetch('/api/compras', {
@@ -1931,8 +2244,26 @@ const enviarEmailOC = async () => {
       }) || []
     }
 
-    const itensSum = enrichedTargetOC.itens?.reduce((acc, i) => acc + ((i.valorUnitario || 0) * (i.quantidade || 0)), 0) || 0
-    const totalIPI = enrichedTargetOC.itens?.reduce((acc, i) => acc + (i.valorIPI || 0), 0) || 0
+    let itensSum = 0
+    let totalIPI = 0
+    if (isRequisicaoMateriaPrima(enrichedTargetOC)) {
+      const grupos = printItensAgrupados.value
+      // Como os grupos no printItensAgrupados somam (valorUnitario * quantidade) dos originais,
+      // para evitar 1 centavo de erro de arredondamento, vamos puxar o valorTotalDigitado se pudermos,
+      // mas como printItensAgrupados não o tem nativamente, vamos pegar de gruposMateriaPrima.
+      if (gruposMateriaPrima.value && gruposMateriaPrima.value.length > 0) {
+        itensSum = gruposMateriaPrima.value.reduce((acc, g) => acc + (Number(g.valorTotalDigitado) || 0), 0)
+        totalIPI = gruposMateriaPrima.value.reduce((acc, g) => acc + ((Number(g.valorTotalDigitado) || 0) * ((g.aliqIPI || 0)/100)), 0)
+      } else {
+        itensSum = grupos.reduce((acc, g) => acc + (g.valorUnitario || 0), 0)
+        totalIPI = grupos.reduce((acc, g) => acc + ((g.valorUnitario || 0) * ((g.aliqIPI || 0)/100)), 0)
+      }
+    } else {
+      const itensReais = enrichedTargetOC.itens?.filter(i => !i.descricao?.startsWith('Retalho')) || []
+      itensSum = itensReais.reduce((acc, i) => acc + ((i.valorUnitario || 0) * (i.quantidade || 0)), 0)
+      totalIPI = itensReais.reduce((acc, i) => acc + (i.valorIPI || ((i.valorUnitario || 0)*(i.quantidade || 0)*((i.aliqIPI || 0)/100))), 0)
+    }
+    
     printData.value = { ...enrichedTargetOC, itensSum, totalIPI }
     
     await new Promise(r => setTimeout(r, 500)) // Dá tempo de renderizar
@@ -1979,8 +2310,9 @@ const reenviarEmailDaOC = async (oc) => {
       etapaProcesso: item.etapaProcesso || oc.os?.tipo || '-'
     }))
 
-    const itensSum = enrichedItens.reduce((acc, i) => acc + ((i.valorUnitario || 0) * (i.quantidade || 0)), 0)
-    const totalIPI = enrichedItens.reduce((acc, i) => acc + (i.valorIPI || 0), 0)
+    const itensReais = enrichedItens.filter(i => !i.descricao?.startsWith('Retalho'))
+    const itensSum = itensReais.reduce((acc, i) => acc + ((i.valorUnitario || 0) * (i.quantidade || 0)), 0)
+    const totalIPI = itensReais.reduce((acc, i) => acc + (i.valorIPI || 0), 0)
     
     printData.value = {
       ...oc,
@@ -2021,8 +2353,22 @@ const baixarImagemOC = async (oc) => {
     etapaProcesso: item.etapaProcesso || oc.os?.tipo || '-'
   }))
 
-  const itensSum = enrichedItens.reduce((acc, i) => acc + ((i.valorUnitario || 0) * (i.quantidade || 0)), 0)
-  const totalIPI = enrichedItens.reduce((acc, i) => acc + (i.valorIPI || 0), 0)
+  let itensSum = 0
+  let totalIPI = 0
+  if (isRequisicaoMateriaPrima(oc)) {
+    const grupos = printItensAgrupados.value
+    if (gruposMateriaPrima.value && gruposMateriaPrima.value.length > 0) {
+      itensSum = gruposMateriaPrima.value.reduce((acc, g) => acc + (Number(g.valorTotalDigitado) || 0), 0)
+      totalIPI = gruposMateriaPrima.value.reduce((acc, g) => acc + ((Number(g.valorTotalDigitado) || 0) * ((g.aliqIPI || 0)/100)), 0)
+    } else {
+      itensSum = grupos.reduce((acc, g) => acc + (g.valorUnitario || 0), 0)
+      totalIPI = grupos.reduce((acc, g) => acc + ((g.valorUnitario || 0) * ((g.aliqIPI || 0)/100)), 0)
+    }
+  } else {
+    const itensReais = enrichedItens.filter(i => !i.descricao?.startsWith('Retalho'))
+    itensSum = itensReais.reduce((acc, i) => acc + ((i.valorUnitario || 0) * (i.quantidade || 0)), 0)
+    totalIPI = itensReais.reduce((acc, i) => acc + (i.valorIPI || ((i.valorUnitario || 0)*(i.quantidade || 0)*((i.aliqIPI || 0)/100))), 0)
+  }
   
   printData.value = {
     ...oc,

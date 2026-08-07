@@ -428,6 +428,7 @@ model Compra {
   itens               CompraItem[]
   anexos              CompraAnexo[]
   rncs                RNC[]
+  metadados           Json?
 
   @@map("compras")
 }

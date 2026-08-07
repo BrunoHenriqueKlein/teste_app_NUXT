@@ -39,7 +39,9 @@ export default defineEventHandler(async (event) => {
         const desc = body.descricao || (estoqueItem ? estoqueItem.descricao : '') || ''
         const mat = body.material || (estoqueItem ? estoqueItem.material : '') || ''
         const catRaw = body.categoria || (estoqueItem ? estoqueItem.categoria : '') || 'FABRICADO'
-        const catFinal = (String(catRaw).toUpperCase() === 'COMERCIAL' || String(catRaw).toUpperCase() === 'COMPRADO') ? 'COMERCIAL' : 'FABRICADO'
+        let catFinal = String(catRaw).toUpperCase()
+        if (catFinal === 'COMPRADO') catFinal = 'COMERCIAL'
+        if (catFinal !== 'COMERCIAL' && catFinal !== 'MATERIA_PRIMA') catFinal = 'FABRICADO'
         const subcat = body.subcategoria || (estoqueItem ? estoqueItem.subcategoria : '') || ''
 
         const vUnit = (body.valorUnitario !== undefined && body.valorUnitario !== null && body.valorUnitario !== '') 

@@ -65,9 +65,18 @@ export default defineEventHandler(async (event) => {
                 const estoqueExistente = await prisma.estoque.findUnique({ where: { id: currentEstoqueId } })
                 if (estoqueExistente) {
                     const novaQuantidade = estoqueExistente.quantidade + (item.quantidade || 0)
-                    const novoValorUnitario = item.valorUnitario || estoqueExistente.valorUnitario || 0
+                    let novoValorUnitario = item.valorUnitario || estoqueExistente.valorUnitario || 0
+                    if (estoqueExistente.unidade === 'mm' && item.valorUnitario) {
+                        novoValorUnitario = item.valorUnitario * 6000
+                    }
                     const novoImpostoIPI = item.aliqIPI || estoqueExistente.impostoIPI || 0
-                    const novoValorTotal = novaQuantidade * novoValorUnitario * (1 + novoImpostoIPI / 100)
+                    
+                    let novoValorTotal = 0
+                    if (estoqueExistente.unidade === 'mm') {
+                        novoValorTotal = (novaQuantidade / 6000) * novoValorUnitario * (1 + novoImpostoIPI / 100)
+                    } else {
+                        novoValorTotal = novaQuantidade * novoValorUnitario * (1 + novoImpostoIPI / 100)
+                    }
 
                     await prisma.estoque.update({
                         where: { id: currentEstoqueId },

@@ -5,7 +5,7 @@ import fs from 'fs'
 export default defineEventHandler(async (event) => {
     const prisma = event.context.prisma
     const body = await readBody(event)
-    const { pecaIds, fornecedorIds, preview, subject: overrideSubject, html: overrideHtml, directPurchase } = body
+    const { pecaIds, fornecedorIds, preview, subject: overrideSubject, html: overrideHtml, directPurchase, skipAttachments, deliveryFormat } = body
 
     const userId = event.context.user?.id
     if (!userId) {
@@ -61,40 +61,106 @@ export default defineEventHandler(async (event) => {
         }
 
         let pecasTableBody = ''
+        const colSpan = skipAttachments ? 5 : 4
+        
         for (const [op, listaPecas] of Object.entries(pecasPorOp)) {
             pecasTableBody += `
                 <tr>
-                    <td colspan="4" style="background-color: #e0e0e0; font-weight: bold; padding: 8px;">${op}</td>
+                    <td colspan="${colSpan}" style="background-color: #e0e0e0; font-weight: bold; padding: 8px;">${op}</td>
                 </tr>
             `
             for (const peca of listaPecas) {
-                pecasTableBody += `
+                if (skipAttachments) {
+                    const perfil = peca.tipoMaterial ? `${peca.tipoMaterial}`.trim() : peca.descricao || '-'
+                    pecasTableBody += `
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${peca.codigo}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${perfil}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${peca.material || '-'}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${peca.comprimentoMaterial || 0} mm</td>
+                            <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${peca.quantidade}</td>
+                        </tr>
+                    `
+                } else {
+                    pecasTableBody += `
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${peca.codigo}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${peca.descricao}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${peca.quantidade}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${peca.material || '-'}</td>
+                        </tr>
+                    `
+                }
+            }
+        }
+
+        let resumoHtml = ''
+        if (skipAttachments) {
+            const resumoMap: Record<string, number> = {}
+            for (const peca of pecas) {
+                const perfil = peca.tipoMaterial ? `${peca.tipoMaterial}`.trim() : peca.descricao || '-'
+                const material = peca.material || '-'
+                const key = `${perfil} | ${material}`
+                const comp = parseFloat(String(peca.comprimentoMaterial)) || 0
+                const qtd = parseInt(String(peca.quantidade)) || 1
+                const total = comp * qtd
+
+                if (!resumoMap[key]) resumoMap[key] = 0
+                resumoMap[key] += total
+            }
+
+            let resumoRows = ''
+            for (const [key, total] of Object.entries(resumoMap)) {
+                const parts = key.split(' | ')
+                const perfil = parts[0]
+                const material = parts[1]
+                resumoRows += `
                     <tr>
-                        <td style="border: 1px solid #ddd; padding: 8px;">${peca.codigo}</td>
-                        <td style="border: 1px solid #ddd; padding: 8px;">${peca.descricao}</td>
-                        <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${peca.quantidade}</td>
-                        <td style="border: 1px solid #ddd; padding: 8px;">${peca.material || '-'}</td>
+                        <td style="border: 1px solid #ddd; padding: 8px;"><strong>${perfil}</strong></td>
+                        <td style="border: 1px solid #ddd; padding: 8px;">${material}</td>
+                        <td style="border: 1px solid #ddd; padding: 8px; text-align: right; color: #2e7d32;"><strong>${total.toFixed(1)} mm</strong></td>
                     </tr>
                 `
             }
+
+            resumoHtml = `
+                <div style="margin-top: 30px;">
+                    <h3 style="margin-bottom: 10px; color: #333;">Resumo de Quantidades Totais</h3>
+                    <p style="font-size: 0.9em; color: #555; margin-bottom: 10px;">Considere a soma dos comprimentos abaixo para formulação do orçamento, conforme a forma de entrega solicitada.</p>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background-color: #e8f5e9; border-bottom: 2px solid #ddd;">
+                                <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Perfil</th>
+                                <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Material</th>
+                                <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Comprimento Total Somado (mm)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${resumoRows}
+                        </tbody>
+                    </table>
+                </div>
+            `
         }
 
         const attachments = []
         let totalSize = 0
         const MAX_ATTACHMENT_SIZE = 15 * 1024 * 1024 // 15MB
 
-        for (const peca of pecas) {
-            if (peca.anexos && peca.anexos.length > 0) {
-                for (const anexo of peca.anexos) {
-                    const filePath = path.join(process.cwd(), 'public', anexo.url)
-                    if (fs.existsSync(filePath)) {
-                        const stats = fs.statSync(filePath)
-                        totalSize += stats.size
-                        attachments.push({
-                            filename: anexo.nome,
-                            path: filePath,
-                            size: stats.size
-                        })
+        if (!skipAttachments) {
+            for (const peca of pecas) {
+                if (peca.anexos && peca.anexos.length > 0) {
+                    for (const anexo of peca.anexos) {
+                        const filePath = path.join(process.cwd(), 'public', anexo.url)
+                        if (fs.existsSync(filePath)) {
+                            const stats = fs.statSync(filePath)
+                            totalSize += stats.size
+                            attachments.push({
+                                filename: anexo.nome,
+                                path: filePath,
+                                size: stats.size
+                            })
+                        }
                     }
                 }
             }
@@ -138,19 +204,44 @@ export default defineEventHandler(async (event) => {
         }
         
         const finalSubject = overrideSubject || defaultSubject
+        
+        let deliveryText = ''
+        if (skipAttachments && deliveryFormat) {
+            if (deliveryFormat === 'PADRAO') deliveryText = 'Solicitamos o fornecimento em barras/peças comerciais padrão.'
+            else if (deliveryFormat === 'CORTADO') deliveryText = 'Solicitamos que o material seja <strong>CORTADO NAS MEDIDAS INDIVIDUAIS</strong> exatas listadas abaixo.'
+            else if (deliveryFormat === 'SOMADO') deliveryText = 'Solicitamos o fornecimento do material em barras que atendam ao <strong>COMPRIMENTO TOTAL SOMADO</strong> de todos os itens do mesmo perfil.'
+
+            deliveryText = `<div style="margin-top: 20px; padding: 15px; background-color: #fff3cd; border-left: 5px solid #ffc107; color: #856404;"><strong>Atenção ao formato de fornecimento desejado:</strong><br>${deliveryText}</div>`
+        }
+
+        const textoAnexos = skipAttachments ? '' : '<p style="margin-top: 20px;">Os desenhos técnicos seguem em anexo para análise.</p>'
+
+        const tableHeaders = skipAttachments 
+            ? `
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Peça</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Perfil</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Material</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Medida (mm)</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">Qtd</th>
+              `
+            : `
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Código</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Descrição</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">Qtd</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Material</th>
+              `
+
         const defaultHtml = `
             <div style="font-family: Arial, sans-serif; line-height: 1.6;">
                 <h2>Solicitação de Orçamento</h2>
                 <p>Olá,</p>
                 <p>Gostaríamos de solicitar um orçamento para os itens listados abaixo.</p>
+                ${deliveryText}
                 
                 <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
                     <thead>
                         <tr style="background-color: #f5f5f5; border-bottom: 2px solid #ddd;">
-                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Código</th>
-                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Descrição</th>
-                            <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">Qtd</th>
-                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Material</th>
+                            ${tableHeaders}
                         </tr>
                     </thead>
                     <tbody>
@@ -158,7 +249,9 @@ export default defineEventHandler(async (event) => {
                     </tbody>
                 </table>
                 
-                <p style="margin-top: 20px;">Os desenhos técnicos seguem em anexo para análise.</p>
+                ${resumoHtml}
+                
+                ${textoAnexos}
                 
                 <p>Ficamos no aguardo de sua proposta técnica e comercial (favor informar impostos e custos de frete, se houver).</p>
                 <br>

@@ -408,6 +408,84 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+    <v-dialog v-model="dialogQuoteSuppliers.show" max-width="500px">
+      <v-card>
+        <v-card-title class="pa-4 bg-secondary text-white">Solicitar Cotações</v-card-title>
+        <v-card-text class="pa-4">
+          <p class="mb-4">Selecione os fornecedores para enviar o e-mail de cotação das <strong>{{ selected.length }} peças</strong> selecionadas.</p>
+          <v-select
+            v-model="dialogQuoteSuppliers.fornecedorIds"
+            :items="fornecedores"
+            item-title="nome"
+            item-value="id"
+            label="Escolha os Fornecedores"
+            variant="outlined"
+            placeholder="Selecione um ou mais"
+            multiple
+            chips
+          ></v-select>
+
+          <v-radio-group v-model="dialogQuoteSuppliers.formatoEntrega" label="Formato de Fornecimento Desejado" class="mt-4">
+            <v-radio label="Padrão Comercial (Barras Inteiras)" value="PADRAO"></v-radio>
+            <v-radio label="Cortado nas Medidas Individuais (Peça a Peça)" value="CORTADO"></v-radio>
+            <v-radio label="Barra Única com Comprimento Total Somado" value="SOMADO"></v-radio>
+          </v-radio-group>
+        </v-card-text>
+        <v-card-actions class="pa-4">
+          <v-spacer></v-spacer>
+          <v-btn variant="text" @click="dialogQuoteSuppliers.show = false">Cancelar</v-btn>
+          <v-btn color="secondary" variant="flat" :loading="loadingPreview" :disabled="!dialogQuoteSuppliers.fornecedorIds.length" @click="loadQuotePreview">
+            Gerar Rascunho
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog v-model="dialogQuoteEmail.show" max-width="800px" persistent>
+      <v-card>
+        <v-card-title class="pa-4 bg-success text-white">Revisar e Enviar E-mail(s)</v-card-title>
+        <v-card-text class="pa-4">
+          <v-alert type="info" variant="tonal" density="compact" class="mb-4">
+            Serão enviados e-mails individuais para os fornecedores selecionados.
+          </v-alert>
+
+          <v-text-field
+            v-model="dialogQuoteEmail.subject"
+            label="Assunto do E-mail"
+            variant="outlined"
+            density="comfortable"
+            class="mb-2"
+          ></v-text-field>
+
+          <v-textarea
+            v-model="dialogQuoteEmail.html"
+            label="Corpo do E-mail (HTML)"
+            variant="outlined"
+            rows="12"
+            auto-grow
+            hint="Você pode editar o texto acima. Os anexos (desenhos) serão incluídos automaticamente se existirem."
+            persistent-hint
+          ></v-textarea>
+          
+          <v-alert
+            v-if="dialogQuoteEmail.attachmentsCount"
+            type="success"
+            variant="tonal"
+            density="compact"
+            class="mt-4"
+          >
+            <strong>{{ dialogQuoteEmail.attachmentsCount }} desenho(s)/anexo(s)</strong> serão enviados automaticamente com estes e-mails.
+          </v-alert>
+        </v-card-text>
+        <v-card-actions class="pa-4">
+          <v-btn variant="text" @click="dialogQuoteEmail.show = false">Voltar</v-btn>
+          <v-spacer></v-spacer>
+          <v-btn color="success" variant="flat" :loading="sendingEmail" @click="sendFinalQuoteEmails">
+            Enviar Agora
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
@@ -426,6 +504,11 @@ const loadingEstoque = ref(false)
 const statusFilter = ref('NAO_SOLICITADO')
 const groupBy = ref([{ key: 'materialAgrupado', order: 'asc' }])
 const activeTab = ref('bom')
+
+const dialogQuoteSuppliers = ref({ show: false, fornecedorIds: [], formatoEntrega: 'PADRAO' })
+const dialogQuoteEmail = ref({ show: false, subject: '', html: '', attachmentsCount: 0 })
+const loadingPreview = ref(false)
+const sendingEmail = ref(false)
 
 const dialogAddEstoque = ref(false)
 const adjustAction = ref('add')
@@ -577,8 +660,15 @@ const normalizeKey = (str) => {
 
 const getEstoque = (key) => {
   const normKey = normalizeKey(key)
-  const item = estoqueFisico.value.find(e => normalizeKey(e.codigo) === normKey)
-  return item ? item.quantidade : null
+  const items = estoqueFisico.value.filter(e => {
+    const normCodigo = normalizeKey(e.codigo)
+    const normDescMat = normalizeKey(`${e.descricao} | ${e.material || ''}`)
+    return normCodigo === normKey || normDescMat === normKey
+  })
+  if (items.length > 0) {
+    return items.reduce((acc, curr) => acc + (curr.quantidade || 0), 0)
+  }
+  return null
 }
 
 const getFalta = (key, groupItems) => {
@@ -616,7 +706,9 @@ const carregarDados = async () => {
     if (fornecedores.value.length === 0) {
       try {
         const respForn = await $fetch('/api/fornecedores')
-        fornecedores.value = respForn
+        fornecedores.value = respForn.filter(f => 
+          f.categorias && f.categorias.some(c => c.toUpperCase().includes('MATERIA') || c.toUpperCase().includes('MATÉRIA'))
+        )
       } catch (e) {
         console.error('Falha ao buscar fornecedores', e)
       }
@@ -634,7 +726,8 @@ const atualizarStatusLote = async (status) => {
   
   try {
     loading.value = true
-    const pecaIds = selected.value.map(item => item.id)
+    const pecaIds = selected.value // selected já é um array de IDs
+    const selectedPieces = itemsComGrupo.value.filter(i => selected.value.includes(i.id))
     
     await $fetch('/api/compras/materias-primas', {
       method: 'POST',
@@ -650,7 +743,7 @@ const atualizarStatusLote = async (status) => {
     
     // Se atendeu pelo estoque, precisamos abater as quantidades
     if (status === 'RECEBIDO') {
-       for (const item of selected.value) {
+       for (const item of selectedPieces) {
            const qtdNecessaria = (parseFloat(item.comprimentoMaterial) || 0) * (parseInt(item.quantidade) || 1)
            if (qtdNecessaria > 0) {
                try {
@@ -678,8 +771,66 @@ const atualizarStatusLote = async (status) => {
   }
 }
 
+const loadQuotePreview = async () => {
+  loadingPreview.value = true
+  try {
+    const data = await $fetch('/api/compras/request-quotes', {
+      method: 'POST',
+      body: {
+        pecaIds: selected.value,
+        fornecedorIds: dialogQuoteSuppliers.value.fornecedorIds,
+        preview: true,
+        skipAttachments: true,
+        deliveryFormat: dialogQuoteSuppliers.value.formatoEntrega
+      }
+    })
+    
+    dialogQuoteEmail.value = {
+      show: true,
+      subject: data.subject,
+      html: data.html,
+      attachmentsCount: data.attachmentsCount
+    }
+    dialogQuoteSuppliers.value.show = false
+  } catch (error) {
+    showSnackbar('Erro ao gerar rascunho: ' + (error.data?.statusMessage || error.message), 'error')
+  } finally {
+    loadingPreview.value = false
+  }
+}
+
+const sendFinalQuoteEmails = async () => {
+  sendingEmail.value = true
+  try {
+    await $fetch('/api/compras/request-quotes', {
+      method: 'POST',
+      body: {
+        pecaIds: selected.value,
+        fornecedorIds: dialogQuoteSuppliers.value.fornecedorIds,
+        subject: dialogQuoteEmail.value.subject,
+        html: dialogQuoteEmail.value.html,
+        skipAttachments: true,
+        deliveryFormat: dialogQuoteSuppliers.value.formatoEntrega
+      }
+    })
+    
+    showSnackbar('E-mails enviados e peças marcadas como EM COTAÇÃO!')
+    dialogQuoteEmail.value.show = false
+    
+    await atualizarStatusLote('EM_ORCAMENTO')
+  } catch (error) {
+    showSnackbar('Erro ao enviar e-mails: ' + (error.data?.statusMessage || error.message), 'error')
+  } finally {
+    sendingEmail.value = false
+  }
+}
+
 const solicitarCompra = () => {
-  atualizarStatusLote('EM_ORCAMENTO')
+  dialogQuoteSuppliers.value = {
+    show: true,
+    fornecedorIds: [],
+    formatoEntrega: 'PADRAO'
+  }
 }
 
 const atenderEstoque = () => {

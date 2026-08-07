@@ -658,6 +658,7 @@
     <!-- Diálogo de Inserção/Edição de Peça -->
     <v-dialog v-model="dialogPeca.show" max-width="500px">
       <v-card>
+      <v-form ref="formPeca" @submit.prevent="savePecaManual">
         <v-card-title>{{ dialogPeca.isEdit ? 'Editar Peça' : 'Adicionar Peça Manualmente' }}</v-card-title>
         <v-card-text>
           <v-text-field v-model="dialogPeca.data.codigo" label="Código" variant="outlined"></v-text-field>
@@ -802,6 +803,7 @@
             Salvar Peça
           </v-btn>
         </v-card-actions>
+      </v-form>
       </v-card>
     </v-dialog>
 
@@ -1432,7 +1434,7 @@ const dialogPeca = ref({
     descricao: '', 
     quantidade: 1, 
     material: '',
-    categoria: 'FABRICADO',
+    categoria: null,
     subcategoria: '',
     statusSuprimento: 'NAO_SOLICITADO',
     valorUnitario: null,
@@ -1557,7 +1559,7 @@ const openAddPecaDialog = () => {
       descricao: '', 
       quantidade: 1, 
       material: '',
-      categoria: 'FABRICADO',
+      categoria: null,
       statusSuprimento: 'NAO_SOLICITADO',
       peso: null,
       areaSuperficial: null,
@@ -1584,7 +1586,17 @@ const openEditPeca = (peca) => {
   }
 }
 
+const formPeca = ref(null)
+
 const savePecaManual = async () => {
+  if (formPeca.value) {
+    const { valid } = await formPeca.value.validate()
+    if (!valid) {
+      showSnackbar('Preencha os campos obrigatórios', 'warning')
+      return
+    }
+  }
+
   savingPeca.value = true
   try {
     const method = dialogPeca.value.isEdit ? 'PATCH' : 'POST'
@@ -1806,7 +1818,8 @@ const getSuprimentoColor = (status) => {
     EM_ORCAMENTO: 'orange-darken-1',
     COMPRADO: 'blue-darken-2',
     RECEBIDO_PARCIAL: 'teal',
-    RECEBIDO: 'success'
+    RECEBIDO: 'success',
+    ATENDIDO_ESTOQUE: 'success'
   }
   return colors[status] || 'grey'
 }
