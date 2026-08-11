@@ -1387,13 +1387,15 @@ const headersDemandas = [
 ]
 
 const getTratarColor = (item) => {
-  if (item.status === 'COTACAO') return 'success'
+  if (item.status === 'APROVADA') return 'success'
+  if (item.status === 'COTACAO') return 'warning'
   if (item.status === 'SOLICITADA' && item.anexos && item.anexos.length > 0) return 'warning'
   return 'info'
 }
 
 const getTratarLabel = (item) => {
-  if (item.status === 'COTACAO') return 'Liberado para compra'
+  if (item.status === 'APROVADA') return 'Liberado para compra'
+  if (item.status === 'COTACAO') return 'Aguardando Cotações'
   if (item.status === 'SOLICITADA' && item.anexos && item.anexos.length > 0) return 'Analisar Orçamentos'
   return 'Tratar Requisição'
 }
