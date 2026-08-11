@@ -414,6 +414,7 @@ model Compra {
   status              CompraStatus @default(SOLICITADA)
   observacoes         String?
   dataSolicitacao     DateTime     @default(now()) @map("data_solicitacao")
+  dataLimiteCompra    DateTime?    @map("data_limite_compra")
   dataCompra          DateTime?    @map("data_compra")
   dataPrevisaoEntrega DateTime?    @map("data_previsao_entrega")
   dataEntregaReal     DateTime?    @map("data_entrega_real")

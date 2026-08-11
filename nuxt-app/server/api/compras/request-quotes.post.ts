@@ -374,6 +374,23 @@ export default defineEventHandler(async (event) => {
             const pecaBase = pecas.find(p => p.opId)
             const opId = pecaBase?.opId || null
             const osId = pecas.find(p => p.osId)?.osId || null
+            
+            // Busca o processo "COMPRAS" das OPs envolvidas para definir a data limite
+            let dataLimiteCompra: Date | null = null
+            const opIds = [...new Set(pecas.filter(p => p.opId).map(p => p.opId))]
+            if (opIds.length > 0) {
+                const processosCompras = await prisma.oPProcesso.findMany({
+                    where: { 
+                        opId: { in: opIds as number[] }, 
+                        nome: { contains: 'COMPRAS', mode: 'insensitive' },
+                        dataTerminoPrevista: { not: null }
+                    },
+                    orderBy: { dataTerminoPrevista: 'asc' }
+                })
+                if (processosCompras.length > 0 && processosCompras[0].dataTerminoPrevista) {
+                    dataLimiteCompra = processosCompras[0].dataTerminoPrevista
+                }
+            }
 
             await prisma.compra.create({
                 data: {
@@ -383,6 +400,7 @@ export default defineEventHandler(async (event) => {
                     fornecedor: fornecedorName,
                     status: statusCompra,
                     valorTotal: 0,
+                    dataLimiteCompra,
                     itens: {
                         create: pecas.map((p: any) => ({
                             pecaId: p.id,

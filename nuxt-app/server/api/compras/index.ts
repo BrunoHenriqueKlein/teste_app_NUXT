@@ -65,6 +65,7 @@ export default defineEventHandler(async (event) => {
                     observacoes: body.observacoes,
                     dataCompra: body.dataCompra ? new Date(body.dataCompra) : null,
                     dataPrevisaoEntrega: body.dataPrevisaoEntrega ? new Date(body.dataPrevisaoEntrega) : null,
+                    dataLimiteCompra: body.dataLimiteCompra ? new Date(body.dataLimiteCompra) : null,
                     itens: {
                         create: body.itens.map((item: any) => ({
                             descricao: item.descricao,
@@ -468,6 +469,7 @@ export default defineEventHandler(async (event) => {
                     observacoes: data.observacoes,
                     dataCompra: data.status === 'PEDIDO_EMITIDO' && !currentCompra?.dataCompra ? new Date() : (data.dataCompra ? new Date(data.dataCompra) : undefined),
                     dataPrevisaoEntrega: data.dataPrevisaoEntrega ? new Date(data.dataPrevisaoEntrega) : undefined,
+                    dataLimiteCompra: data.dataLimiteCompra ? new Date(data.dataLimiteCompra) : undefined,
                     dataEntregaReal: data.dataEntregaReal ? new Date(data.dataEntregaReal) : undefined,
                     numeroNF: data.numeroNF,
                     metadados: data.metadados ? data.metadados : undefined,

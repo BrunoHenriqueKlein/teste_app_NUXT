@@ -152,6 +152,19 @@
               </v-chip>
               <span v-else class="text-grey text-caption">Peças / BOM</span>
             </template>
+            <template v-slot:item.dataLimiteCompra="{ item }">
+              <div v-if="item.dataLimiteCompra">
+                <v-chip
+                  :color="isDateNearOrPassed(item.dataLimiteCompra) ? 'error' : 'info'"
+                  size="small"
+                  :prepend-icon="isDateNearOrPassed(item.dataLimiteCompra) ? 'mdi-alert' : 'mdi-calendar-clock'"
+                  variant="flat"
+                >
+                  {{ formatDate(item.dataLimiteCompra) }}
+                </v-chip>
+              </div>
+              <span v-else class="text-grey text-caption">Sem data limite</span>
+            </template>
             <template v-slot:item.acoes="{ item }">
               <v-btn
                 :color="getTratarColor(item)"
@@ -416,7 +429,7 @@
                  prepend-inner-icon="mdi-pound"
                ></v-text-field>
              </v-col>
-             <v-col cols="12" md="5">
+             <v-col cols="12" md="3">
                <v-select
                  v-model="dialogDetalhes.fornecedorId"
                  :items="fornecedores"
@@ -429,7 +442,19 @@
                  prepend-inner-icon="mdi-badge-account"
                ></v-select>
              </v-col>
-             <v-col cols="12" md="4">
+             <v-col cols="12" md="3">
+               <v-text-field
+                 v-model="dialogDetalhes.dataLimiteCompra"
+                 label="Data Limite para Compra"
+                 type="date"
+                 variant="outlined"
+                 density="compact"
+                 :readonly="!!dialogDetalhes.requisicao?.dataLimiteCompra && dialogDetalhes.requisicao?.dataLimiteCompra !== ''"
+                 :hint="dialogDetalhes.requisicao?.dataLimiteCompra ? 'Gerado pela OP' : 'Defina uma data'"
+                 persistent-hint
+               ></v-text-field>
+             </v-col>
+             <v-col cols="12" md="3">
                <v-text-field
                  v-model="dialogDetalhes.dataPrevisao"
                  label="Previsão de Entrega"
@@ -1261,6 +1286,17 @@ const formatDate = (date) => {
   return new Date(date).toLocaleDateString('pt-BR')
 }
 
+const isDateNearOrPassed = (date) => {
+  if (!date) return false
+  const target = new Date(date)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  target.setHours(0, 0, 0, 0)
+  const diffTime = target.getTime() - today.getTime()
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  return diffDays <= 2 // Vencido ou vence em até 2 dias
+}
+
 const isDelayed = (date) => {
   if (!date) return false
   const today = new Date()
@@ -1368,6 +1404,7 @@ const headersRequisicoes = [
   { title: 'OS / Máquina', key: 'os', value: item => item.os?.numero || '' },
   { title: 'Processo / Tipo', key: 'tipo', align: 'center', value: item => item.os?.tipo || 'Peças / BOM' },
   { title: 'Categoria', key: 'categoria', align: 'center', value: item => item.fornecedor ? item.fornecedor.replace('REQ_', '') : '' },
+  { title: 'Data Limite', key: 'dataLimiteCompra', align: 'center', value: item => item.dataLimiteCompra ? new Date(item.dataLimiteCompra).getTime() : 0 },
   { title: 'Itens', key: '_count.itens', align: 'center', value: item => item._count?.itens || item.itens?.length || 0 },
   { title: 'Ações', key: 'acoes', align: 'center', value: item => getTratarLabel(item) }
 ]
@@ -1638,6 +1675,7 @@ const dialogDetalhes = ref({
   show: false,
   requisicao: null,
   dataPrevisao: '',
+  dataLimiteCompra: '',
   valorFrete: 0,
   valorDesconto: 0,
   formaPagamento: '',
@@ -1856,6 +1894,7 @@ const verDetalhesRequisicao = (item) => {
     show: true,
     requisicao: JSON.parse(JSON.stringify(item)),
     dataPrevisao: item.dataPrevisaoEntrega ? new Date(item.dataPrevisaoEntrega).toISOString().substr(0, 10) : '',
+    dataLimiteCompra: item.dataLimiteCompra ? new Date(item.dataLimiteCompra).toISOString().substr(0, 10) : '',
     valorFrete: item.valorFrete || 0,
     valorDesconto: item.valorDesconto || 0,
     savingNegociado: item.savingNegociado || 0,
@@ -1968,6 +2007,7 @@ const salvarTratativa = async () => {
         cnpjTransportadora: dialogDetalhes.value.cnpjTransportadora,
         observacoes: dialogDetalhes.value.observacoes,
         dataPrevisaoEntrega: dialogDetalhes.value.dataPrevisao,
+        dataLimiteCompra: dialogDetalhes.value.dataLimiteCompra,
         itens: dialogDetalhes.value.requisicao.itens.map(item => ({
           ...item,
           valorIPI: (item.valorUnitario * item.quantidade) * ((item.aliqIPI || 0) / 100),
@@ -2106,6 +2146,7 @@ const emitirOC = async () => {
       cnpjTransportadora: dialogDetalhes.value.cnpjTransportadora,
       observacoes: dialogDetalhes.value.observacoes,
       dataPrevisaoEntrega: dialogDetalhes.value.dataPrevisao,
+      dataLimiteCompra: dialogDetalhes.value.dataLimiteCompra,
       itens: selectedItens.map(item => ({
         ...item,
         valorIPI: (item.valorUnitario * item.quantidade) * (item.aliqIPI / 100),
@@ -2184,6 +2225,7 @@ const enviarEmailOC = async () => {
       cnpjTransportadora: dialogDetalhes.value.cnpjTransportadora,
       observacoes: dialogDetalhes.value.observacoes,
       dataPrevisaoEntrega: dialogDetalhes.value.dataPrevisao,
+      dataLimiteCompra: dialogDetalhes.value.dataLimiteCompra,
       itens: selectedItens.map(item => ({
         id: item.id,
         codigo: item.peca?.codigo,

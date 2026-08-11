@@ -221,13 +221,29 @@ export default defineEventHandler(async (event) => {
 
                 const itensDestaCompra = comprasMap.get(cId).itens
                 
+                let dataLimiteCompra: Date | null = null
+                if (compraOriginal.opId) {
+                    const processosCompras = await prisma.oPProcesso.findMany({
+                        where: { 
+                            opId: compraOriginal.opId, 
+                            nome: { contains: 'COMPRAS', mode: 'insensitive' },
+                            dataTerminoPrevista: { not: null }
+                        },
+                        orderBy: { dataTerminoPrevista: 'asc' }
+                    })
+                    if (processosCompras.length > 0 && processosCompras[0].dataTerminoPrevista) {
+                        dataLimiteCompra = processosCompras[0].dataTerminoPrevista
+                    }
+                }
+                
                 if (itensDestaCompra.length === compraOriginal.itens.length) {
                     // Todos os itens selecionados, apenas atualiza
                     await prisma.compra.update({
                         where: { id: cId },
                         data: {
                             status: novoStatus,
-                            fornecedor: novoForn
+                            fornecedor: novoForn,
+                            dataLimiteCompra: dataLimiteCompra || compraOriginal.dataLimiteCompra
                         }
                     })
                 } else {
@@ -242,6 +258,7 @@ export default defineEventHandler(async (event) => {
                             fornecedor: novoForn,
                             isEstoque: true,
                             valorTotal: 0,
+                            dataLimiteCompra: dataLimiteCompra || compraOriginal.dataLimiteCompra,
                             itens: {
                                 connect: itensDestaCompra.map(i => ({ id: i.id }))
                             }
