@@ -1946,7 +1946,7 @@ const verDetalhesRequisicao = (item) => {
           aliqICMS: i.aliqICMS || 0,
           selected: true,
           qtdComercial: 1,
-          unComercial: 'LT',
+          unComercial: 'PC',
           compPorUnidade: 0
         }
       }
@@ -1962,7 +1962,7 @@ const verDetalhesRequisicao = (item) => {
        if (reqMeta && reqMeta.raw_materials && reqMeta.raw_materials[g.key]) {
          const rm = reqMeta.raw_materials[g.key]
          g.qtdComercial = rm.qtdComercial || 1
-         g.unComercial = rm.unComercial || 'LT'
+         g.unComercial = rm.unComercial || 'PC'
          g.compPorUnidade = rm.compPorUnidade || g.comprimentoTotal
          g.valorTotalDigitado = rm.valorTotalDigitado || 0
        }
