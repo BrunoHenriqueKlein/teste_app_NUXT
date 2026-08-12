@@ -525,7 +525,7 @@
                   <div v-if="((grupo.qtdComercial || 1) * (grupo.compPorUnidade || grupo.comprimentoTotal)) > grupo.comprimentoTotal" class="text-caption text-orange">Sobra: {{ (((grupo.qtdComercial || 1) * (grupo.compPorUnidade || grupo.comprimentoTotal)) - grupo.comprimentoTotal).toLocaleString('pt-BR') }} mm</div>
                 </td>
                 <td>
-                  <v-text-field v-model.number="grupo.valorTotalDigitado" type="number" variant="underlined" density="compact" hide-details prefix="R$" @update:model-value="atualizarRateioMateriaPrima(grupo)"></v-text-field>
+                  <v-text-field v-model.number="grupo.valorTotalDigitado" type="number" step="0.01" variant="underlined" density="compact" hide-details prefix="R$" @update:model-value="atualizarRateioMateriaPrima(grupo)"></v-text-field>
                 </td>
                 <td>
                   <v-text-field v-model.number="grupo.aliqIPI" type="number" variant="underlined" density="compact" hide-details suffix="%" @update:model-value="atualizarRateioMateriaPrima(grupo)"></v-text-field>
@@ -617,6 +617,7 @@
                   <v-text-field
                     v-model.number="item.valorUnitario"
                     type="number"
+                    step="0.01"
                     variant="underlined"
                     density="compact"
                     hide-details
@@ -700,6 +701,8 @@
             <v-col cols="12" md="3">
               <v-text-field
                 v-model.number="dialogDetalhes.valorFrete"
+                type="number"
+                step="0.01"
                 label="Valor do Frete"
                 prefix="R$"
                 variant="outlined"
@@ -710,6 +713,8 @@
             <v-col cols="12" md="3">
               <v-text-field
                 v-model.number="dialogDetalhes.valorDesconto"
+                type="number"
+                step="0.01"
                 label="Desconto Total"
                 prefix="R$"
                 variant="outlined"
@@ -769,6 +774,8 @@
             <v-col cols="12" md="4">
               <v-text-field
                 v-model.number="dialogDetalhes.savingNegociado"
+                type="number"
+                step="0.01"
                 label="Saving Negociado (KPI de Economia)"
                 prefix="R$"
                 variant="outlined"

@@ -258,7 +258,17 @@ export default defineEventHandler(async (event) => {
                         status: 'PEDIDO_EMITIDO',
                         dataCompra: new Date(),
                         dataPrevisaoEntrega: data.dataPrevisaoEntrega ? new Date(data.dataPrevisaoEntrega) : null,
-                        observacoes: `Desmembrado da REQ ${currentCompra!.numero}. ${data.observacoes || ''}`
+                        observacoes: `Desmembrado da REQ ${currentCompra!.numero}. ${data.observacoes || ''}`,
+                        valorTotal: data.valorTotal,
+                        valorFrete: data.valorFrete,
+                        valorDesconto: data.valorDesconto,
+                        savingNegociado: data.savingNegociado,
+                        formaPagamento: data.formaPagamento,
+                        tipoFrete: data.tipoFrete,
+                        transportadora: data.transportadora,
+                        cnpjTransportadora: data.cnpjTransportadora,
+                        dataLimiteCompra: data.dataLimiteCompra ? new Date(data.dataLimiteCompra) : undefined,
+                        metadados: data.metadados ? data.metadados : undefined,
                     }
                 })
 
