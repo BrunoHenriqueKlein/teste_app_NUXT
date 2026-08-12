@@ -812,7 +812,7 @@
             Salvar Rascunho
           </v-btn>
           <v-btn
-            v-if="!dialogDetalhes.isVisualizado && dialogDetalhes.requisicao?.status === 'SOLICITADA' && dialogDetalhes.requisicao?.anexos?.length > 0"
+            v-if="!dialogDetalhes.isVisualizado && ['SOLICITADA', 'COTACAO'].includes(dialogDetalhes.requisicao?.status)"
             color="success"
             variant="flat"
             :loading="saving"
@@ -1247,13 +1247,14 @@ const loading = ref(false)
 const saving = ref(false)
 
 const requisicoesEngenharia = computed(() => {
-  return compras.value.filter(c => c.status === 'SOLICITADA' || c.status === 'COTACAO')
+  return compras.value.filter(c => c.status === 'SOLICITADA' || c.status === 'COTACAO' || c.status === 'APROVADA')
 })
 
 const activeOrders = computed(() => {
   return compras.value.filter(o => 
     o.status !== 'SOLICITADA' && 
     o.status !== 'COTACAO' && 
+    o.status !== 'APROVADA' && 
     o.status !== 'RECEBIDA_TOTAL' && 
     o.status !== 'CANCELADA' &&
     o.status !== 'RASCUNHO'
@@ -1991,7 +1992,7 @@ const verDetalhesRequisicao = (item) => {
 
 const liberarParaCompra = async () => {
   if (dialogDetalhes.value.requisicao) {
-    dialogDetalhes.value.requisicao.status = 'COTACAO'
+    dialogDetalhes.value.requisicao.status = 'APROVADA'
     await salvarTratativa()
   }
 }
