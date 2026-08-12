@@ -1323,9 +1323,10 @@ const getPrevisaoStatus = (date) => {
   const diffTime = target.getTime() - now.getTime()
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
   
-  if (diffDays < 0) return { text: 'Atrasado', color: 'error', icon: 'mdi-alert-circle' }
-  if (diffDays <= 3) return { text: 'Atenção (Próximo)', color: 'warning', icon: 'mdi-clock-alert-outline' }
-  return { text: 'No Prazo', color: 'success', icon: 'mdi-check-circle-outline' }
+  if (diffDays < 0) return { text: `Atrasado em ${Math.abs(diffDays)} dia(s)`, color: 'error', icon: 'mdi-alert-circle' }
+  if (diffDays === 0) return { text: 'Vence hoje', color: 'warning', icon: 'mdi-clock-alert-outline' }
+  if (diffDays <= 3) return { text: `Vence em ${diffDays} dia(s)`, color: 'warning', icon: 'mdi-clock-alert-outline' }
+  return { text: `Faltam ${diffDays} dia(s)`, color: 'success', icon: 'mdi-check-circle-outline' }
 }
 
 const getRecebimentoStatus = (previsao, recebido) => {
